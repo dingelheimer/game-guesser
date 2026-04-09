@@ -81,6 +81,8 @@ Follow the coding standards and technology references from the KB:
 
 ## Key Rules
 
+- **Never push to `main` directly** — work on `epic/<name>` branches. Merge to
+  `main` only after human review when the epic is complete
 - **Never commit secrets** — `.env.local` is gitignored
 - **Local-first Supabase** — develop against local Docker instance when available
 - **Strict TypeScript** — `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
