@@ -41,25 +41,28 @@ Follow the Next.js + Supabase development workflow from the KB:
 
 After completing code changes, always verify:
 
-1. `pnpm lint` — zero warnings or errors
-2. `pnpm typecheck` — zero type errors
-3. `pnpm build` — succeeds with no warnings
-4. `supabase db reset` — migrations apply cleanly (if schema was changed)
-5. `pnpm db:types:local` — regenerate types (if schema was changed)
-6. `pnpm test:e2e` — E2E tests pass (if tests exist for affected area)
-7. Visual verification via Playwright MCP server (if UI was changed)
+1. `pnpm test` — unit tests pass (Vitest)
+2. `pnpm lint` — zero warnings or errors
+3. `pnpm typecheck` — zero type errors
+4. `pnpm build` — succeeds with no warnings
+5. `supabase db reset` — migrations apply cleanly (if schema was changed)
+6. `pnpm db:types:local` — regenerate types (if schema was changed)
+7. `pnpm test:e2e` — E2E tests pass (if tests exist for affected area)
+8. Visual verification via Playwright MCP server (if UI was changed)
 
-## Playwright
+## Testing
 
-Two usage modes:
+Three testing layers:
 
-- **MCP server** — Use the Playwright MCP server to open the running app in a
-  real browser and visually verify UI changes after implementation. Always do
-  this for stories that touch UI.
-- **E2E test suite** — Tests live in `e2e/`. Run with `pnpm test:e2e`. Write
-  new E2E tests when a story introduces a new user flow.
-
-See [Playwright E2E Testing](../kb/docs/testing/playwright.md) for details.
+- **Vitest** — Unit tests for components, server actions, utilities, Zustand
+  stores. Tests live in `src/` alongside the code (`*.test.ts(x)`). Run with
+  `pnpm test`. See [Vitest Unit Testing](../kb/docs/testing/vitest.md).
+- **Playwright E2E** — Full user journey tests in `e2e/`. Run with
+  `pnpm test:e2e`. Write new E2E tests when a story introduces a new user flow.
+  See [Playwright E2E Testing](../kb/docs/testing/playwright.md).
+- **Playwright MCP server** — Use the MCP server to open the running app in a
+  real browser and visually verify UI changes. Always do this for stories that
+  touch UI.
 
 ## Technology References
 
