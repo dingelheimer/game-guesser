@@ -1,8 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { Header } from "@/components/layouts/header";
+import { BottomNav } from "@/components/layouts/bottom-nav";
+import { Footer } from "@/components/layouts/footer";
+import { NoiseOverlay } from "@/components/layouts/noise-overlay";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -22,8 +26,17 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Game Guesser",
-  description: "A video game timeline guessing party game",
+  title: {
+    default: "Game Guesser",
+    template: "%s | Game Guesser",
+  },
+  description: "A video game timeline guessing party game — guess when games were released!",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -42,10 +55,14 @@ export default function RootLayout({
       )}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col bg-surface-900">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <TooltipProvider>
-            {children}
+            <NoiseOverlay />
+            <Header />
+            <main className="flex flex-1 flex-col pb-16 md:pb-0">{children}</main>
+            <Footer />
+            <BottomNav />
             <Toaster />
           </TooltipProvider>
         </ThemeProvider>
