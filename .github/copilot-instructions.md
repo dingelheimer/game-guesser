@@ -63,6 +63,12 @@ Three testing layers:
 - **Playwright MCP server** — Use the MCP server to open the running app in a
   real browser and visually verify UI changes. Always do this for stories that
   touch UI.
+- **Edge Functions** — Extract business logic into testable modules; test with
+  Vitest. Use HTTP integration tests for end-to-end verification.
+  See [Edge Functions Testing](../kb/docs/testing/edge_functions.md).
+- **Accessibility** — Use `@axe-core/playwright` in E2E tests. Every user
+  journey test should include an accessibility check.
+  See [Accessibility Testing](../kb/docs/testing/accessibility.md).
 
 ## Technology References
 
