@@ -46,6 +46,20 @@ After completing code changes, always verify:
 3. `pnpm build` — succeeds with no warnings
 4. `supabase db reset` — migrations apply cleanly (if schema was changed)
 5. `pnpm db:types:local` — regenerate types (if schema was changed)
+6. `pnpm test:e2e` — E2E tests pass (if tests exist for affected area)
+7. Visual verification via Playwright MCP server (if UI was changed)
+
+## Playwright
+
+Two usage modes:
+
+- **MCP server** — Use the Playwright MCP server to open the running app in a
+  real browser and visually verify UI changes after implementation. Always do
+  this for stories that touch UI.
+- **E2E test suite** — Tests live in `e2e/`. Run with `pnpm test:e2e`. Write
+  new E2E tests when a story introduces a new user flow.
+
+See [Playwright E2E Testing](../kb/docs/testing/playwright.md) for details.
 
 ## Technology References
 
