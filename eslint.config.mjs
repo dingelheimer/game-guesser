@@ -3,7 +3,17 @@ import tseslint from "typescript-eslint";
 import nextPlugin from "@next/eslint-plugin-next";
 
 export default tseslint.config(
-  { ignores: [".next/**", "out/**", "build/**", "next-env.d.ts", "*.mjs"] },
+  {
+    ignores: [
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+      "*.mjs",
+      // Deno Edge Functions — use Deno LSP for type-checking these files
+      "supabase/functions/**",
+    ],
+  },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   {
@@ -34,6 +44,9 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      // Vitest mock patterns: method access in expect() calls and async mocks without await
+      "@typescript-eslint/unbound-method": "off",
+      "@typescript-eslint/require-await": "off",
     },
   },
 );

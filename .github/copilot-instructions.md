@@ -1,4 +1,4 @@
-# Copilot Instructions for Game Guesser
+﻿# Copilot Instructions for Game Guesser
 
 ## Project Overview
 
@@ -9,7 +9,7 @@ Vercel.
 
 ## Knowledge Base
 
-This project is managed by the CT-SmartHorseshoe AI Agent Development System.
+This project is managed by an AI Agent Development System.
 Always start at the KB entry point and follow links:
 
 @../kb/docs/index.md
