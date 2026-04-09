@@ -1,4 +1,4 @@
-# Copilot Instructions for Game Guesser
+﻿# Copilot Instructions for Game Guesser
 
 ## Project Overview
 
