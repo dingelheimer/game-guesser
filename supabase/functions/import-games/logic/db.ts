@@ -136,5 +136,25 @@ export function createDbOperations(supabase: SupabaseClient): DbOperations {
       const { error } = await supabase.rpc("compute_popularity_scores");
       if (error) throw new Error(`refreshRankings failed: ${error.message}`);
     },
+
+    async getImportProgress(): Promise<number | null> {
+      const { data, error } = await supabase
+        .from("sync_state")
+        .select("value")
+        .eq("key", "import_last_completed_year")
+        .maybeSingle();
+      if (error) throw new Error(`getImportProgress failed: ${error.message}`);
+      if (data === null) return null;
+      const parsed = parseInt((data as { value: string }).value, 10);
+      return isNaN(parsed) ? null : parsed;
+    },
+
+    async saveImportProgress(year: number): Promise<void> {
+      const { error } = await supabase.from("sync_state").upsert(
+        { key: "import_last_completed_year", value: String(year) },
+        { onConflict: "key" },
+      );
+      if (error) throw new Error(`saveImportProgress failed: ${error.message}`);
+    },
   };
 }
