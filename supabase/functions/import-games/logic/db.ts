@@ -131,5 +131,10 @@ export function createDbOperations(supabase: SupabaseClient): DbOperations {
         );
       }
     },
+
+    async refreshRankings(): Promise<void> {
+      const { error } = await supabase.rpc("compute_popularity_scores");
+      if (error) throw new Error(`refreshRankings failed: ${error.message}`);
+    },
   };
 }

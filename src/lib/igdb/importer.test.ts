@@ -61,6 +61,7 @@ function makeMockDb(overrides: Partial<DbOperations> = {}): DbOperations {
     replaceScreenshots: vi.fn((): Promise<void> => Promise.resolve()),
     replaceGamePlatforms: vi.fn((): Promise<void> => Promise.resolve()),
     replaceGameGenres: vi.fn((): Promise<void> => Promise.resolve()),
+    refreshRankings: vi.fn((): Promise<void> => Promise.resolve()),
     ...overrides,
   };
 }
@@ -308,5 +309,34 @@ describe("importGames", () => {
     expect(result).toHaveProperty("total_skipped");
     expect(result).toHaveProperty("years");
     expect(Array.isArray(result.years)).toBe(true);
+  });
+
+  it("calls refreshRankings once after all years are imported", async () => {
+    const fetcher: IgdbFetcher = vi
+      .fn()
+      .mockResolvedValueOnce([makeGame({ id: 1 })])
+      .mockResolvedValueOnce([makeGame({ id: 2 })]);
+
+    await importGames(
+      { start_year: 2000, end_year: 2001, min_rating_count: 5 },
+      fetcher,
+      db,
+      () => {},
+    );
+
+    expect(db.refreshRankings).toHaveBeenCalledOnce();
+  });
+
+  it("logs a message when rankings are refreshed", async () => {
+    const fetcher: IgdbFetcher = vi.fn().mockResolvedValueOnce([]);
+
+    await importGames(
+      { start_year: 2020, end_year: 2020, min_rating_count: 5 },
+      fetcher,
+      db,
+      (msg) => logs.push(msg),
+    );
+
+    expect(logs.some((l) => l.toLowerCase().includes("ranking"))).toBe(true);
   });
 });

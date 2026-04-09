@@ -57,6 +57,8 @@ export interface DbOperations {
   ): Promise<void>;
   /** Delete all genre associations for gameDbId, then insert fresh ones. */
   replaceGameGenres(gameDbId: number, genreDbIds: number[]): Promise<void>;
+  /** Recompute popularity_score and popularity_rank_per_year for all games. */
+  refreshRankings(): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +281,10 @@ export async function importGames(
   log(
     `[import-games] Complete: ${String(totalImported)} total imported, ${String(totalSkipped)} skipped`,
   );
+
+  log("[import-games] Refreshing popularity scores and difficulty rankings...");
+  await db.refreshRankings();
+  log("[import-games] Rankings refreshed.");
 
   return {
     total_imported: totalImported,
