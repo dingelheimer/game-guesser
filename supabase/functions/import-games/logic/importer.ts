@@ -59,6 +59,13 @@ export interface DbOperations {
   replaceGameGenres(gameDbId: number, genreDbIds: number[]): Promise<void>;
   /** Recompute popularity_score and popularity_rank_per_year for all games. */
   refreshRankings(): Promise<void>;
+  /**
+   * Return the last year that was fully processed in a previous import run,
+   * or null if no progress has been saved yet.
+   */
+  getImportProgress(): Promise<number | null>;
+  /** Persist the last fully-processed year so a future run can resume. */
+  saveImportProgress(year: number): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,6 +76,12 @@ export interface ImportParams {
   start_year: number;
   end_year: number;
   min_rating_count: number;
+  /**
+   * When true (the default), skip years that were already fully processed in a
+   * previous run by reading progress from the database. Pass false to force a
+   * full re-import from start_year.
+   */
+  resume?: boolean;
 }
 
 export interface YearResult {
@@ -227,7 +240,27 @@ export async function importGames(
   let totalImported = 0;
   let totalSkipped = 0;
 
-  for (let year = params.start_year; year <= params.end_year; year++) {
+  // --- Resume support ---
+  const shouldResume = params.resume !== false;
+  let effectiveStartYear = params.start_year;
+
+  if (shouldResume) {
+    const lastCompleted = await db.getImportProgress();
+    if (lastCompleted !== null && lastCompleted >= params.start_year) {
+      effectiveStartYear = lastCompleted + 1;
+      if (effectiveStartYear > params.end_year) {
+        log(
+          `[import-games] Already completed through year ${String(lastCompleted)}, nothing to do.`,
+        );
+        return { total_imported: 0, total_skipped: 0, years: [] };
+      }
+      log(
+        `[import-games] Resuming from year ${String(effectiveStartYear)} (last completed: ${String(lastCompleted)})`,
+      );
+    }
+  }
+
+  for (let year = effectiveStartYear; year <= params.end_year; year++) {
     let offset = 0;
     let yearImported = 0;
     let yearSkipped = 0;
@@ -276,6 +309,10 @@ export async function importGames(
     years.push({ year, imported: yearImported, skipped: yearSkipped, pages });
     totalImported += yearImported;
     totalSkipped += yearSkipped;
+
+    if (shouldResume) {
+      await db.saveImportProgress(year);
+    }
   }
 
   log(

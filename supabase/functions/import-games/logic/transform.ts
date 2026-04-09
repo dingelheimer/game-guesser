@@ -234,7 +234,7 @@ export function buildImportQuery(
     `    & first_release_date < ${String(endUnix)}`,
     "    & cover != null",
     "    & screenshots != null",
-    "    & (category = 0 | category = 8 | category = 9)",
+    "    & (category = null | category = 0 | category = 8 | category = 9)",
     `    & rating_count >= ${String(minRatingCount)};`,
     "sort first_release_date asc;",
     `limit ${String(IGDB_PAGE_SIZE)};`,

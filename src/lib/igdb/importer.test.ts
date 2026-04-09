@@ -62,6 +62,8 @@ function makeMockDb(overrides: Partial<DbOperations> = {}): DbOperations {
     replaceGamePlatforms: vi.fn((): Promise<void> => Promise.resolve()),
     replaceGameGenres: vi.fn((): Promise<void> => Promise.resolve()),
     refreshRankings: vi.fn((): Promise<void> => Promise.resolve()),
+    getImportProgress: vi.fn((): Promise<number | null> => Promise.resolve(null)),
+    saveImportProgress: vi.fn((): Promise<void> => Promise.resolve()),
     ...overrides,
   };
 }
@@ -338,5 +340,92 @@ describe("importGames", () => {
     );
 
     expect(logs.some((l) => l.toLowerCase().includes("ranking"))).toBe(true);
+  });
+
+  it("saves progress after each completed year", async () => {
+    const fetcher: IgdbFetcher = vi
+      .fn()
+      .mockResolvedValueOnce([makeGame({ id: 1 })])
+      .mockResolvedValueOnce([makeGame({ id: 2 })]);
+
+    await importGames(
+      { start_year: 2000, end_year: 2001, min_rating_count: 5 },
+      fetcher,
+      db,
+      () => {},
+    );
+
+    expect(db.saveImportProgress).toHaveBeenCalledTimes(2);
+    expect(db.saveImportProgress).toHaveBeenNthCalledWith(1, 2000);
+    expect(db.saveImportProgress).toHaveBeenNthCalledWith(2, 2001);
+  });
+
+  it("resumes from the year after the last completed year", async () => {
+    const dbWithProgress = makeMockDb({
+      getImportProgress: vi.fn((): Promise<number | null> =>
+        Promise.resolve(2001),
+      ),
+    });
+    const fetcher: IgdbFetcher = vi
+      .fn()
+      .mockResolvedValueOnce([makeGame({ id: 3 })]);
+
+    const result = await importGames(
+      { start_year: 2000, end_year: 2002, min_rating_count: 5 },
+      fetcher,
+      dbWithProgress,
+      (msg) => logs.push(msg),
+    );
+
+    // Should only process 2002 (2000 and 2001 were already done)
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(result.years).toHaveLength(1);
+    expect(result.years[0]?.year).toBe(2002);
+    expect(logs.some((l) => l.includes("Resuming from year 2002"))).toBe(true);
+  });
+
+  it("returns empty result when all years already completed", async () => {
+    const dbWithProgress = makeMockDb({
+      getImportProgress: vi.fn((): Promise<number | null> =>
+        Promise.resolve(2025),
+      ),
+    });
+    const fetcher: IgdbFetcher = vi.fn();
+
+    const result = await importGames(
+      { start_year: 2020, end_year: 2025, min_rating_count: 5 },
+      fetcher,
+      dbWithProgress,
+      (msg) => logs.push(msg),
+    );
+
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(result.total_imported).toBe(0);
+    expect(result.years).toHaveLength(0);
+    expect(logs.some((l) => l.includes("nothing to do"))).toBe(true);
+  });
+
+  it("does not resume when resume: false is passed", async () => {
+    const dbWithProgress = makeMockDb({
+      getImportProgress: vi.fn((): Promise<number | null> =>
+        Promise.resolve(2001),
+      ),
+    });
+    const fetcher: IgdbFetcher = vi
+      .fn()
+      .mockResolvedValueOnce([makeGame({ id: 1 })])
+      .mockResolvedValueOnce([makeGame({ id: 2 })]);
+
+    const result = await importGames(
+      { start_year: 2000, end_year: 2001, min_rating_count: 5, resume: false },
+      fetcher,
+      dbWithProgress,
+      () => {},
+    );
+
+    // Should process both years even though 2001 was "completed"
+    expect(result.years).toHaveLength(2);
+    expect(dbWithProgress.getImportProgress).not.toHaveBeenCalled();
+    expect(dbWithProgress.saveImportProgress).not.toHaveBeenCalled();
   });
 });

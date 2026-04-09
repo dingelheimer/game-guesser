@@ -155,6 +155,7 @@ Deno.serve(async (req: Request) => {
       start_year: startYear,
       end_year: endYear,
       min_rating_count: typeof minRatingCount === "number" ? minRatingCount : 5,
+      resume: body["resume"] !== false,
     };
   } catch {
     return new Response(
