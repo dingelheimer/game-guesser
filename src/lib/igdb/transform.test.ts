@@ -290,7 +290,7 @@ describe("buildImportQuery", () => {
 
   it("filters by game categories (main=0, remake=8, remaster=9)", () => {
     const query = buildImportQuery(2010, 0, 0);
-    expect(query).toContain("category = 0 | category = 8 | category = 9");
+    expect(query).toContain("category = null | category = 0 | category = 8 | category = 9");
   });
 
   it("requires cover and screenshots to be present", () => {
