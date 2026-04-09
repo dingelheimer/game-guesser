@@ -11,8 +11,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "db:types": "supabase gen types typescript --local > src/types/supabase.ts",
-    "db:reset": "supabase db reset && pnpm db:types"
+    "db:types": "supabase gen types typescript --linked > src/types/supabase.ts",
+    "db:types:local": "supabase gen types typescript --local > src/types/supabase.ts",
+    "db:push": "supabase db push",
+    "db:reset:local": "supabase db reset && pnpm db:types:local"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
