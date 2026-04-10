@@ -77,6 +77,17 @@ describe("GameCard", () => {
       );
     });
 
+    it("uses mobile screenshot URL for size=timeline variant", () => {
+      render(<GameCard {...defaultProps} size="timeline" />);
+      const imgs = screen.getAllByAltText("Game screenshot");
+      // Verify size=timeline is applied via sizes attribute
+      expect(imgs[0]).toHaveAttribute("sizes", "(max-width: 768px) 40vw, 200px");
+      expect(imgs[0]).toHaveAttribute(
+        "src",
+        "https://images.igdb.com/igdb/image/upload/t_screenshot_med/abc123.jpg",
+      );
+    });
+
     it("labels the card as a mystery card", () => {
       render(<GameCard {...defaultProps} />);
       // getAllByLabelText because both faces share the outer motion.div aria-label

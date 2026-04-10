@@ -324,6 +324,7 @@ export function Timeline({
                   releaseYear={card.releaseYear}
                   platform={card.platform}
                   isRevealed={card.isRevealed}
+                  size="timeline"
                   className="w-[40vw] md:w-[140px]"
                 />
                 <YearMarker year={card.releaseYear} />

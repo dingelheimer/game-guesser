@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useReducedMotion, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { coverUrl, screenshotUrl } from "@/lib/igdb/images";
+import { coverUrl, screenshotUrl, screenshotUrlMobile } from "@/lib/igdb/images";
 
 export interface GameCardProps {
   /** IGDB image ID for the screenshot shown during guessing. */
@@ -21,6 +21,12 @@ export interface GameCardProps {
   isRevealed: boolean;
   /** Show skeleton placeholder while images are loading. */
   isLoading?: boolean;
+  /**
+   * Card size variant.
+   * - `"hero"` (default): current-card area; uses full-size screenshots.
+   * - `"timeline"`: compact placed card; uses mobile-optimised screenshots.
+   */
+  size?: "hero" | "timeline";
   className?: string;
 }
 
@@ -39,9 +45,22 @@ export function GameCard({
   platform,
   isRevealed,
   isLoading = false,
+  size = "hero",
   className,
 }: GameCardProps) {
   const reduceMotion = useReducedMotion();
+
+  const screenshotSrc =
+    screenshotImageId !== null
+      ? size === "timeline"
+        ? screenshotUrlMobile(screenshotImageId)
+        : screenshotUrl(screenshotImageId)
+      : null;
+
+  const screenshotSizes =
+    size === "timeline"
+      ? "(max-width: 768px) 40vw, 200px"
+      : "(max-width: 768px) 80vw, 480px";
 
   if (isLoading) {
     return (
@@ -82,22 +101,22 @@ export function GameCard({
         <div
           className={cn(
             "absolute inset-0 rounded-2xl overflow-hidden",
-            "bg-surface-800 border border-white/10",
+            "bg-surface-900 border border-white/10",
           )}
           style={{ backfaceVisibility: "hidden" }}
           aria-hidden={isRevealed}
         >
-          {screenshotImageId !== null ? (
+          {screenshotSrc !== null ? (
             <Image
-              src={screenshotUrl(screenshotImageId)}
+              src={screenshotSrc}
               alt="Game screenshot"
               fill
-              sizes="(max-width: 768px) 70vw, 200px"
-              className="object-cover"
+              sizes={screenshotSizes}
+              className="object-contain"
               priority={!isRevealed}
             />
           ) : (
-            <div className="h-full w-full bg-surface-700" />
+            <div className="h-full w-full bg-surface-800" />
           )}
 
           {/* Gradient overlay */}
