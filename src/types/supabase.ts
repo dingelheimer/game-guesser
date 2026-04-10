@@ -5,6 +5,14 @@
 import type { DifficultyTier } from "@/lib/difficulty";
 export type { DifficultyTier };
 
+export type SoloSessionStatus = "active" | "game_over";
+
+/** A single entry in the solo session timeline (stored as JSONB). */
+export interface SoloTimelineEntry {
+  game_id: number;
+  release_year: number;
+}
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type CurationStatus = "curated" | "uncurated" | "rejected";
@@ -202,6 +210,53 @@ export interface Database {
           value?: string;
         };
       };
+      solo_sessions: {
+        Row: {
+          id: string; // UUID
+          difficulty: DifficultyTier;
+          status: SoloSessionStatus;
+          score: number;
+          turns_played: number;
+          best_streak: number;
+          current_streak: number;
+          deck: number[]; // bigint[] — game IDs; deck[0] is the current card
+          timeline: SoloTimelineEntry[]; // JSONB
+          failed_game_id: number | null;
+          failed_position: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          difficulty: DifficultyTier;
+          status?: SoloSessionStatus;
+          score?: number;
+          turns_played?: number;
+          best_streak?: number;
+          current_streak?: number;
+          deck: number[];
+          timeline?: SoloTimelineEntry[];
+          failed_game_id?: number | null;
+          failed_position?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          difficulty?: DifficultyTier;
+          status?: SoloSessionStatus;
+          score?: number;
+          turns_played?: number;
+          best_streak?: number;
+          current_streak?: number;
+          deck?: number[];
+          timeline?: SoloTimelineEntry[];
+          failed_game_id?: number | null;
+          failed_position?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       games_by_difficulty: {
@@ -248,5 +303,6 @@ export type Genre = Database["public"]["Tables"]["genres"]["Row"];
 export type Cover = Database["public"]["Tables"]["covers"]["Row"];
 export type Screenshot = Database["public"]["Tables"]["screenshots"]["Row"];
 export type SyncState = Database["public"]["Tables"]["sync_state"]["Row"];
+export type SoloSession = Database["public"]["Tables"]["solo_sessions"]["Row"];
 export type GameByDifficulty =
   Database["public"]["Views"]["games_by_difficulty"]["Row"];
