@@ -81,7 +81,7 @@ describe("GameCard", () => {
       render(<GameCard {...defaultProps} size="timeline" />);
       const imgs = screen.getAllByAltText("Game screenshot");
       // Verify size=timeline is applied via sizes attribute
-      expect(imgs[0]).toHaveAttribute("sizes", "(max-width: 768px) 40vw, 200px");
+      expect(imgs[0]).toHaveAttribute("sizes", "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px");
       expect(imgs[0]).toHaveAttribute(
         "src",
         "https://images.igdb.com/igdb/image/upload/t_screenshot_med/abc123.jpg",
