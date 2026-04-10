@@ -27,18 +27,16 @@ function ScoreBar({
   difficulty: DifficultyTier;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3">
-      <div className="flex items-center gap-1.5 font-mono text-lg font-bold text-text-primary">
+    <div className="bg-surface-800/80 flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 backdrop-blur-xl">
+      <div className="text-text-primary flex items-center gap-1.5 font-mono text-lg font-bold">
         <Trophy className="size-4 text-yellow-400" aria-hidden="true" />
         <span aria-label={`Score: ${score.toString()}`}>{score}</span>
       </div>
 
-      <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+      <div className="text-text-secondary flex items-center gap-1.5 text-sm">
         <Zap className="size-3.5 text-sky-400" aria-hidden="true" />
         <span aria-label={`Current streak: ${streak.toString()}`}>×{streak}</span>
-        <span className="text-xs text-text-secondary/60">
-          best {bestStreak.toString()}
-        </span>
+        <span className="text-text-secondary/60 text-xs">best {bestStreak.toString()}</span>
       </div>
 
       <span
@@ -64,9 +62,7 @@ function PlacementResult({ correct }: { correct: boolean }) {
     <motion.div
       className={cn(
         "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold",
-        correct
-          ? "bg-emerald-500/15 text-emerald-400"
-          : "bg-rose-500/15 text-rose-400",
+        correct ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400",
       )}
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -112,28 +108,26 @@ export function SoloGame() {
   // ── Game over screen ──────────────────────────────────────────────────────
 
   if (phase === "game_over") {
-      return (
-        <div className="flex min-h-screen flex-col">
-          <GameOverScreen
-            difficulty={difficulty}
-            score={score}
-            turnsPlayed={turnsPlayed}
-            bestStreak={bestStreak}
-            timelineItems={timelineItems}
-            failedCard={revealedCard}
-            validPositions={validPositions}
-            endedOnIncorrectPlacement={lastPlacementCorrect === false}
-            onPlayAgain={() => {
-              if (difficulty !== null) {
-                void useSoloGameStore.getState().startGame(difficulty);
-              } else {
-                resetGame();
-              }
-            }}
-            onChangeDifficulty={resetGame}
-          />
-        </div>
-      );
+    return (
+      <GameOverScreen
+        difficulty={difficulty}
+        score={score}
+        turnsPlayed={turnsPlayed}
+        bestStreak={bestStreak}
+        timelineItems={timelineItems}
+        failedCard={revealedCard}
+        validPositions={validPositions}
+        endedOnIncorrectPlacement={lastPlacementCorrect === false}
+        onPlayAgain={() => {
+          if (difficulty !== null) {
+            void useSoloGameStore.getState().startGame(difficulty);
+          } else {
+            resetGame();
+          }
+        }}
+        onChangeDifficulty={resetGame}
+      />
+    );
   }
 
   // ── Active game ───────────────────────────────────────────────────────────
@@ -144,7 +138,7 @@ export function SoloGame() {
     : `hidden-${gameIdOrNone(currentCard?.game_id)}`;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col">
       {/* Score bar */}
       {difficulty !== null && (
         <ScoreBar
@@ -157,16 +151,13 @@ export function SoloGame() {
 
       {/* Error banner */}
       {error !== null && (
-        <div
-          className="bg-rose-500/15 px-4 py-2 text-sm text-rose-400"
-          role="alert"
-        >
+        <div className="bg-rose-500/15 px-4 py-2 text-sm text-rose-400" role="alert">
           {error}
         </div>
       )}
 
       {/* Card area */}
-      <div className="flex flex-col items-center gap-4 px-4 pt-6 pb-4">
+      <div className="flex flex-col items-center gap-6 px-4 pt-6 pb-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={cardKey}
@@ -178,15 +169,13 @@ export function SoloGame() {
             }
             exit={reduceMotion === true ? {} : { opacity: 0, y: -12 }}
             transition={
-              isRevealing && lastPlacementCorrect === false
-                ? { duration: 0.5 }
-                : { duration: 0.25 }
+              isRevealing && lastPlacementCorrect === false ? { duration: 0.5 } : { duration: 0.25 }
             }
             className={cn(
               "relative",
               isRevealing &&
                 lastPlacementCorrect === false &&
-                "ring-2 ring-rose-500 rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.4)]",
+                "rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.4)] ring-2 ring-rose-500",
             )}
           >
             <GameCard
@@ -198,9 +187,7 @@ export function SoloGame() {
               coverImageId={isRevealing ? (revealedCard?.cover_image_id ?? null) : null}
               title={isRevealing ? (revealedCard?.name ?? "?") : "?"}
               releaseYear={isRevealing ? (revealedCard?.release_year ?? 0) : 0}
-              platform={
-                isRevealing ? (revealedCard?.platform_names[0] ?? "Unknown") : "?"
-              }
+              platform={isRevealing ? (revealedCard?.platform_names[0] ?? "Unknown") : "?"}
               isRevealed={isRevealing}
               isLoading={isSubmitting}
             />
@@ -230,9 +217,7 @@ export function SoloGame() {
               <Button
                 onClick={advanceTurn}
                 className="w-full max-w-sm"
-                aria-label={
-                  !lastPlacementCorrect ? "See game over screen" : "Next turn"
-                }
+                aria-label={!lastPlacementCorrect ? "See game over screen" : "Next turn"}
               >
                 {!lastPlacementCorrect ? "See Result" : "Next Turn →"}
               </Button>
@@ -243,13 +228,19 @@ export function SoloGame() {
 
       {/* Timeline */}
       <div className="flex-1 overflow-hidden">
-        <p className="px-4 pb-1 text-xs text-text-secondary/60">
+        <p className="text-text-secondary/60 px-4 pb-1 text-xs">
           {isPlacing ? "Tap a zone to place the card" : "Timeline"}
         </p>
         <Timeline
           placedCards={timelineItems}
           pendingCard={pendingTimelineItem}
-          {...(isPlacing ? { onPlaceCard: (pos: number) => { void placeCard(pos); } } : {})}
+          {...(isPlacing
+            ? {
+                onPlaceCard: (pos: number) => {
+                  void placeCard(pos);
+                },
+              }
+            : {})}
         />
       </div>
     </div>
