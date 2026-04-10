@@ -4,21 +4,14 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GameCard } from "@/components/game/GameCard";
+import { GameOverScreen } from "@/components/game/GameOverScreen";
 import { Timeline } from "@/components/game/Timeline";
 import { TitleGuessInput } from "@/components/game/TitleGuessInput";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 import { hiddenToTimelineItem } from "@/stores/soloGameStore";
+import { getSoloDifficultyLabel } from "@/lib/solo/share";
 import type { DifficultyTier } from "@/types/supabase";
-import { Trophy, Zap, Repeat } from "lucide-react";
-
-// ── Difficulty badge labels ───────────────────────────────────────────────────
-
-const DIFFICULTY_LABEL: Record<DifficultyTier, string> = {
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-  extreme: "Extreme",
-};
+import { Trophy, Zap } from "lucide-react";
 
 // ── Score bar ─────────────────────────────────────────────────────────────────
 
@@ -56,9 +49,9 @@ function ScoreBar({
           difficulty === "hard" && "bg-orange-500/20 text-orange-400",
           difficulty === "extreme" && "bg-rose-500/20 text-rose-400",
         )}
-        aria-label={`Difficulty: ${DIFFICULTY_LABEL[difficulty]}`}
+        aria-label={`Difficulty: ${getSoloDifficultyLabel(difficulty)}`}
       >
-        {DIFFICULTY_LABEL[difficulty]}
+        {getSoloDifficultyLabel(difficulty)}
       </span>
     </div>
   );
@@ -85,54 +78,6 @@ function PlacementResult({ correct }: { correct: boolean }) {
   );
 }
 
-// ── Minimal game-over panel (Story 3.5 will replace this with the full screen) ─
-
-function GameOverPanel({
-  score,
-  turnsPlayed,
-  onPlayAgain,
-  onChangeDifficulty,
-}: {
-  score: number;
-  turnsPlayed: number;
-  onPlayAgain: () => void;
-  onChangeDifficulty: () => void;
-}) {
-  return (
-    <motion.div
-      className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-12"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-    >
-      <div className="text-center">
-        <h2 className="font-display text-4xl font-bold text-rose-400">Game Over</h2>
-        <p className="mt-2 text-text-secondary">Better luck next time!</p>
-      </div>
-
-      <div className="flex gap-8 font-mono">
-        <div className="text-center">
-          <div className="text-5xl font-bold text-text-primary">{score}</div>
-          <div className="mt-1 text-sm text-text-secondary">cards placed</div>
-        </div>
-        <div className="text-center">
-          <div className="text-5xl font-bold text-text-primary">{turnsPlayed}</div>
-          <div className="mt-1 text-sm text-text-secondary">turns played</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Button onClick={onPlayAgain} className="gap-2">
-          <Repeat className="size-4" aria-hidden="true" />
-          Play Again
-        </Button>
-        <Button onClick={onChangeDifficulty} variant="outline">
-          Change Difficulty
-        </Button>
-      </div>
-    </motion.div>
-  );
-}
-
 // ── Main SoloGame component ───────────────────────────────────────────────────
 
 export function SoloGame() {
@@ -146,6 +91,7 @@ export function SoloGame() {
   const bestStreak = useSoloGameStore((s) => s.bestStreak);
   const currentStreak = useSoloGameStore((s) => s.currentStreak);
   const lastPlacementCorrect = useSoloGameStore((s) => s.lastPlacementCorrect);
+  const validPositions = useSoloGameStore((s) => s.validPositions);
   const titleGuessResult = useSoloGameStore((s) => s.titleGuessResult);
   const error = useSoloGameStore((s) => s.error);
 
@@ -166,22 +112,28 @@ export function SoloGame() {
   // ── Game over screen ──────────────────────────────────────────────────────
 
   if (phase === "game_over") {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <GameOverPanel
-          score={score}
-          turnsPlayed={turnsPlayed}
-          onPlayAgain={() => {
-            if (difficulty !== null) {
-              void useSoloGameStore.getState().startGame(difficulty);
-            } else {
-              resetGame();
-            }
-          }}
-          onChangeDifficulty={resetGame}
-        />
-      </div>
-    );
+      return (
+        <div className="flex min-h-screen flex-col">
+          <GameOverScreen
+            difficulty={difficulty}
+            score={score}
+            turnsPlayed={turnsPlayed}
+            bestStreak={bestStreak}
+            timelineItems={timelineItems}
+            failedCard={revealedCard}
+            validPositions={validPositions}
+            endedOnIncorrectPlacement={lastPlacementCorrect === false}
+            onPlayAgain={() => {
+              if (difficulty !== null) {
+                void useSoloGameStore.getState().startGame(difficulty);
+              } else {
+                resetGame();
+              }
+            }}
+            onChangeDifficulty={resetGame}
+          />
+        </div>
+      );
   }
 
   // ── Active game ───────────────────────────────────────────────────────────
