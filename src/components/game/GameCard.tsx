@@ -59,14 +59,19 @@ export function GameCard({
 
   const screenshotSizes =
     size === "timeline"
-      ? "(max-width: 768px) 40vw, 200px"
-      : "(max-width: 768px) 80vw, 480px";
+      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px"
+      : "(max-width: 768px) 80vw, (max-width: 1024px) 240px, 300px";
+
+  const coverSizes =
+    size === "timeline"
+      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px"
+      : "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px";
 
   if (isLoading) {
     return (
       <div
         className={cn(
-          "w-[70vw] md:w-[200px]",
+          "w-[70vw] md:w-[240px] lg:w-[300px] shrink-0",
           "aspect-[3/4] rounded-2xl overflow-hidden",
           className,
         )}
@@ -82,7 +87,7 @@ export function GameCard({
 
   return (
     <div
-      className={cn("w-[70vw] md:w-[200px] aspect-[3/4]", className)}
+      className={cn("w-[70vw] md:w-[240px] lg:w-[300px] shrink-0 aspect-[3/4]", className)}
       style={{ perspective: "1000px" }}
     >
       <motion.div
@@ -157,7 +162,7 @@ export function GameCard({
                 src={coverUrl(coverImageId)}
                 alt={`${title} cover art`}
                 fill
-                sizes="(max-width: 768px) 70vw, 200px"
+                sizes={coverSizes}
                 className="object-cover"
                 priority={isRevealed}
               />

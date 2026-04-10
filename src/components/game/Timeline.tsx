@@ -131,8 +131,8 @@ function DropZone({
         "min-h-[44px] min-w-[44px]",
         // Mobile: full width, variable height
         "w-full",
-        // Desktop: auto width (grows with animation), fixed height to match cards
-        "md:h-32 md:w-auto",
+        // Desktop: auto width (grows with animation), height matches timeline cards (aspect-[3/4] at md:180px → 240px, lg:200px → 267px)
+        "md:h-[240px] lg:h-[267px] md:w-auto",
         isActive
           ? "border-primary-400 bg-primary-500/20"
           : "border-white/20 bg-transparent hover:border-primary-400/50",
@@ -289,7 +289,7 @@ export function Timeline({
             // Mobile: vertical stack, full width
             "flex flex-col items-stretch gap-2",
             // Desktop: horizontal row with horizontal scroll
-            "md:flex-row md:items-end md:gap-1 md:overflow-x-auto md:pb-4",
+            "md:flex-row md:items-end md:gap-3 md:overflow-x-auto md:pb-4",
             placedCards.length === 0 && "min-h-[80px] justify-center",
           )}
           role="group"
@@ -325,7 +325,7 @@ export function Timeline({
                   platform={card.platform}
                   isRevealed={card.isRevealed}
                   size="timeline"
-                  className="w-[40vw] md:w-[140px]"
+                  className="w-[40vw] md:w-[180px] lg:w-[200px]"
                 />
                 <YearMarker year={card.releaseYear} />
               </div>
