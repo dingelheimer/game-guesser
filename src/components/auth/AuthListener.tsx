@@ -19,8 +19,9 @@ export function AuthListener() {
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         router.push("/");
+      } else {
+        router.refresh();
       }
-      router.refresh();
     });
     return () => {
       subscription.unsubscribe();
