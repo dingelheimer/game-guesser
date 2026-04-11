@@ -228,9 +228,13 @@ export function SoloGame() {
 
       {/* Timeline */}
       <div className="flex-1 overflow-hidden">
-        <p className="text-text-secondary/60 px-4 pb-1 text-xs">
-          {isPlacing ? "Tap a zone to place the card" : "Timeline"}
-        </p>
+        <div className="flex items-center gap-3 px-4 pb-2 pt-1">
+          <div className="bg-surface-700 h-px flex-1" />
+          <span className="text-text-secondary/70 text-xs font-medium uppercase tracking-wider">
+            {isPlacing ? "Timeline — tap a zone to place" : "Timeline"}
+          </span>
+          <div className="bg-surface-700 h-px flex-1" />
+        </div>
         <Timeline
           placedCards={timelineItems}
           pendingCard={pendingTimelineItem}
