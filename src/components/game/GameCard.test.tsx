@@ -8,6 +8,8 @@ vi.mock("next/image", () => ({
     src,
     alt,
     className,
+    fill,
+    priority,
     ...rest
   }: {
     src: string;
@@ -17,16 +19,28 @@ vi.mock("next/image", () => ({
     priority?: boolean;
     className?: string;
     [key: string]: unknown;
-  }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} className={className} {...rest} />
-  ),
+  }) => {
+    void fill;
+    void priority;
+
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={alt} className={className} {...rest} />
+    );
+  },
 }));
 
 // framer-motion: skip animations, pass through children and props
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...rest }: any) => <div {...rest}>{children}</div>,
+    div: ({ children, animate, initial, transition, layout, ...rest }: any) => {
+      void animate;
+      void initial;
+      void transition;
+      void layout;
+
+      return <div {...rest}>{children}</div>;
+    },
   },
   useReducedMotion: vi.fn(() => false),
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -52,6 +66,7 @@ describe("GameCard", () => {
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveAttribute("aria-busy", "true");
       expect(wrapper).toHaveAttribute("aria-label", "Loading game card");
+      expect(wrapper.className).toContain("aspect-video");
     });
 
     it("does not render the mystery badge or title while loading", () => {
@@ -69,21 +84,31 @@ describe("GameCard", () => {
     });
 
     it("renders screenshot image with correct src", () => {
-      render(<GameCard {...defaultProps} />);
+      const { container } = render(<GameCard {...defaultProps} />);
+      const wrapper = container.firstChild as HTMLElement;
       const imgs = screen.getAllByAltText("Game screenshot");
+
+      expect(wrapper.className).toContain("aspect-video");
       expect(imgs[0]).toHaveAttribute(
         "src",
         "https://images.igdb.com/igdb/image/upload/t_screenshot_big/abc123.jpg",
       );
+      expect(imgs[0]).toHaveClass("object-cover");
+      expect(imgs[0]).toHaveAttribute(
+        "sizes",
+        "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px",
+      );
     });
 
     it("uses mobile screenshot URL for size=timeline variant", () => {
-      render(<GameCard {...defaultProps} size="timeline" />);
+      const { container } = render(<GameCard {...defaultProps} size="timeline" />);
+      const wrapper = container.firstChild as HTMLElement;
       const imgs = screen.getAllByAltText("Game screenshot");
       // Verify size=timeline is applied via sizes attribute
+      expect(wrapper.className).toContain("aspect-video");
       expect(imgs[0]).toHaveAttribute(
         "sizes",
-        "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px",
+        "(max-width: 768px) 40vw, (max-width: 1024px) 180px, (max-width: 1280px) 200px, 220px",
       );
       expect(imgs[0]).toHaveAttribute(
         "src",
@@ -103,7 +128,10 @@ describe("GameCard", () => {
     const revealedProps = { ...defaultProps, isRevealed: true };
 
     it("renders the game title", () => {
-      render(<GameCard {...revealedProps} />);
+      const { container } = render(<GameCard {...revealedProps} />);
+      const wrapper = container.firstChild as HTMLElement;
+
+      expect(wrapper.className).toContain("aspect-[3/4]");
       expect(screen.getAllByText("Half-Life 2").length).toBeGreaterThanOrEqual(1);
     });
 
