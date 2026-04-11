@@ -109,6 +109,10 @@ vi.mock("@/components/game/Timeline", () => ({
   }) => timelineMock(props),
 }));
 
+vi.mock("@/lib/auth/actions", () => ({
+  submitScoreAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 vi.mock("@/stores/soloGameStore", () => ({
   hiddenToTimelineItem: vi.fn((card: HiddenCardData) => ({
     id: String(card.game_id),
@@ -172,13 +176,13 @@ describe("SoloGame", () => {
   });
 
   it("uses the wider story 6.3 layout container", () => {
-    const { container } = render(<SoloGame />);
+    const { container } = render(<SoloGame username={null} />);
 
     expect(container.firstElementChild).toHaveClass("max-w-7xl");
   });
 
   it("hides the hero card on desktop during placing", () => {
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     const heroWrapper = screen.getByTestId("hero-card").parentElement;
 
@@ -187,7 +191,7 @@ describe("SoloGame", () => {
   });
 
   it("collapses desktop card-area spacing during placing", () => {
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
 
@@ -197,7 +201,7 @@ describe("SoloGame", () => {
   it("removes the hero card and pending timeline card while submitting", () => {
     mockState = createState({ phase: "submitting" });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     expect(screen.queryByTestId("hero-card")).not.toBeInTheDocument();
     expect(screen.getByTestId("timeline")).toHaveAttribute("data-has-pending", "false");
@@ -210,7 +214,7 @@ describe("SoloGame", () => {
       currentCard: null,
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     const heroWrapper = screen.getByTestId("hero-card").parentElement;
 
@@ -226,7 +230,7 @@ describe("SoloGame", () => {
       currentCard: null,
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
 
@@ -236,7 +240,7 @@ describe("SoloGame", () => {
   });
 
   it("centers the timeline section within the available height", () => {
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     const timelineSection = screen.getByTestId("timeline").parentElement;
 
@@ -256,7 +260,7 @@ describe("SoloGame", () => {
       platformBonusResult: null,
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     expect(screen.getByTestId("hero-card")).toHaveAttribute("data-is-revealed", "true");
     expect(screen.getByText("✓ Correct!")).toBeInTheDocument();
@@ -277,7 +281,7 @@ describe("SoloGame", () => {
       platformBonusResult: null,
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     expect(screen.getByTestId("hero-card")).toHaveAttribute("data-platform", "");
   });
@@ -295,7 +299,7 @@ describe("SoloGame", () => {
       platformBonusResult: "correct",
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     expect(screen.getByTestId("hero-card")).toHaveAttribute("data-platform", "PC");
   });
@@ -310,7 +314,7 @@ describe("SoloGame", () => {
       platformBonusResult: null,
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     expect(screen.getByTestId("hero-card")).toHaveAttribute("data-platform", "PC");
   });
@@ -331,7 +335,7 @@ describe("SoloGame", () => {
       revealMovedCard,
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     expect(screen.queryByText("✗ Wrong placement")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "See game over screen" })).not.toBeInTheDocument();
@@ -375,7 +379,7 @@ describe("SoloGame", () => {
       revealMovedCard,
     });
 
-    render(<SoloGame />);
+    render(<SoloGame username={null} />);
 
     expect(moveCardToCorrectPosition).toHaveBeenCalledTimes(1);
     expect(revealMovedCard).toHaveBeenCalledTimes(1);

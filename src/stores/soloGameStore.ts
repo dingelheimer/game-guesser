@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { DifficultyTier } from "@/types/supabase";
+import type { DifficultyTier } from "@/lib/difficulty";
 import type { TimelineItem } from "@/components/game/Timeline";
 import * as api from "@/lib/solo/api";
 import type { HiddenCardData, RevealedCardData } from "@/lib/solo/api";
