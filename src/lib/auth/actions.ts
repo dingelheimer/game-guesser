@@ -82,7 +82,7 @@ export async function loginAction(
     return { error: "Invalid email or password. Please try again." };
   }
 
-  redirect(parsed.data.next ?? "/play");
+  redirect(parsed.data.next ?? "/");
 }
 
 export async function signUpAction(
@@ -158,7 +158,7 @@ export async function signUpAction(
     return { error: "Failed to create profile. Please try again." };
   }
 
-  redirect("/play");
+  redirect("/");
 }
 
 export async function signOutAction(): Promise<void> {
