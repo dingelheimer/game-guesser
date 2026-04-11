@@ -293,9 +293,13 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
-        {/* ── Pending card (drag source) ─────────────────────────────── */}
+        {/* ── Pending card (drag source) — desktop only ──────────────── */}
+        {/* On mobile, players use tap-to-place via drop zone buttons.     */}
+        {/* Hiding the hero-sized card on mobile avoids doubling the card  */}
+        {/* height (it already appears in the card area) and prevents the  */}
+        {/* heavy vertical scroll needed to reach the drop zones.          */}
         {hasPending && (
-          <div className="flex justify-center">
+          <div className="hidden justify-center md:flex">
             <DraggablePendingCard card={pendingCard} />
           </div>
         )}

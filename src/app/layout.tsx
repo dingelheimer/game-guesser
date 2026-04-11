@@ -55,7 +55,7 @@ export default function RootLayout({
       )}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col bg-surface-900">
+      <body className="bg-surface-900 flex min-h-full flex-col">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <TooltipProvider>
             <NoiseOverlay />

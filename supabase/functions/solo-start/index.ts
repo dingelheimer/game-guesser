@@ -20,10 +20,10 @@ const VALID_DIFFICULTIES = new Set(["easy", "medium", "hard", "extreme"]);
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed. Use POST." }),
-      { status: 405, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed. Use POST." }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Parse and validate request body
@@ -42,10 +42,10 @@ Deno.serve(async (req: Request) => {
     }
     difficulty = d;
   } catch {
-    return new Response(
-      JSON.stringify({ error: "Invalid JSON body" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Validate Supabase environment

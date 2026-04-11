@@ -227,7 +227,7 @@ export function SoloGame() {
       </div>
 
       {/* Timeline */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1">
         <div className="flex items-center gap-3 px-4 pb-2 pt-1">
           <div className="bg-surface-700 h-px flex-1" />
           <span className="text-text-secondary/70 text-xs font-medium uppercase tracking-wider">

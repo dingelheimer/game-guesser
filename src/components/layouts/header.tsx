@@ -12,11 +12,11 @@ const navItems = [
 
 export function Header() {
   return (
-    <header className="hidden border-b border-border/50 bg-surface-800/80 backdrop-blur-xl md:block">
+    <header className="border-border/50 bg-surface-800/80 hidden border-b backdrop-blur-xl md:block">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2">
-          <Gamepad2 className="h-7 w-7 text-primary-400" />
-          <span className="font-display text-xl font-bold tracking-tight text-text-primary">
+          <Gamepad2 className="text-primary-400 h-7 w-7" />
+          <span className="font-display text-text-primary text-xl font-bold tracking-tight">
             Game Guesser
           </span>
         </Link>
@@ -26,7 +26,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-all duration-200 hover:bg-surface-700 hover:text-text-primary"
+              className="text-text-secondary hover:bg-surface-700 hover:text-text-primary flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200"
             >
               <item.icon className="h-4 w-4" />
               {item.label}

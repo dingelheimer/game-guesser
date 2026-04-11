@@ -45,9 +45,7 @@ describe("transformGame", () => {
     expect(result.total_rating_count).toBe(4500);
     expect(result.follows).toBe(12000);
     expect(result.hypes).toBe(100);
-    expect(result.igdb_updated_at).toBe(
-      new Date(1700000000 * 1000).toISOString(),
-    );
+    expect(result.igdb_updated_at).toBe(new Date(1700000000 * 1000).toISOString());
   });
 
   it("uses 0 as default for missing count and engagement fields", () => {
@@ -165,9 +163,7 @@ describe("transformGenre", () => {
 
 describe("transformCover", () => {
   it("transforms a cover with all fields", () => {
-    expect(
-      transformCover({ id: 100, image_id: "co1wyy", width: 264, height: 374 }, 42),
-    ).toEqual({
+    expect(transformCover({ id: 100, image_id: "co1wyy", width: 264, height: 374 }, 42)).toEqual({
       game_id: 42,
       igdb_image_id: "co1wyy",
       width: 264,
@@ -222,11 +218,7 @@ describe("transformScreenshots", () => {
 
   it("filters out screenshots without image_id", () => {
     const result = transformScreenshots(
-      [
-        { id: 1, image_id: "sc1" },
-        { id: 2 },
-        { id: 3, image_id: "sc3" },
-      ],
+      [{ id: 1, image_id: "sc1" }, { id: 2 }, { id: 3, image_id: "sc3" }],
       1,
     );
     expect(result).toHaveLength(2);
@@ -283,9 +275,7 @@ describe("buildImportQuery", () => {
   });
 
   it("sets limit to IGDB_PAGE_SIZE", () => {
-    expect(buildImportQuery(2010, 0, 0)).toContain(
-      `limit ${String(IGDB_PAGE_SIZE)}`,
-    );
+    expect(buildImportQuery(2010, 0, 0)).toContain(`limit ${String(IGDB_PAGE_SIZE)}`);
   });
 
   it("filters by game categories (main=0, remake=8, remaster=9)", () => {

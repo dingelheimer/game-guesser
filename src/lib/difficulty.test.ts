@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  computePopularityScore,
-  DIFFICULTY_THRESHOLDS,
-  rankToTier,
-} from "./difficulty";
+import { computePopularityScore, DIFFICULTY_THRESHOLDS, rankToTier } from "./difficulty";
 
 describe("DIFFICULTY_THRESHOLDS", () => {
   it("easy is top 10", () => {
@@ -62,9 +58,7 @@ describe("rankToTier", () => {
 
 describe("computePopularityScore", () => {
   it("applies weights: rating_count × 1.0, follows × 0.5, hypes × 0.2", () => {
-    expect(computePopularityScore(100, 50, 10)).toBe(
-      100 * 1.0 + 50 * 0.5 + 10 * 0.2,
-    );
+    expect(computePopularityScore(100, 50, 10)).toBe(100 * 1.0 + 50 * 0.5 + 10 * 0.2);
   });
 
   it("returns 0 for all-zero inputs", () => {

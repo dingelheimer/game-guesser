@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  importGames,
-  processBatch,
-} from "../../../supabase/functions/import-games/logic/importer";
+import { importGames, processBatch } from "../../../supabase/functions/import-games/logic/importer";
 import type {
   DbOperations,
   IgdbFetcher,
@@ -101,9 +98,9 @@ describe("processBatch", () => {
     ];
     await processBatch(games, db);
 
-    const platformArgs = (
-      db.upsertPlatforms as ReturnType<typeof vi.fn>
-    ).mock.calls[0]?.[0] as PlatformInsert[] | undefined;
+    const platformArgs = (db.upsertPlatforms as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as
+      | PlatformInsert[]
+      | undefined;
     expect(platformArgs).toHaveLength(1);
   });
 
@@ -133,8 +130,9 @@ describe("processBatch", () => {
   it("calls replaceScreenshots with empty array when game has no screenshots", async () => {
     const games = [makeGame({ screenshots: [] })];
     await processBatch(games, db);
-    const args = (db.replaceScreenshots as ReturnType<typeof vi.fn>).mock
-      .calls[0] as [number, ScreenshotInsert[]] | undefined;
+    const args = (db.replaceScreenshots as ReturnType<typeof vi.fn>).mock.calls[0] as
+      | [number, ScreenshotInsert[]]
+      | undefined;
     expect(args?.[1]).toHaveLength(0);
   });
 
@@ -196,9 +194,7 @@ describe("importGames", () => {
   });
 
   it("paginates when a page returns IGDB_PAGE_SIZE (500) results", async () => {
-    const fullPage = Array.from({ length: 500 }, (_, i) =>
-      makeGame({ id: i + 1 }),
-    );
+    const fullPage = Array.from({ length: 500 }, (_, i) => makeGame({ id: i + 1 }));
     const lastPage = [makeGame({ id: 501 })];
     const fetcher: IgdbFetcher = vi
       .fn()
@@ -217,9 +213,7 @@ describe("importGames", () => {
   });
 
   it("stops pagination when a page returns fewer than 500 results", async () => {
-    const fetcher: IgdbFetcher = vi
-      .fn()
-      .mockResolvedValueOnce([makeGame()]);
+    const fetcher: IgdbFetcher = vi.fn().mockResolvedValueOnce([makeGame()]);
 
     await importGames(
       { start_year: 2000, end_year: 2000, min_rating_count: 5 },
@@ -282,9 +276,7 @@ describe("importGames", () => {
   });
 
   it("logs progress messages", async () => {
-    const fetcher: IgdbFetcher = vi
-      .fn()
-      .mockResolvedValueOnce([makeGame()]);
+    const fetcher: IgdbFetcher = vi.fn().mockResolvedValueOnce([makeGame()]);
 
     await importGames(
       { start_year: 2000, end_year: 2000, min_rating_count: 5 },
@@ -362,13 +354,9 @@ describe("importGames", () => {
 
   it("resumes from the year after the last completed year", async () => {
     const dbWithProgress = makeMockDb({
-      getImportProgress: vi.fn((): Promise<number | null> =>
-        Promise.resolve(2001),
-      ),
+      getImportProgress: vi.fn((): Promise<number | null> => Promise.resolve(2001)),
     });
-    const fetcher: IgdbFetcher = vi
-      .fn()
-      .mockResolvedValueOnce([makeGame({ id: 3 })]);
+    const fetcher: IgdbFetcher = vi.fn().mockResolvedValueOnce([makeGame({ id: 3 })]);
 
     const result = await importGames(
       { start_year: 2000, end_year: 2002, min_rating_count: 5 },
@@ -386,9 +374,7 @@ describe("importGames", () => {
 
   it("returns empty result when all years already completed", async () => {
     const dbWithProgress = makeMockDb({
-      getImportProgress: vi.fn((): Promise<number | null> =>
-        Promise.resolve(2025),
-      ),
+      getImportProgress: vi.fn((): Promise<number | null> => Promise.resolve(2025)),
     });
     const fetcher: IgdbFetcher = vi.fn();
 
@@ -407,9 +393,7 @@ describe("importGames", () => {
 
   it("does not resume when resume: false is passed", async () => {
     const dbWithProgress = makeMockDb({
-      getImportProgress: vi.fn((): Promise<number | null> =>
-        Promise.resolve(2001),
-      ),
+      getImportProgress: vi.fn((): Promise<number | null> => Promise.resolve(2001)),
     });
     const fetcher: IgdbFetcher = vi
       .fn()

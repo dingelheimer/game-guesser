@@ -7,7 +7,12 @@ export async function updateSession(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   // Pass through if Supabase is not configured (e.g. local dev without .env.local)
-  if (supabaseUrl === undefined || supabaseUrl === "" || supabaseKey === undefined || supabaseKey === "") {
+  if (
+    supabaseUrl === undefined ||
+    supabaseUrl === "" ||
+    supabaseKey === undefined ||
+    supabaseKey === ""
+  ) {
     return NextResponse.next({ request });
   }
 
