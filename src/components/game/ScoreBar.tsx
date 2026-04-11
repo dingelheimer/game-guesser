@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Trophy, Zap } from "lucide-react";
 import { getSoloDifficultyLabel } from "@/lib/solo/share";
 import { cn } from "@/lib/utils";
-import type { DifficultyTier } from "@/types/supabase";
+import type { DifficultyTier } from "@/lib/difficulty";
 
 const BONUS_BADGE_DURATION_MS = 1800;
 

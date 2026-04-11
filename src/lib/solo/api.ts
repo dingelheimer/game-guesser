@@ -4,7 +4,7 @@
  */
 
 import { createClient } from "@/lib/supabase/client";
-import type { DifficultyTier } from "@/types/supabase";
+import type { DifficultyTier } from "@/lib/difficulty";
 
 // ── Response types (mirrors Edge Function output shapes) ─────────────────────
 

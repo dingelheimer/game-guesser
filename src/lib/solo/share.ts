@@ -1,4 +1,4 @@
-import type { DifficultyTier } from "@/types/supabase";
+import type { DifficultyTier } from "@/lib/difficulty";
 
 const DIFFICULTY_LABELS: Record<DifficultyTier, string> = {
   easy: "Easy",
