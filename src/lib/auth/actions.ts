@@ -131,12 +131,12 @@ export async function signUpAction(
     if (signUpError.message.toLowerCase().includes("already registered")) {
       return { error: "An account with this email already exists." };
     }
-    return { error: "Sign-up failed. Please try again." };
+    return { error: `Sign-up failed: ${signUpError.message}` };
   }
 
   const userId = authData.user?.id;
   if (userId === undefined) {
-    return { error: "Sign-up failed. Please try again." };
+    return { error: "Sign-up failed: no user returned. Check email confirmation settings." };
   }
 
   const { error: profileError } = await supabase
