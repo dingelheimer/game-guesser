@@ -11,7 +11,7 @@ export function SoloGamePage() {
   const startGame = useSoloGameStore((s) => s.startGame);
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       {phase === "idle" && (
         <motion.div
           key="difficulty"
