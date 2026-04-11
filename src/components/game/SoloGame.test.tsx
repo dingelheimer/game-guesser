@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import type { HiddenCardData, RevealedCardData } from "@/lib/solo/api";
@@ -19,9 +19,24 @@ const mockRevealedCard: RevealedCardData = {
   platform_names: ["PC"],
 };
 
-const timelineMock = vi.fn(({ pendingCard }: { pendingCard?: unknown }) => (
-  <div data-has-pending={pendingCard != null ? "true" : "false"} data-testid="timeline" />
-));
+const timelineMock = vi.fn(
+  ({
+    pendingCard,
+    highlightedCardId,
+    highlightedCardTone,
+  }: {
+    pendingCard?: unknown;
+    highlightedCardId?: string | null;
+    highlightedCardTone?: "error" | null;
+  }) => (
+    <div
+      data-has-pending={pendingCard != null ? "true" : "false"}
+      data-highlighted-card-id={highlightedCardId ?? ""}
+      data-highlighted-card-tone={highlightedCardTone ?? ""}
+      data-testid="timeline"
+    />
+  ),
+);
 
 const gameCardMock = vi.fn(
   ({
@@ -43,6 +58,9 @@ const gameCardMock = vi.fn(
 );
 
 let mockState: SoloGameState;
+const hoistedMotion = vi.hoisted(() => ({
+  mockUseReducedMotion: vi.fn(() => false),
+}));
 
 vi.mock("framer-motion", () => ({
   motion: {
@@ -54,7 +72,7 @@ vi.mock("framer-motion", () => ({
     } & HTMLAttributes<HTMLDivElement>) => <div {...rest}>{children}</div>,
   },
   AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  useReducedMotion: vi.fn(() => false),
+  useReducedMotion: hoistedMotion.mockUseReducedMotion,
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -84,7 +102,11 @@ vi.mock("@/components/game/ScoreBar", () => ({
 }));
 
 vi.mock("@/components/game/Timeline", () => ({
-  Timeline: (props: { pendingCard?: unknown }) => timelineMock(props),
+  Timeline: (props: {
+    pendingCard?: unknown;
+    highlightedCardId?: string | null;
+    highlightedCardTone?: "error" | null;
+  }) => timelineMock(props),
 }));
 
 vi.mock("@/stores/soloGameStore", () => ({
@@ -117,6 +139,8 @@ function createState(overrides: Partial<SoloGameState> = {}): SoloGameState {
     nextCard: null,
     revealedCard: mockRevealedCard,
     timelineItems: [],
+    droppedPosition: null,
+    correctionTargetPosition: null,
     score: 3,
     turnsPlayed: 2,
     bestStreak: 2,
@@ -130,6 +154,8 @@ function createState(overrides: Partial<SoloGameState> = {}): SoloGameState {
     platformBonusResult: null,
     startGame: vi.fn(async () => {}),
     placeCard: vi.fn(async () => {}),
+    moveCardToCorrectPosition: vi.fn(),
+    revealMovedCard: vi.fn(),
     submitPlatformGuess: vi.fn(),
     advanceTurn: vi.fn(),
     resetGame: vi.fn(),
@@ -140,6 +166,8 @@ function createState(overrides: Partial<SoloGameState> = {}): SoloGameState {
 describe("SoloGame", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    hoistedMotion.mockUseReducedMotion.mockReturnValue(false);
     mockState = createState();
   });
 
@@ -158,15 +186,21 @@ describe("SoloGame", () => {
     expect(screen.getByTestId("timeline")).toHaveAttribute("data-has-pending", "true");
   });
 
-  it("keeps the hero card hidden on desktop while submitting", () => {
+  it("collapses desktop card-area spacing during placing", () => {
+    render(<SoloGame />);
+
+    const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
+
+    expect(cardArea).toHaveClass("md:gap-0", "md:pt-0", "md:pb-0");
+  });
+
+  it("removes the hero card and pending timeline card while submitting", () => {
     mockState = createState({ phase: "submitting" });
 
     render(<SoloGame />);
 
-    const heroWrapper = screen.getByTestId("hero-card").parentElement;
-
-    expect(heroWrapper).toHaveClass("md:hidden");
-    expect(screen.getByTestId("hero-card")).toHaveAttribute("data-is-loading", "true");
+    expect(screen.queryByTestId("hero-card")).not.toBeInTheDocument();
+    expect(screen.getByTestId("timeline")).toHaveAttribute("data-has-pending", "false");
   });
 
   it("shows the hero card on all screen sizes during revealing", () => {
@@ -183,6 +217,51 @@ describe("SoloGame", () => {
     expect(heroWrapper).not.toHaveClass("md:hidden");
     expect(screen.getByTestId("hero-card")).toHaveAttribute("data-is-revealed", "true");
     expect(screen.getByTestId("timeline")).toHaveAttribute("data-has-pending", "false");
+  });
+
+  it("restores card-area spacing during revealing", () => {
+    mockState = createState({
+      phase: "revealing",
+      lastPlacementCorrect: true,
+      currentCard: null,
+    });
+
+    render(<SoloGame />);
+
+    const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
+
+    expect(cardArea).not.toHaveClass("md:gap-0");
+    expect(cardArea).not.toHaveClass("md:pt-0");
+    expect(cardArea).not.toHaveClass("md:pb-0");
+  });
+
+  it("centers the timeline section within the available height", () => {
+    render(<SoloGame />);
+
+    const timelineSection = screen.getByTestId("timeline").parentElement;
+
+    expect(timelineSection).toHaveClass("flex", "flex-1", "flex-col", "justify-center");
+  });
+
+  it("keeps the hero reveal controls visible after a correct placement", () => {
+    mockState = createState({
+      phase: "revealing",
+      lastPlacementCorrect: true,
+      currentCard: null,
+      availablePlatforms: [
+        { id: 1, name: "PC" },
+        { id: 2, name: "Xbox 360" },
+      ],
+      correctPlatformIds: [1],
+      platformBonusResult: null,
+    });
+
+    render(<SoloGame />);
+
+    expect(screen.getByTestId("hero-card")).toHaveAttribute("data-is-revealed", "true");
+    expect(screen.getByText("✓ Correct!")).toBeInTheDocument();
+    expect(screen.getByTestId("platform-bonus-input")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next turn" })).toBeInTheDocument();
   });
 
   it("hides the revealed platform while the platform bonus is pending", () => {
@@ -234,5 +313,73 @@ describe("SoloGame", () => {
     render(<SoloGame />);
 
     expect(screen.getByTestId("hero-card")).toHaveAttribute("data-platform", "PC");
+  });
+
+  it("delays wrong-placement controls until the timeline animation finishes", () => {
+    vi.useFakeTimers();
+    const moveCardToCorrectPosition = vi.fn();
+    const revealMovedCard = vi.fn();
+
+    mockState = createState({
+      phase: "revealing",
+      lastPlacementCorrect: false,
+      currentCard: null,
+      availablePlatforms: [],
+      correctPlatformIds: [],
+      platformBonusResult: null,
+      moveCardToCorrectPosition,
+      revealMovedCard,
+    });
+
+    render(<SoloGame />);
+
+    expect(screen.queryByText("✗ Wrong placement")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "See game over screen" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("timeline")).toHaveAttribute("data-highlighted-card-id", "7");
+    expect(screen.getByTestId("timeline")).toHaveAttribute("data-highlighted-card-tone", "error");
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(moveCardToCorrectPosition).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(revealMovedCard).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("✗ Wrong placement")).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    expect(screen.getByText("✗ Wrong placement")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "See game over screen" })).toBeInTheDocument();
+  });
+
+  it("reveals incorrect placements instantly when reduced motion is active", () => {
+    hoistedMotion.mockUseReducedMotion.mockReturnValue(true);
+    const moveCardToCorrectPosition = vi.fn();
+    const revealMovedCard = vi.fn();
+
+    mockState = createState({
+      phase: "revealing",
+      lastPlacementCorrect: false,
+      currentCard: null,
+      availablePlatforms: [],
+      correctPlatformIds: [],
+      platformBonusResult: null,
+      moveCardToCorrectPosition,
+      revealMovedCard,
+    });
+
+    render(<SoloGame />);
+
+    expect(moveCardToCorrectPosition).toHaveBeenCalledTimes(1);
+    expect(revealMovedCard).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("✗ Wrong placement")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "See game over screen" })).toBeInTheDocument();
   });
 });

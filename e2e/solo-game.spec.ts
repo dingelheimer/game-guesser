@@ -13,7 +13,9 @@ import { test, expect, type Page } from "@playwright/test";
 
 /** Returns true if the page has a horizontal scrollbar (scrollWidth > clientWidth). */
 async function hasHorizontalScroll(page: Page): Promise<boolean> {
-  return page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  return page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
 }
 
 // ── Difficulty selection ──────────────────────────────────────────────────────

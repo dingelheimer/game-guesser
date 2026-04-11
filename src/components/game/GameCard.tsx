@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useReducedMotion, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScreenshotViewer } from "@/components/game/ScreenshotViewer";
 import { coverUrl, screenshotUrl, screenshotUrlMobile } from "@/lib/igdb/images";
 
 export interface GameCardProps {
@@ -53,7 +54,7 @@ export function GameCard({
   const sizeClasses =
     size === "timeline"
       ? "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]"
-      : "w-[70vw] shrink-0 md:w-[240px] lg:w-[300px]";
+      : "w-[70vw] shrink-0 md:w-[340px] lg:w-[420px] xl:w-[480px]";
   const aspectRatioClass = isRevealed ? "aspect-[3/4]" : "aspect-video";
   const flipTransition = reduceMotion ? { duration: 0 } : { duration: 0.6, ease: motionEase };
   const layoutTransition = reduceMotion
@@ -70,12 +71,12 @@ export function GameCard({
   const screenshotSizes =
     size === "timeline"
       ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, (max-width: 1280px) 200px, 220px"
-      : "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px";
+      : "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px";
 
   const coverSizes =
     size === "timeline"
       ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, (max-width: 1280px) 200px, 220px"
-      : "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px";
+      : "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px";
 
   if (isLoading) {
     return (
@@ -127,6 +128,10 @@ export function GameCard({
           ) : (
             <div className="bg-surface-800 h-full w-full" />
           )}
+
+          {size === "hero" && !isRevealed && screenshotImageId !== null ? (
+            <ScreenshotViewer screenshotImageId={screenshotImageId} title={title} />
+          ) : null}
 
           {/* Gradient overlay */}
           <div className="from-surface-900/90 absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t to-transparent" />

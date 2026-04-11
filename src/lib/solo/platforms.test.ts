@@ -98,9 +98,7 @@ describe("buildPlatformOptions — option count", () => {
     const correct = platforms([1, 2, 3]);
     const needed = maxDistractorsNeeded(3); // 9
     // Provide more than needed
-    const distractors = platforms(
-      Array.from({ length: needed + 5 }, (_, i) => i + 10),
-    );
+    const distractors = platforms(Array.from({ length: needed + 5 }, (_, i) => i + 10));
     const { options } = buildPlatformOptions(correct, distractors);
     expect(options).toHaveLength(3 + needed);
   });

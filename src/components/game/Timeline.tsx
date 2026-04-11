@@ -12,6 +12,8 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  defaultDropAnimationSideEffects,
+  type DropAnimation,
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
@@ -42,6 +44,10 @@ export interface TimelineProps {
    * `position` is 0-based: 0 = before first card, placedCards.length = after last card.
    */
   onPlaceCard?: (position: number) => void;
+  /** Optional highlighted card ID for transient placement feedback. */
+  highlightedCardId?: string | null;
+  /** Visual style for the highlighted card feedback. */
+  highlightedCardTone?: "error" | null;
   className?: string;
 }
 
@@ -215,9 +221,16 @@ function DraggablePendingCard({ card }: { card: TimelineItem }) {
   );
 }
 
-export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: TimelineProps) {
+export function Timeline({
+  placedCards,
+  pendingCard,
+  onPlaceCard,
+  highlightedCardId = null,
+  highlightedCardTone = null,
+  className,
+}: TimelineProps) {
   const reduceMotion = useReducedMotion() ?? false;
-  const [isDragging, setIsDragging] = useState(false);
+  const [activeCard, setActiveCard] = useState<TimelineItem | null>(null);
   const [activeDropZoneId, setActiveDropZoneId] = useState<string | null>(null);
   /**
    * Roving tabindex: tracks which drop zone has tabIndex=0.
@@ -228,6 +241,20 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
   const hasPending = pendingCard != null;
   const zoneCount = placedCards.length + 1;
   const isOverlayOverValidDropZone = activeDropZoneId !== null;
+  const cardLayoutTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.3, ease: [0.25, 1, 0.5, 1] as const };
+  const dropAnimation: DropAnimation = {
+    sideEffects: defaultDropAnimationSideEffects({
+      styles: {
+        active: {
+          opacity: "0",
+        },
+      },
+    }),
+    duration: reduceMotion ? 0 : 300,
+    easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+  };
 
   // Reset the keyboard cursor to zone 0 whenever a new card is placed.
   useEffect(() => {
@@ -274,26 +301,26 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    setIsDragging(false);
     setActiveDropZoneId(null);
     const overId = event.over?.id;
     if (typeof overId === "string") {
       const idx = parseZoneIndex(overId);
       if (idx !== null) handlePlace(idx);
     }
+    setActiveCard(null);
   }
 
   return (
     <DndContext
       sensors={sensors}
       onDragStart={() => {
-        setIsDragging(true);
+        setActiveCard(pendingCard ?? null);
         setActiveDropZoneId(null);
       }}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
-        setIsDragging(false);
+        setActiveCard(null);
         setActiveDropZoneId(null);
       }}
     >
@@ -341,22 +368,47 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
           {placedCards.map((card, i) => (
             <Fragment key={card.id}>
               {/* Placed card with year marker */}
-              <div
+              <motion.div
+                layout
+                animate={
+                  highlightedCardId === card.id && highlightedCardTone === "error" && !reduceMotion
+                    ? { x: [0, -10, 10, -8, 8, -4, 4, 0] }
+                    : { x: 0 }
+                }
+                transition={{
+                  x: {
+                    duration:
+                      highlightedCardId === card.id &&
+                      highlightedCardTone === "error" &&
+                      !reduceMotion
+                        ? 0.4
+                        : 0,
+                  },
+                  layout: cardLayoutTransition,
+                }}
                 className="flex shrink-0 flex-col items-center gap-1"
                 aria-label={`${card.title}, ${String(card.releaseYear)}`}
               >
-                <GameCard
-                  screenshotImageId={card.screenshotImageId}
-                  coverImageId={card.coverImageId}
-                  title={card.title}
-                  releaseYear={card.releaseYear}
-                  platform={card.platform}
-                  isRevealed={card.isRevealed}
-                  size="timeline"
-                  className="w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]"
-                />
-                <YearMarker year={card.releaseYear} />
-              </div>
+                <div
+                  className={cn(
+                    highlightedCardId === card.id &&
+                      highlightedCardTone === "error" &&
+                      "rounded-2xl shadow-[0_0_20px_rgba(244,63,94,0.35)] ring-2 ring-rose-500",
+                  )}
+                >
+                  <GameCard
+                    screenshotImageId={card.screenshotImageId}
+                    coverImageId={card.coverImageId}
+                    title={card.title}
+                    releaseYear={card.releaseYear}
+                    platform={card.platform}
+                    isRevealed={card.isRevealed}
+                    size="timeline"
+                    className="w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]"
+                  />
+                </div>
+                {card.isRevealed ? <YearMarker year={card.releaseYear} /> : null}
+              </motion.div>
 
               {/* Zone after this card (zone i+1) */}
               {hasPending && (
@@ -391,8 +443,8 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
         </div>
       </div>
 
-      <DragOverlay>
-        {isDragging && pendingCard ? (
+      <DragOverlay dropAnimation={dropAnimation}>
+        {activeCard ? (
           <div
             className={cn(
               "pointer-events-none scale-95 rotate-2 opacity-80 transition-shadow duration-150",
@@ -402,12 +454,13 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
             aria-hidden="true"
           >
             <GameCard
-              screenshotImageId={pendingCard.screenshotImageId}
-              coverImageId={pendingCard.coverImageId}
-              title={pendingCard.title}
-              releaseYear={pendingCard.releaseYear}
-              platform={pendingCard.platform}
-              isRevealed={pendingCard.isRevealed}
+              screenshotImageId={activeCard.screenshotImageId}
+              coverImageId={activeCard.coverImageId}
+              title={activeCard.title}
+              releaseYear={activeCard.releaseYear}
+              platform={activeCard.platform}
+              isRevealed={activeCard.isRevealed}
+              size="timeline"
             />
           </div>
         ) : null}
