@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { DifficultyTier } from "@/types/supabase";
+import type { DifficultyTier } from "@/lib/difficulty";
 import { Shield, Zap, Flame, Skull } from "lucide-react";
 
 // ── Difficulty config ─────────────────────────────────────────────────────────
