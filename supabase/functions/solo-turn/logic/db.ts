@@ -5,6 +5,11 @@
 
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { TimelineEntry } from "./validate.ts";
+import { getDisplayName } from "./platform-names.ts";
+import { buildPlatformOptions, maxDistractorsNeeded } from "./platforms.ts";
+import type { PlatformOption } from "./platforms.ts";
+
+export { PlatformOption };
 
 /** Session fields loaded from the database. */
 export interface LoadedSession {
@@ -57,6 +62,11 @@ export interface SoloTurnDbOperations {
   fetchHiddenCardData: (gameId: number) => Promise<HiddenCardData>;
   /** Fetch only the release year for the current card (used for validation). */
   fetchReleaseYear: (gameId: number) => Promise<number>;
+  /** Build platform bonus options (correct platforms + era-based distractors). */
+  fetchPlatformOptions: (
+    gameId: number,
+    releaseYear: number,
+  ) => Promise<{ options: PlatformOption[]; correctIds: number[] }>;
 }
 
 export function createSoloTurnDbOperations(supabase: SupabaseClient): SoloTurnDbOperations {
@@ -143,8 +153,7 @@ export function createSoloTurnDbOperations(supabase: SupabaseClient): SoloTurnDb
       const { data: platforms, error: platformErr } = await supabase
         .from("game_platforms")
         .select("platforms(name)")
-        .eq("game_id", gameId)
-        .limit(3);
+        .eq("game_id", gameId);
 
       if (platformErr !== null) {
         throw new Error(
@@ -154,7 +163,7 @@ export function createSoloTurnDbOperations(supabase: SupabaseClient): SoloTurnDb
 
       const platformNames = (platforms ?? []).flatMap((row) => {
         const p = row.platforms as { name: string } | null;
-        return p !== null ? [p.name] : [];
+        return p !== null ? [getDisplayName(p.name)] : [];
       });
 
       return {
@@ -187,5 +196,104 @@ export function createSoloTurnDbOperations(supabase: SupabaseClient): SoloTurnDb
         screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
       };
     },
+
+    async fetchPlatformOptions(
+      gameId: number,
+      releaseYear: number,
+    ): Promise<{ options: PlatformOption[]; correctIds: number[] }> {
+      // 1. Fetch all correct platforms for this game.
+      const { data: correctData, error: correctErr } = await supabase
+        .from("game_platforms")
+        .select("platforms(id, name)")
+        .eq("game_id", gameId);
+
+      if (correctErr !== null) {
+        throw new Error(
+          `Failed to fetch platforms for game ${gameId.toString()}: ${correctErr.message}`,
+        );
+      }
+
+      const correct: PlatformOption[] = (correctData ?? []).flatMap((row) => {
+        const p = row.platforms as { id: number; name: string } | null;
+        return p !== null ? [{ id: p.id, name: getDisplayName(p.name) }] : [];
+      });
+
+      const correctPlatformIds = correct.map((p) => p.id);
+      const distCount = maxDistractorsNeeded(correct.length);
+
+      // 2. Helper: fetch distractor platforms within a ±halfRange year window.
+      const fetchDistractors = async (halfRange: number): Promise<PlatformOption[]> => {
+        if (distCount === 0) return [];
+
+        const minYear = releaseYear - halfRange;
+        const maxYear = releaseYear + halfRange;
+
+        // 2a. Get game IDs in the era (excluding the current game).
+        const { data: eraGames, error: eraErr } = await supabase
+          .from("games")
+          .select("id")
+          .gte("release_year", minYear)
+          .lte("release_year", maxYear)
+          .neq("id", gameId);
+
+        if (eraErr !== null || !eraGames?.length) return [];
+
+        const eraGameIds = eraGames.map((g) => (g as { id: number }).id);
+
+        // 2b. Get distinct platform IDs used by era games, excluding correct ones.
+        const { data: gpRows, error: gpErr } = await supabase
+          .from("game_platforms")
+          .select("platform_id")
+          .in("game_id", eraGameIds);
+
+        if (gpErr !== null || !gpRows?.length) return [];
+
+        const candidateIds = [
+          ...new Set(gpRows.map((r) => (r as { platform_id: number }).platform_id)),
+        ].filter((id) => !correctPlatformIds.includes(id));
+
+        if (candidateIds.length === 0) return [];
+
+        // 2c. Shuffle client-side and take distCount IDs, then fetch their names.
+        const shuffled = clientShuffle(candidateIds).slice(0, distCount);
+
+        const { data: platforms, error: pErr } = await supabase
+          .from("platforms")
+          .select("id, name")
+          .in("id", shuffled);
+
+        if (pErr !== null) return [];
+
+        return (platforms ?? []).map((p) => ({
+          id: (p as { id: number }).id,
+          name: getDisplayName((p as { name: string }).name),
+        }));
+      };
+
+      let distractors = await fetchDistractors(5);
+
+      // 3. Fall back to ±15 years if the narrow era returned too few distractors.
+      const minNeeded = Math.max(0, 8 - correct.length);
+      if (distractors.length < minNeeded) {
+        distractors = await fetchDistractors(15);
+      }
+
+      return buildPlatformOptions(correct, distractors);
+    },
   };
+}
+
+/** Fisher-Yates shuffle using Math.random (used for distractor candidate selection). */
+function clientShuffle<T>(arr: T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const a = result[i];
+    const b = result[j];
+    if (a !== undefined && b !== undefined) {
+      result[i] = b;
+      result[j] = a;
+    }
+  }
+  return result;
 }

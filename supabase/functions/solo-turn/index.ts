@@ -131,7 +131,16 @@ Deno.serve(async (req: Request) => {
     // 5. Fetch revealed card data
     const revealedCard = await db.fetchRevealedCardData(currentGameId);
 
-    // 6. Fetch next card (if game isn't over)
+    // 6. Fetch platform bonus options (only when placement is correct).
+    let platformOptions: { id: number; name: string }[] | undefined;
+    let correctPlatformIds: number[] | undefined;
+    if (result.correct) {
+      const platformData = await db.fetchPlatformOptions(currentGameId, newYear);
+      platformOptions = platformData.options;
+      correctPlatformIds = platformData.correctIds;
+    }
+
+    // 7. Fetch next card (if game isn't over)
     let nextCard = null;
     if (!result.game_over) {
       const nextGameId = result.new_deck[0];
@@ -153,6 +162,8 @@ Deno.serve(async (req: Request) => {
         ...(result.valid_positions !== undefined && {
           valid_positions: result.valid_positions,
         }),
+        ...(platformOptions !== undefined && { platform_options: platformOptions }),
+        ...(correctPlatformIds !== undefined && { correct_platform_ids: correctPlatformIds }),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
