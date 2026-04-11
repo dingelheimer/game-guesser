@@ -17,7 +17,20 @@ interface MockDndContextProps {
   onDragCancel?: () => void;
 }
 
-let lastDndContextProps: MockDndContextProps | null = null;
+interface MockDragOverlayProps {
+  children: React.ReactNode;
+  dropAnimation?: {
+    duration?: number;
+    easing?: string;
+    sideEffects?: unknown;
+  };
+}
+
+const hoistedState = vi.hoisted(() => ({
+  lastDndContextProps: null as MockDndContextProps | null,
+  lastDragOverlayProps: null as MockDragOverlayProps | null,
+  mockUseReducedMotion: vi.fn(() => false),
+}));
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -26,6 +39,8 @@ vi.mock("next/image", () => ({
     src,
     alt,
     className,
+    fill,
+    priority,
     ...rest
   }: {
     src: string;
@@ -35,27 +50,51 @@ vi.mock("next/image", () => ({
     priority?: boolean;
     className?: string;
     [key: string]: unknown;
-  }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} className={className} {...rest} />
-  ),
+  }) => {
+    void fill;
+    void priority;
+
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={alt} className={className} {...rest} />
+    );
+  },
 }));
 
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...rest }: any) => <div {...rest}>{children}</div>,
-    span: ({ children, ...rest }: any) => <span {...rest}>{children}</span>,
+    div: ({ children, animate, initial, transition, layout, ...rest }: any) => {
+      void animate;
+      void initial;
+      void transition;
+
+      return (
+        <div data-layout={layout === true ? "true" : undefined} {...rest}>
+          {children}
+        </div>
+      );
+    },
+    span: ({ children, animate, initial, transition, ...rest }: any) => {
+      void animate;
+      void initial;
+      void transition;
+
+      return <span {...rest}>{children}</span>;
+    },
   },
-  useReducedMotion: vi.fn(() => false),
+  useReducedMotion: hoistedState.mockUseReducedMotion,
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@dnd-kit/core", () => ({
   DndContext: ({ children, ...rest }: MockDndContextProps) => {
-    lastDndContextProps = { children, ...rest };
+    hoistedState.lastDndContextProps = { children, ...rest };
     return <>{children}</>;
   },
-  DragOverlay: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DragOverlay: ({ children, ...rest }: MockDragOverlayProps) => {
+    hoistedState.lastDragOverlayProps = { children, ...rest };
+    return <>{children}</>;
+  },
   useDroppable: vi.fn((opts: { id: string }) => ({
     setNodeRef: vi.fn(),
     isOver: false,
@@ -72,6 +111,7 @@ vi.mock("@dnd-kit/core", () => ({
   TouchSensor: vi.fn(),
   useSensor: vi.fn((S: unknown) => S),
   useSensors: vi.fn((...sensors: unknown[]) => sensors),
+  defaultDropAnimationSideEffects: vi.fn(() => vi.fn()),
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -116,6 +156,16 @@ const pendingCard: TimelineItem = {
   isRevealed: false,
 };
 
+const tentativeTimelineCard: TimelineItem = {
+  id: "4",
+  screenshotImageId: "img4",
+  coverImageId: null,
+  title: "?",
+  releaseYear: 0,
+  platform: "?",
+  isRevealed: false,
+};
+
 /** Returns all drop zone buttons (excludes the draggable pending card). */
 function getDropZones() {
   return screen
@@ -146,7 +196,9 @@ function getDragOverlay(container: HTMLElement): HTMLDivElement {
 describe("Timeline", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    lastDndContextProps = null;
+    hoistedState.lastDndContextProps = null;
+    hoistedState.lastDragOverlayProps = null;
+    hoistedState.mockUseReducedMotion.mockReturnValue(false);
   });
 
   // ── Structure ──────────────────────────────────────────────────────────────
@@ -218,6 +270,14 @@ describe("Timeline", () => {
     it("does not show empty-state message when pending card is present", () => {
       render(<Timeline placedCards={[]} pendingCard={pendingCard} />);
       expect(screen.queryByText("No cards placed yet")).not.toBeInTheDocument();
+    });
+
+    it("does not render a year marker for unrevealed timeline cards", () => {
+      const { container } = render(<Timeline placedCards={[tentativeTimelineCard]} />);
+
+      const yearBadge = container.querySelector('span[class*="text-xs"][class*="tabular-nums"]');
+
+      expect(yearBadge).not.toBeInTheDocument();
     });
   });
 
@@ -395,44 +455,91 @@ describe("Timeline", () => {
   });
 
   describe("drag overlay", () => {
-    it("adds the drop-zone glow to the overlay when hovering a valid zone", () => {
+    it("configures the drop animation with the story timing and source-hiding side effect", () => {
+      render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
+
+      expect(hoistedState.lastDragOverlayProps?.dropAnimation?.duration).toBe(300);
+      expect(hoistedState.lastDragOverlayProps?.dropAnimation?.easing).toBe(
+        "cubic-bezier(0.25, 1, 0.5, 1)",
+      );
+      expect(typeof hoistedState.lastDragOverlayProps?.dropAnimation?.sideEffects).toBe("function");
+    });
+
+    it("disables drop animation timing when reduced motion is preferred", () => {
+      hoistedState.mockUseReducedMotion.mockReturnValue(true);
+
+      render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
+
+      expect(hoistedState.lastDragOverlayProps?.dropAnimation?.duration).toBe(0);
+    });
+
+    it("renders a timeline-sized overlay and adds the drop-zone glow on valid hover", () => {
       const { container } = render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
 
       act(() => {
-        lastDndContextProps?.onDragStart?.();
+        hoistedState.lastDndContextProps?.onDragStart?.();
       });
 
       act(() => {
-        lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
+        hoistedState.lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
       });
 
       const overlay = getDragOverlay(container);
+      const overlayCard = Array.from(overlay.querySelectorAll("div")).find((element) =>
+        element.className.includes("xl:w-[220px]"),
+      );
 
+      expect(overlay.className).toContain("rotate-2");
+      expect(overlay.className).toContain("opacity-80");
       expect(overlay.className).toContain("ring-primary-400");
       expect(overlay.className).toContain("shadow-[0_0_24px_rgba(139,92,246,0.45)]");
       expect(overlay.className).toContain("ring-2");
+      expect(overlayCard?.className).toContain(
+        "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]",
+      );
     });
 
     it("removes the overlay glow when no valid zone is active", () => {
       const { container } = render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
 
       act(() => {
-        lastDndContextProps?.onDragStart?.();
+        hoistedState.lastDndContextProps?.onDragStart?.();
       });
       act(() => {
-        lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
+        hoistedState.lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
       });
 
       expect(getDragOverlay(container).className).toContain("ring-primary-400");
 
       act(() => {
-        lastDndContextProps?.onDragOver?.({ over: null });
+        hoistedState.lastDndContextProps?.onDragOver?.({ over: null });
       });
 
       expect(getDragOverlay(container).className).not.toContain("ring-primary-400");
       expect(getDragOverlay(container).className).not.toContain(
         "shadow-[0_0_24px_rgba(139,92,246,0.45)]",
       );
+    });
+  });
+
+  describe("incorrect placement feedback", () => {
+    it("highlights the specified timeline card with layout-enabled feedback styling", () => {
+      const { container } = render(
+        <Timeline
+          placedCards={[card1, tentativeTimelineCard]}
+          highlightedCardId="4"
+          highlightedCardTone="error"
+        />,
+      );
+
+      const highlightedWrapper = Array.from(container.querySelectorAll("div")).find((element) =>
+        element.className.includes("ring-rose-500"),
+      );
+      const layoutWrapper = highlightedWrapper?.parentElement;
+
+      expect(highlightedWrapper?.className).toContain("ring-rose-500");
+      expect(highlightedWrapper?.className).toContain("shadow-[0_0_20px_rgba(244,63,94,0.35)]");
+      expect(layoutWrapper).toHaveAttribute("data-layout", "true");
     });
   });
 });
