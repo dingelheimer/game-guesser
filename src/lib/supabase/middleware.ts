@@ -39,7 +39,17 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Validates and refreshes the session token
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Protect /profile — redirect unauthenticated users to login
+  if (!user && request.nextUrl.pathname.startsWith("/profile")) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/auth/login";
+    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
   return supabaseResponse;
 }
