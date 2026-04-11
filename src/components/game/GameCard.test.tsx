@@ -89,6 +89,9 @@ describe("GameCard", () => {
       const imgs = screen.getAllByAltText("Game screenshot");
 
       expect(wrapper.className).toContain("aspect-video");
+      expect(wrapper.className).toContain(
+        "w-[70vw] shrink-0 md:w-[340px] lg:w-[420px] xl:w-[480px]",
+      );
       expect(imgs[0]).toHaveAttribute(
         "src",
         "https://images.igdb.com/igdb/image/upload/t_screenshot_big/abc123.jpg",
@@ -96,8 +99,9 @@ describe("GameCard", () => {
       expect(imgs[0]).toHaveClass("object-cover");
       expect(imgs[0]).toHaveAttribute(
         "sizes",
-        "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px",
+        "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px",
       );
+      expect(screen.getByRole("button", { name: "View full-size screenshot" })).toBeInTheDocument();
     });
 
     it("uses mobile screenshot URL for size=timeline variant", () => {
@@ -114,6 +118,9 @@ describe("GameCard", () => {
         "src",
         "https://images.igdb.com/igdb/image/upload/t_screenshot_med/abc123.jpg",
       );
+      expect(
+        screen.queryByRole("button", { name: "View full-size screenshot" }),
+      ).not.toBeInTheDocument();
     });
 
     it("labels the card as a mystery card", () => {
@@ -154,12 +161,24 @@ describe("GameCard", () => {
         "src",
         "https://images.igdb.com/igdb/image/upload/t_cover_big/def456.jpg",
       );
+      expect(imgs[0]).toHaveAttribute(
+        "sizes",
+        "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px",
+      );
     });
 
     it("labels the card with title and year", () => {
       render(<GameCard {...revealedProps} />);
       const labels = screen.getAllByLabelText("Half-Life 2, 2004");
       expect(labels.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("does not render the screenshot viewer trigger once revealed", () => {
+      render(<GameCard {...revealedProps} />);
+
+      expect(
+        screen.queryByRole("button", { name: "View full-size screenshot" }),
+      ).not.toBeInTheDocument();
     });
   });
 

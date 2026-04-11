@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,9 @@ function PlacementResult({ correct }: { correct: boolean }) {
   );
 }
 
+type IncorrectPlacementStage = "idle" | "indicator" | "sliding" | "revealing" | "done";
+
+/** Renders the solo game play surface, including the hero card, result controls, and timeline. */
 export function SoloGame() {
   const phase = useSoloGameStore((s) => s.phase);
   const difficulty = useSoloGameStore((s) => s.difficulty);
@@ -48,15 +52,20 @@ export function SoloGame() {
   const error = useSoloGameStore((s) => s.error);
 
   const placeCard = useSoloGameStore((s) => s.placeCard);
+  const moveCardToCorrectPosition = useSoloGameStore((s) => s.moveCardToCorrectPosition);
+  const revealMovedCard = useSoloGameStore((s) => s.revealMovedCard);
   const advanceTurn = useSoloGameStore((s) => s.advanceTurn);
   const resetGame = useSoloGameStore((s) => s.resetGame);
   const submitPlatformGuess = useSoloGameStore((s) => s.submitPlatformGuess);
 
   const reduceMotion = useReducedMotion();
+  const [incorrectPlacementStage, setIncorrectPlacementStage] =
+    useState<IncorrectPlacementStage>("idle");
 
   const isSubmitting = phase === "submitting";
-  const isPlacing = phase === "placing" || phase === "submitting";
+  const isPlacing = phase === "placing";
   const isRevealing = phase === "revealing";
+  const isIncorrectReveal = isRevealing && lastPlacementCorrect === false;
   const isPlatformBonusPending =
     isRevealing &&
     lastPlacementCorrect === true &&
@@ -65,6 +74,51 @@ export function SoloGame() {
 
   const pendingTimelineItem =
     isPlacing && currentCard !== null ? hiddenToTimelineItem(currentCard) : null;
+  const shouldShowHeroCard = !isSubmitting && (isRevealing || currentCard !== null);
+  const shouldShowResultControls =
+    isRevealing &&
+    lastPlacementCorrect !== null &&
+    (lastPlacementCorrect || incorrectPlacementStage === "done");
+
+  useEffect(() => {
+    if (!isIncorrectReveal || revealedCard === null) {
+      setIncorrectPlacementStage("idle");
+      return;
+    }
+
+    if (reduceMotion === true) {
+      moveCardToCorrectPosition();
+      revealMovedCard();
+      setIncorrectPlacementStage("done");
+      return;
+    }
+
+    setIncorrectPlacementStage("indicator");
+
+    const slideTimer = window.setTimeout(() => {
+      setIncorrectPlacementStage("sliding");
+      moveCardToCorrectPosition();
+    }, 400);
+    const revealTimer = window.setTimeout(() => {
+      setIncorrectPlacementStage("revealing");
+      revealMovedCard();
+    }, 700);
+    const resultTimer = window.setTimeout(() => {
+      setIncorrectPlacementStage("done");
+    }, 1300);
+
+    return () => {
+      window.clearTimeout(slideTimer);
+      window.clearTimeout(revealTimer);
+      window.clearTimeout(resultTimer);
+    };
+  }, [
+    isIncorrectReveal,
+    moveCardToCorrectPosition,
+    reduceMotion,
+    revealMovedCard,
+    revealedCard?.game_id,
+  ]);
 
   if (phase === "game_over") {
     return (
@@ -120,48 +174,56 @@ export function SoloGame() {
       )}
 
       {/* Card area */}
-      <div className="flex flex-col items-center gap-6 px-4 pt-6 pb-4">
+      <div
+        className={cn(
+          "flex flex-col items-center gap-6 px-4 pt-6 pb-4",
+          isPlacing && "md:gap-0 md:pt-0 md:pb-0",
+        )}
+      >
         <AnimatePresence mode="wait">
-          <motion.div
-            key={cardKey}
-            initial={reduceMotion === true ? {} : { opacity: 0, y: 12 }}
-            animate={
-              isRevealing && lastPlacementCorrect === false && reduceMotion !== true
-                ? { x: [0, -10, 10, -8, 8, -4, 4, 0], opacity: 1, y: 0 }
-                : { opacity: 1, y: 0 }
-            }
-            exit={reduceMotion === true ? {} : { opacity: 0, y: -12 }}
-            transition={
-              isRevealing && lastPlacementCorrect === false ? { duration: 0.5 } : { duration: 0.25 }
-            }
-            className={cn(
-              "relative",
-              // Desktop dragging uses the timeline card; mobile still relies on the hero card.
-              isPlacing && "md:hidden",
-              isRevealing &&
-                lastPlacementCorrect === false &&
-                "rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.4)] ring-2 ring-rose-500",
-            )}
-          >
-            <GameCard
-              screenshotImageId={
-                isRevealing
-                  ? (revealedCard?.screenshot_image_ids[0] ?? null)
-                  : (currentCard?.screenshot_image_ids[0] ?? null)
+          {shouldShowHeroCard && (
+            <motion.div
+              key={cardKey}
+              initial={reduceMotion === true ? {} : { opacity: 0, y: 12 }}
+              animate={
+                isRevealing && lastPlacementCorrect === false && reduceMotion !== true
+                  ? { x: [0, -10, 10, -8, 8, -4, 4, 0], opacity: 1, y: 0 }
+                  : { opacity: 1, y: 0 }
               }
-              coverImageId={isRevealing ? (revealedCard?.cover_image_id ?? null) : null}
-              title={isRevealing ? (revealedCard?.name ?? "?") : "?"}
-              releaseYear={isRevealing ? (revealedCard?.release_year ?? 0) : 0}
-              platform={isRevealing ? revealedPlatform : "?"}
-              isRevealed={isRevealing}
-              isLoading={isSubmitting}
-            />
-          </motion.div>
+              exit={reduceMotion === true ? {} : { opacity: 0, y: -12 }}
+              transition={
+                isRevealing && lastPlacementCorrect === false
+                  ? { duration: 0.5 }
+                  : { duration: 0.25 }
+              }
+              className={cn(
+                "relative",
+                // Desktop dragging uses the timeline card; mobile still relies on the hero card.
+                isPlacing && "md:hidden",
+                isRevealing &&
+                  lastPlacementCorrect === false &&
+                  "rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.4)] ring-2 ring-rose-500",
+              )}
+            >
+              <GameCard
+                screenshotImageId={
+                  isRevealing
+                    ? (revealedCard?.screenshot_image_ids[0] ?? null)
+                    : (currentCard?.screenshot_image_ids[0] ?? null)
+                }
+                coverImageId={isRevealing ? (revealedCard?.cover_image_id ?? null) : null}
+                title={isRevealing ? (revealedCard?.name ?? "?") : "?"}
+                releaseYear={isRevealing ? (revealedCard?.release_year ?? 0) : 0}
+                platform={isRevealing ? revealedPlatform : "?"}
+                isRevealed={isRevealing}
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Placement result + platform bonus + next turn */}
         <AnimatePresence>
-          {isRevealing && lastPlacementCorrect !== null && (
+          {shouldShowResultControls && (
             <motion.div
               className="flex w-full max-w-lg flex-col items-center gap-3"
               initial={{ opacity: 0 }}
@@ -192,17 +254,25 @@ export function SoloGame() {
       </div>
 
       {/* Timeline */}
-      <div className="flex-1">
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
         <div className="flex items-center gap-3 px-4 pt-1 pb-2">
           <div className="bg-surface-700 h-px flex-1" />
           <span className="text-text-secondary/70 text-xs font-medium tracking-wider uppercase">
-            {isPlacing ? "Timeline — tap a zone to place" : "Timeline"}
+            {phase === "placing" ? "Timeline — tap a zone to place" : "Timeline"}
           </span>
           <div className="bg-surface-700 h-px flex-1" />
         </div>
         <Timeline
           placedCards={timelineItems}
           pendingCard={pendingTimelineItem}
+          highlightedCardId={
+            isIncorrectReveal && incorrectPlacementStage === "indicator" && revealedCard !== null
+              ? String(revealedCard.game_id)
+              : null
+          }
+          highlightedCardTone={
+            isIncorrectReveal && incorrectPlacementStage === "indicator" ? "error" : null
+          }
           {...(isPlacing
             ? {
                 onPlaceCard: (pos: number) => {
