@@ -5,55 +5,11 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GameCard } from "@/components/game/GameCard";
 import { GameOverScreen } from "@/components/game/GameOverScreen";
+import { PlatformBonusInput } from "@/components/game/PlatformBonusInput";
+import { ScoreBar } from "@/components/game/ScoreBar";
 import { Timeline } from "@/components/game/Timeline";
-import { TitleGuessInput } from "@/components/game/TitleGuessInput";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 import { hiddenToTimelineItem } from "@/stores/soloGameStore";
-import { getSoloDifficultyLabel } from "@/lib/solo/share";
-import type { DifficultyTier } from "@/types/supabase";
-import { Trophy, Zap } from "lucide-react";
-
-// ── Score bar ─────────────────────────────────────────────────────────────────
-
-function ScoreBar({
-  score,
-  streak,
-  bestStreak,
-  difficulty,
-}: {
-  score: number;
-  streak: number;
-  bestStreak: number;
-  difficulty: DifficultyTier;
-}) {
-  return (
-    <div className="bg-surface-800/80 flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 backdrop-blur-xl">
-      <div className="text-text-primary flex items-center gap-1.5 font-mono text-lg font-bold">
-        <Trophy className="size-4 text-yellow-400" aria-hidden="true" />
-        <span aria-label={`Score: ${score.toString()}`}>{score}</span>
-      </div>
-
-      <div className="text-text-secondary flex items-center gap-1.5 text-sm">
-        <Zap className="size-3.5 text-sky-400" aria-hidden="true" />
-        <span aria-label={`Current streak: ${streak.toString()}`}>×{streak}</span>
-        <span className="text-text-secondary/60 text-xs">best {bestStreak.toString()}</span>
-      </div>
-
-      <span
-        className={cn(
-          "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-          difficulty === "easy" && "bg-emerald-500/20 text-emerald-400",
-          difficulty === "medium" && "bg-sky-500/20 text-sky-400",
-          difficulty === "hard" && "bg-orange-500/20 text-orange-400",
-          difficulty === "extreme" && "bg-rose-500/20 text-rose-400",
-        )}
-        aria-label={`Difficulty: ${getSoloDifficultyLabel(difficulty)}`}
-      >
-        {getSoloDifficultyLabel(difficulty)}
-      </span>
-    </div>
-  );
-}
 
 // ── Result overlay (correct / incorrect indicator) ────────────────────────────
 
@@ -86,15 +42,19 @@ export function SoloGame() {
   const turnsPlayed = useSoloGameStore((s) => s.turnsPlayed);
   const bestStreak = useSoloGameStore((s) => s.bestStreak);
   const currentStreak = useSoloGameStore((s) => s.currentStreak);
+  const bonusPointsEarned = useSoloGameStore((s) => s.bonusPointsEarned);
+  const bonusOpportunities = useSoloGameStore((s) => s.bonusOpportunities);
   const lastPlacementCorrect = useSoloGameStore((s) => s.lastPlacementCorrect);
   const validPositions = useSoloGameStore((s) => s.validPositions);
-  const titleGuessResult = useSoloGameStore((s) => s.titleGuessResult);
+  const availablePlatforms = useSoloGameStore((s) => s.availablePlatforms);
+  const correctPlatformIds = useSoloGameStore((s) => s.correctPlatformIds);
+  const platformBonusResult = useSoloGameStore((s) => s.platformBonusResult);
   const error = useSoloGameStore((s) => s.error);
 
   const placeCard = useSoloGameStore((s) => s.placeCard);
-  const submitTitleGuess = useSoloGameStore((s) => s.submitTitleGuess);
   const advanceTurn = useSoloGameStore((s) => s.advanceTurn);
   const resetGame = useSoloGameStore((s) => s.resetGame);
+  const submitPlatformGuess = useSoloGameStore((s) => s.submitPlatformGuess);
 
   const reduceMotion = useReducedMotion();
 
@@ -114,6 +74,8 @@ export function SoloGame() {
         score={score}
         turnsPlayed={turnsPlayed}
         bestStreak={bestStreak}
+        bonusPointsEarned={bonusPointsEarned}
+        bonusOpportunities={bonusOpportunities}
         timelineItems={timelineItems}
         failedCard={revealedCard}
         validPositions={validPositions}
@@ -146,6 +108,7 @@ export function SoloGame() {
           streak={currentStreak}
           bestStreak={bestStreak}
           difficulty={difficulty}
+          bonusPointsEarned={bonusPointsEarned}
         />
       )}
 
@@ -194,23 +157,23 @@ export function SoloGame() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Placement result + title guess + next turn */}
+        {/* Placement result + platform bonus + next turn */}
         <AnimatePresence>
           {isRevealing && lastPlacementCorrect !== null && (
             <motion.div
-              className="flex w-full max-w-sm flex-col items-center gap-3"
+              className="flex w-full max-w-lg flex-col items-center gap-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
               <PlacementResult correct={lastPlacementCorrect} />
 
-              {lastPlacementCorrect && (
-                <TitleGuessInput
-                  correctTitle={revealedCard?.name ?? ""}
-                  result={titleGuessResult}
-                  submitted={titleGuessResult !== null}
-                  onSubmit={submitTitleGuess}
+              {lastPlacementCorrect && availablePlatforms.length > 0 && (
+                <PlatformBonusInput
+                  platforms={availablePlatforms}
+                  correctPlatformIds={correctPlatformIds}
+                  result={platformBonusResult}
+                  onSubmit={submitPlatformGuess}
                 />
               )}
 
@@ -228,9 +191,9 @@ export function SoloGame() {
 
       {/* Timeline */}
       <div className="flex-1">
-        <div className="flex items-center gap-3 px-4 pb-2 pt-1">
+        <div className="flex items-center gap-3 px-4 pt-1 pb-2">
           <div className="bg-surface-700 h-px flex-1" />
-          <span className="text-text-secondary/70 text-xs font-medium uppercase tracking-wider">
+          <span className="text-text-secondary/70 text-xs font-medium tracking-wider uppercase">
             {isPlacing ? "Timeline — tap a zone to place" : "Timeline"}
           </span>
           <div className="bg-surface-700 h-px flex-1" />

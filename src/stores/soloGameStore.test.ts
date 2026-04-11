@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { revealedToTimelineItem, hiddenToTimelineItem, checkTitleGuess } from "./soloGameStore";
+import { revealedToTimelineItem, hiddenToTimelineItem, checkPlatformGuess } from "./soloGameStore";
 import type { useSoloGameStore as UseSoloGameStoreType } from "./soloGameStore";
 import type { RevealedCardData, HiddenCardData } from "@/lib/solo/api";
 
@@ -66,19 +66,31 @@ describe("hiddenToTimelineItem", () => {
   });
 });
 
-// ── checkTitleGuess ───────────────────────────────────────────────────────────
+// ── checkPlatformGuess ────────────────────────────────────────────────────────
 
-describe("checkTitleGuess", () => {
+describe("checkPlatformGuess", () => {
   it("returns 'correct' for an exact match", () => {
-    expect(checkTitleGuess("Super Mario Bros", "Super Mario Bros")).toBe("correct");
+    expect(checkPlatformGuess([1, 2, 3], [1, 2, 3])).toBe("correct");
   });
 
-  it("returns 'correct' for a close fuzzy match", () => {
-    expect(checkTitleGuess("super mario", "Super Mario Bros")).toBe("correct");
+  it("returns 'correct' when IDs are in a different order", () => {
+    expect(checkPlatformGuess([3, 1, 2], [1, 2, 3])).toBe("correct");
   });
 
-  it("returns 'incorrect' for a completely different title", () => {
-    expect(checkTitleGuess("Minecraft", "Super Mario Bros")).toBe("incorrect");
+  it("returns 'incorrect' when lengths differ", () => {
+    expect(checkPlatformGuess([1, 2], [1, 2, 3])).toBe("incorrect");
+  });
+
+  it("returns 'incorrect' when IDs do not match", () => {
+    expect(checkPlatformGuess([1, 2, 4], [1, 2, 3])).toBe("incorrect");
+  });
+
+  it("returns 'correct' for empty sets", () => {
+    expect(checkPlatformGuess([], [])).toBe("correct");
+  });
+
+  it("returns 'incorrect' when selected is empty but correct is not", () => {
+    expect(checkPlatformGuess([], [1])).toBe("incorrect");
   });
 });
 
@@ -105,6 +117,8 @@ describe("useSoloGameStore", () => {
     expect(s.score).toBe(0);
     expect(s.timelineItems).toHaveLength(0);
     expect(s.currentCard).toBeNull();
+    expect(s.bonusPointsEarned).toBe(0);
+    expect(s.bonusOpportunities).toBe(0);
   });
 
   it("resetGame returns to idle and clears all state", () => {
@@ -113,38 +127,66 @@ describe("useSoloGameStore", () => {
       score: 5,
       turnsPlayed: 3,
       timelineItems: [revealedToTimelineItem(mockRevealedCard)],
+      bonusPointsEarned: 2,
+      bonusOpportunities: 3,
+      availablePlatforms: [{ id: 1, name: "PS4" }],
+      correctPlatformIds: [1],
+      platformBonusResult: "correct",
     });
     store.getState().resetGame();
     const s = store.getState();
     expect(s.phase).toBe("idle");
     expect(s.score).toBe(0);
     expect(s.timelineItems).toHaveLength(0);
+    expect(s.bonusPointsEarned).toBe(0);
+    expect(s.bonusOpportunities).toBe(0);
+    expect(s.availablePlatforms).toHaveLength(0);
+    expect(s.correctPlatformIds).toHaveLength(0);
+    expect(s.platformBonusResult).toBeNull();
   });
 
-  it("submitTitleGuess sets correct result for a matching guess", () => {
+  it("submitPlatformGuess sets correct result and increments score for exact match", () => {
     store.setState({
       phase: "revealing",
-      revealedCard: mockRevealedCard,
-      titleGuessResult: null,
+      score: 2,
+      bonusPointsEarned: 0,
+      correctPlatformIds: [1, 2, 3],
+      platformBonusResult: null,
     });
-    store.getState().submitTitleGuess("Super Mario Bros");
-    expect(store.getState().titleGuessResult).toBe("correct");
+    store.getState().submitPlatformGuess([3, 1, 2]);
+    const s = store.getState();
+    expect(s.platformBonusResult).toBe("correct");
+    expect(s.score).toBe(3);
+    expect(s.bonusPointsEarned).toBe(1);
   });
 
-  it("submitTitleGuess sets incorrect result for a non-matching guess", () => {
+  it("submitPlatformGuess sets incorrect result and does not change score for wrong selection", () => {
     store.setState({
       phase: "revealing",
-      revealedCard: mockRevealedCard,
-      titleGuessResult: null,
+      score: 2,
+      bonusPointsEarned: 1,
+      correctPlatformIds: [1, 2, 3],
+      platformBonusResult: null,
     });
-    store.getState().submitTitleGuess("Minecraft");
-    expect(store.getState().titleGuessResult).toBe("incorrect");
+    store.getState().submitPlatformGuess([1, 2]);
+    const s = store.getState();
+    expect(s.platformBonusResult).toBe("incorrect");
+    expect(s.score).toBe(2);
+    expect(s.bonusPointsEarned).toBe(1);
   });
 
-  it("submitTitleGuess does nothing when revealedCard is null", () => {
-    store.setState({ revealedCard: null, titleGuessResult: null });
-    store.getState().submitTitleGuess("anything");
-    expect(store.getState().titleGuessResult).toBeNull();
+  it("submitPlatformGuess does nothing when already submitted", () => {
+    store.setState({
+      score: 2,
+      bonusPointsEarned: 1,
+      correctPlatformIds: [1, 2, 3],
+      platformBonusResult: "incorrect",
+    });
+    store.getState().submitPlatformGuess([1, 2, 3]);
+    const s = store.getState();
+    expect(s.platformBonusResult).toBe("incorrect");
+    expect(s.score).toBe(2);
+    expect(s.bonusPointsEarned).toBe(1);
   });
 
   it("advanceTurn transitions to game_over when lastPlacementCorrect=false", () => {
@@ -187,12 +229,16 @@ describe("useSoloGameStore", () => {
       phase: "revealing",
       lastPlacementCorrect: true,
       nextCard: mockHiddenCard,
-      titleGuessResult: "correct",
+      platformBonusResult: "correct",
+      availablePlatforms: [{ id: 1, name: "PS4" }],
+      correctPlatformIds: [1],
       validPositions: [1, 2],
     });
     store.getState().advanceTurn();
     const s = store.getState();
-    expect(s.titleGuessResult).toBeNull();
+    expect(s.platformBonusResult).toBeNull();
+    expect(s.availablePlatforms).toHaveLength(0);
+    expect(s.correctPlatformIds).toHaveLength(0);
     expect(s.validPositions).toBeNull();
     expect(s.lastPlacementCorrect).toBeNull();
   });
