@@ -40,6 +40,10 @@ export interface TurnResponse {
   game_over: boolean;
   next_card?: HiddenCardData;
   valid_positions?: number[];
+  /** Shuffled list of correct + distractor platforms (only present on correct placements). */
+  platform_options?: { id: number; name: string }[];
+  /** Correct platform IDs for client-side bonus validation (only present on correct placements). */
+  correct_platform_ids?: number[];
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
