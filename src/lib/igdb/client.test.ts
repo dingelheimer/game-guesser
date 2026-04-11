@@ -31,11 +31,7 @@ const VALID_GAME = {
 };
 
 /** Build a mock Response object. */
-function mockResponse(
-  body: unknown,
-  status = 200,
-  statusText = "OK",
-): Response {
+function mockResponse(body: unknown, status = 200, statusText = "OK"): Response {
   return new Response(JSON.stringify(body), {
     status,
     statusText,
@@ -141,10 +137,7 @@ describe("IgdbError", () => {
 
 describe("token management", () => {
   it("fetches a new token on first request", async () => {
-    stubFetchSequence(
-      mockResponse(VALID_TOKEN_RESPONSE),
-      mockResponse([VALID_GAME]),
-    );
+    stubFetchSequence(mockResponse(VALID_TOKEN_RESPONSE), mockResponse([VALID_GAME]));
 
     const results = await fetchGames("fields id, name;");
 
@@ -225,10 +218,7 @@ describe("token management", () => {
   });
 
   it("throws IgdbError(network_error) on Twitch auth network failure", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new TypeError("Network error")),
-    );
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Network error")));
 
     await expect(fetchGames("fields id;")).rejects.toMatchObject({
       code: "network_error",
@@ -258,9 +248,7 @@ describe("error handling", () => {
   });
 
   it("throws IgdbError(api_error) on 500", async () => {
-    stubFetchSequence(
-      mockResponse({ message: "Server Error" }, 500, "Internal Server Error"),
-    );
+    stubFetchSequence(mockResponse({ message: "Server Error" }, 500, "Internal Server Error"));
 
     await expect(fetchGames("fields id;")).rejects.toMatchObject({
       code: "api_error",
@@ -269,10 +257,7 @@ describe("error handling", () => {
   });
 
   it("throws IgdbError(network_error) on fetch rejection", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
-    );
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
 
     await expect(fetchGames("fields id;")).rejects.toMatchObject({
       code: "network_error",
@@ -315,9 +300,7 @@ describe("typed fetch functions", () => {
     const shot = { id: 20, image_id: "sc1abc", width: 889, height: 500 };
     stubFetchSequence(mockResponse([shot]));
 
-    const results = await fetchScreenshots(
-      "fields id, image_id, width, height;",
-    );
+    const results = await fetchScreenshots("fields id, image_id, width, height;");
 
     expect(results[0]).toEqual(shot);
   });

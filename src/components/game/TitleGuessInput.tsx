@@ -68,7 +68,9 @@ export function TitleGuessInput({
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm gap-2">
       <Input
         value={value}
-        onChange={(e) => { setValue(e.target.value); }}
+        onChange={(e) => {
+          setValue(e.target.value);
+        }}
         placeholder="Guess the game title…"
         aria-label="Game title guess"
         autoComplete="off"

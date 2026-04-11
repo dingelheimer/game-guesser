@@ -27,7 +27,7 @@ export function SoloGamePage() {
       {phase === "starting" && (
         <motion.div
           key="loading"
-          className="flex min-h-[60vh] items-center justify-center gap-3 text-text-secondary"
+          className="text-text-secondary flex min-h-[60vh] items-center justify-center gap-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

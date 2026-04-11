@@ -31,11 +31,11 @@ interface GameOverScreenProps {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface-800/80 p-4 backdrop-blur">
-      <p className="text-xs font-semibold tracking-[0.18em] text-text-secondary uppercase">
+    <div className="bg-surface-800/80 rounded-2xl border border-white/10 p-4 backdrop-blur">
+      <p className="text-text-secondary text-xs font-semibold tracking-[0.18em] uppercase">
         {label}
       </p>
-      <p className="mt-2 font-mono text-4xl font-bold tabular-nums text-text-primary">{value}</p>
+      <p className="text-text-primary mt-2 font-mono text-4xl font-bold tabular-nums">{value}</p>
     </div>
   );
 }
@@ -59,29 +59,20 @@ function describeTimelineSlot(placedCards: TimelineItem[], position: number): st
   return "as the first card on the timeline";
 }
 
-function SlotPreview({
-  active,
-  label,
-}: {
-  active: boolean;
-  label: string;
-}) {
+function SlotPreview({ active, label }: { active: boolean; label: string }) {
   return (
     <div
       className={cn(
         "flex h-24 w-[4.5rem] shrink-0 items-center justify-center rounded-2xl border border-dashed px-2 text-center",
         active
           ? "border-emerald-400 bg-emerald-500/10 shadow-[0_0_18px_rgba(52,211,153,0.25)]"
-          : "border-white/12 bg-surface-900/60",
+          : "bg-surface-900/60 border-white/12",
       )}
       aria-label={active ? `Correct slot: ${label}` : `Timeline slot: ${label}`}
     >
       <div className="flex flex-col items-center gap-2">
         <div
-          className={cn(
-            "w-1 rounded-full",
-            active ? "h-12 bg-emerald-400" : "h-8 bg-white/20",
-          )}
+          className={cn("w-1 rounded-full", active ? "h-12 bg-emerald-400" : "h-8 bg-white/20")}
         />
         <span
           className={cn(
@@ -98,11 +89,11 @@ function SlotPreview({
 
 function TimelineCardPreview({ card }: { card: TimelineItem }) {
   return (
-    <div className="flex w-28 shrink-0 flex-col rounded-2xl border border-white/10 bg-surface-800/70 p-3">
-      <span className="font-mono text-xs font-semibold tabular-nums text-primary-300">
+    <div className="bg-surface-800/70 flex w-28 shrink-0 flex-col rounded-2xl border border-white/10 p-3">
+      <span className="text-primary-300 font-mono text-xs font-semibold tabular-nums">
         {card.releaseYear}
       </span>
-      <span className="mt-2 line-clamp-2 text-sm font-medium text-text-primary">{card.title}</span>
+      <span className="text-text-primary mt-2 line-clamp-2 text-sm font-medium">{card.title}</span>
     </div>
   );
 }
@@ -124,7 +115,7 @@ export function GameOverScreen({
     score,
     turnsPlayed,
   });
-  const highlightedPositions = endedOnIncorrectPlacement ? validPositions ?? [] : [];
+  const highlightedPositions = endedOnIncorrectPlacement ? (validPositions ?? []) : [];
   const positionDescriptions = highlightedPositions.map((position) =>
     describeTimelineSlot(timelineItems, position),
   );
@@ -137,7 +128,7 @@ export function GameOverScreen({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.25 }}
     >
-      <div className="w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-surface-900/95 shadow-2xl shadow-black/30 backdrop-blur">
+      <div className="bg-surface-900/95 w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-black/30 backdrop-blur">
         <div className="grid gap-8 px-4 py-6 md:px-8 md:py-10 xl:grid-cols-[280px_minmax(0,1fr)] xl:items-center">
           <div className="flex flex-col items-center gap-4">
             <div
@@ -163,7 +154,7 @@ export function GameOverScreen({
               />
             )}
 
-            <p className="max-w-xs text-center text-sm text-text-secondary">
+            <p className="text-text-secondary max-w-xs text-center text-sm">
               {endedOnIncorrectPlacement
                 ? "This reveal ended your run. The highlighted slot shows where it belonged."
                 : "You placed every card in the deck without missing a turn."}
@@ -173,17 +164,17 @@ export function GameOverScreen({
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-display text-4xl font-bold text-text-primary md:text-5xl">
+                <h2 className="font-display text-text-primary text-4xl font-bold md:text-5xl">
                   {endedOnIncorrectPlacement ? "Game Over" : "Perfect Run"}
                 </h2>
                 {difficulty !== null && (
-                  <span className="rounded-full border border-primary-400/30 bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-300">
+                  <span className="border-primary-400/30 bg-primary-500/10 text-primary-300 rounded-full border px-3 py-1 text-xs font-semibold">
                     {getSoloDifficultyLabel(difficulty)}
                   </span>
                 )}
               </div>
 
-              <p className="max-w-2xl text-sm text-text-secondary md:text-base">
+              <p className="text-text-secondary max-w-2xl text-sm md:text-base">
                 {endedOnIncorrectPlacement
                   ? "One wrong placement stopped the endless run, but the board you built is still worth showing off."
                   : "You ran the full solo deck cleanly and closed out the session with a perfect finish."}
@@ -199,17 +190,16 @@ export function GameOverScreen({
             {endedOnIncorrectPlacement &&
               failedCard !== null &&
               positionDescriptions.length > 0 && (
-                <div className="rounded-2xl border border-white/10 bg-surface-800/75 p-4">
+                <div className="bg-surface-800/75 rounded-2xl border border-white/10 p-4">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="size-4 text-primary-300" aria-hidden="true" />
-                    <h3 className="font-display text-lg font-semibold text-text-primary">
+                    <BarChart3 className="text-primary-300 size-4" aria-hidden="true" />
+                    <h3 className="font-display text-text-primary text-lg font-semibold">
                       Correct position
                     </h3>
                   </div>
 
-                  <p className="mt-2 text-sm text-text-secondary">
-                    {positionDescriptions.length === 1 &&
-                    firstPositionDescription !== undefined
+                  <p className="text-text-secondary mt-2 text-sm">
+                    {positionDescriptions.length === 1 && firstPositionDescription !== undefined
                       ? `This card belonged ${firstPositionDescription}.`
                       : "Any highlighted slot would have counted because the release year matched the neighboring cards."}
                   </p>
@@ -234,7 +224,7 @@ export function GameOverScreen({
                   </div>
 
                   {positionDescriptions.length > 1 && (
-                    <div className="mt-3 flex flex-col gap-1 text-xs text-text-secondary">
+                    <div className="text-text-secondary mt-3 flex flex-col gap-1 text-xs">
                       {positionDescriptions.map((description) => (
                         <span key={description}>{description}</span>
                       ))}
@@ -243,14 +233,14 @@ export function GameOverScreen({
                 </div>
               )}
 
-            <div className="rounded-2xl border border-white/10 bg-surface-800/75 p-4">
+            <div className="bg-surface-800/75 rounded-2xl border border-white/10 p-4">
               <div className="flex items-center gap-2">
                 <Trophy className="size-4 text-yellow-400" aria-hidden="true" />
-                <h3 className="font-display text-lg font-semibold text-text-primary">
+                <h3 className="font-display text-text-primary text-lg font-semibold">
                   Share preview
                 </h3>
               </div>
-              <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-xl bg-surface-900/80 p-3 font-mono text-sm text-text-primary">
+              <pre className="bg-surface-900/80 text-text-primary mt-3 overflow-x-auto rounded-xl p-3 font-mono text-sm break-words whitespace-pre-wrap">
                 {shareSummary}
               </pre>
             </div>

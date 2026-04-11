@@ -38,48 +38,24 @@ describe("TitleGuessInput", () => {
   });
 
   it("renders the text input and guess button", () => {
-    render(
-      <TitleGuessInput
-        correctTitle="Super Mario Bros"
-        result={null}
-        onSubmit={onSubmit}
-      />,
-    );
+    render(<TitleGuessInput correctTitle="Super Mario Bros" result={null} onSubmit={onSubmit} />);
     expect(screen.getByRole("textbox", { name: /game title guess/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /guess/i })).toBeInTheDocument();
   });
 
   it("disables the Guess button when input is empty", () => {
-    render(
-      <TitleGuessInput
-        correctTitle="Super Mario Bros"
-        result={null}
-        onSubmit={onSubmit}
-      />,
-    );
+    render(<TitleGuessInput correctTitle="Super Mario Bros" result={null} onSubmit={onSubmit} />);
     expect(screen.getByRole("button", { name: /guess/i })).toBeDisabled();
   });
 
   it("enables the Guess button after typing", () => {
-    render(
-      <TitleGuessInput
-        correctTitle="Super Mario Bros"
-        result={null}
-        onSubmit={onSubmit}
-      />,
-    );
+    render(<TitleGuessInput correctTitle="Super Mario Bros" result={null} onSubmit={onSubmit} />);
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Mario" } });
     expect(screen.getByRole("button", { name: /guess/i })).not.toBeDisabled();
   });
 
   it("calls onSubmit with trimmed guess on form submit", () => {
-    render(
-      <TitleGuessInput
-        correctTitle="Super Mario Bros"
-        result={null}
-        onSubmit={onSubmit}
-      />,
-    );
+    render(<TitleGuessInput correctTitle="Super Mario Bros" result={null} onSubmit={onSubmit} />);
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "  Super Mario  " },
     });
