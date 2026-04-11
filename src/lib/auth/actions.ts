@@ -131,12 +131,15 @@ export async function signUpAction(
     if (signUpError.message.toLowerCase().includes("already registered")) {
       return { error: "An account with this email already exists." };
     }
-    return { error: `Sign-up failed: ${signUpError.message}` };
+    if (signUpError.message.toLowerCase().includes("rate limit")) {
+      return { error: "Too many sign-up attempts. Please wait a few minutes and try again." };
+    }
+    return { error: "Sign-up failed. Please try again." };
   }
 
   const userId = authData.user?.id;
   if (userId === undefined) {
-    return { error: "Sign-up failed: no user returned. Check email confirmation settings." };
+    return { error: "Sign-up failed. Please try again." };
   }
 
   const { error: profileError } = await supabase
