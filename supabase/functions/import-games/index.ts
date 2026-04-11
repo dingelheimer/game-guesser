@@ -44,9 +44,7 @@ async function getAccessToken(): Promise<string> {
   const clientId = Deno.env.get("TWITCH_CLIENT_ID") ?? "";
   const clientSecret = Deno.env.get("TWITCH_CLIENT_SECRET") ?? "";
   if (!clientId || !clientSecret) {
-    throw new Error(
-      "TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets must be configured",
-    );
+    throw new Error("TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets must be configured");
   }
 
   const url = new URL(TWITCH_TOKEN_URL);
@@ -106,9 +104,7 @@ async function igdbFetchGames(query: string): Promise<IgdbGameInput[]> {
   }
 
   if (!response.ok) {
-    throw new Error(
-      `IGDB API error: ${String(response.status)} ${response.statusText}`,
-    );
+    throw new Error(`IGDB API error: ${String(response.status)} ${response.statusText}`);
   }
 
   return (await response.json()) as IgdbGameInput[];
@@ -120,10 +116,10 @@ async function igdbFetchGames(query: string): Promise<IgdbGameInput[]> {
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed. Use POST." }),
-      { status: 405, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed. Use POST." }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Parse and validate request body
@@ -137,18 +133,17 @@ Deno.serve(async (req: Request) => {
     if (typeof startYear !== "number" || typeof endYear !== "number") {
       return new Response(
         JSON.stringify({
-          error:
-            "Missing required parameters: start_year (number), end_year (number)",
+          error: "Missing required parameters: start_year (number), end_year (number)",
         }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
     if (startYear > endYear) {
-      return new Response(
-        JSON.stringify({ error: "start_year must be <= end_year" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "start_year must be <= end_year" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     params = {
@@ -158,10 +153,10 @@ Deno.serve(async (req: Request) => {
       resume: body["resume"] !== false,
     };
   } catch {
-    return new Response(
-      JSON.stringify({ error: "Invalid JSON body" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Validate Supabase environment

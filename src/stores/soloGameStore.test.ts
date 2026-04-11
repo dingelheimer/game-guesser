@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  revealedToTimelineItem,
-  hiddenToTimelineItem,
-  checkTitleGuess,
-} from "./soloGameStore";
+import { revealedToTimelineItem, hiddenToTimelineItem, checkTitleGuess } from "./soloGameStore";
 import type { useSoloGameStore as UseSoloGameStoreType } from "./soloGameStore";
 import type { RevealedCardData, HiddenCardData } from "@/lib/solo/api";
 

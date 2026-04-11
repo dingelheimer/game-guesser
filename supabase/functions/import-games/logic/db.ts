@@ -46,89 +46,60 @@ export function createDbOperations(supabase: SupabaseClient): DbOperations {
     },
 
     async upsertCovers(covers: CoverInsert[]): Promise<void> {
-      const { error } = await supabase
-        .from("covers")
-        .upsert(covers, { onConflict: "game_id" });
+      const { error } = await supabase.from("covers").upsert(covers, { onConflict: "game_id" });
       if (error) throw new Error(`upsertCovers failed: ${error.message}`);
     },
 
-    async replaceScreenshots(
-      gameDbId: number,
-      screenshots: ScreenshotInsert[],
-    ): Promise<void> {
+    async replaceScreenshots(gameDbId: number, screenshots: ScreenshotInsert[]): Promise<void> {
       const { error: deleteError } = await supabase
         .from("screenshots")
         .delete()
         .eq("game_id", gameDbId);
       if (deleteError) {
-        throw new Error(
-          `replaceScreenshots delete failed: ${deleteError.message}`,
-        );
+        throw new Error(`replaceScreenshots delete failed: ${deleteError.message}`);
       }
       if (screenshots.length === 0) return;
-      const { error: insertError } = await supabase
-        .from("screenshots")
-        .insert(screenshots);
+      const { error: insertError } = await supabase.from("screenshots").insert(screenshots);
       if (insertError) {
-        throw new Error(
-          `replaceScreenshots insert failed: ${insertError.message}`,
-        );
+        throw new Error(`replaceScreenshots insert failed: ${insertError.message}`);
       }
     },
 
-    async replaceGamePlatforms(
-      gameDbId: number,
-      platformDbIds: number[],
-    ): Promise<void> {
+    async replaceGamePlatforms(gameDbId: number, platformDbIds: number[]): Promise<void> {
       const { error: deleteError } = await supabase
         .from("game_platforms")
         .delete()
         .eq("game_id", gameDbId);
       if (deleteError) {
-        throw new Error(
-          `replaceGamePlatforms delete failed: ${deleteError.message}`,
-        );
+        throw new Error(`replaceGamePlatforms delete failed: ${deleteError.message}`);
       }
       if (platformDbIds.length === 0) return;
       const rows = platformDbIds.map((platform_id) => ({
         game_id: gameDbId,
         platform_id,
       }));
-      const { error: insertError } = await supabase
-        .from("game_platforms")
-        .insert(rows);
+      const { error: insertError } = await supabase.from("game_platforms").insert(rows);
       if (insertError) {
-        throw new Error(
-          `replaceGamePlatforms insert failed: ${insertError.message}`,
-        );
+        throw new Error(`replaceGamePlatforms insert failed: ${insertError.message}`);
       }
     },
 
-    async replaceGameGenres(
-      gameDbId: number,
-      genreDbIds: number[],
-    ): Promise<void> {
+    async replaceGameGenres(gameDbId: number, genreDbIds: number[]): Promise<void> {
       const { error: deleteError } = await supabase
         .from("game_genres")
         .delete()
         .eq("game_id", gameDbId);
       if (deleteError) {
-        throw new Error(
-          `replaceGameGenres delete failed: ${deleteError.message}`,
-        );
+        throw new Error(`replaceGameGenres delete failed: ${deleteError.message}`);
       }
       if (genreDbIds.length === 0) return;
       const rows = genreDbIds.map((genre_id) => ({
         game_id: gameDbId,
         genre_id,
       }));
-      const { error: insertError } = await supabase
-        .from("game_genres")
-        .insert(rows);
+      const { error: insertError } = await supabase.from("game_genres").insert(rows);
       if (insertError) {
-        throw new Error(
-          `replaceGameGenres insert failed: ${insertError.message}`,
-        );
+        throw new Error(`replaceGameGenres insert failed: ${insertError.message}`);
       }
     },
 
@@ -150,10 +121,9 @@ export function createDbOperations(supabase: SupabaseClient): DbOperations {
     },
 
     async saveImportProgress(year: number): Promise<void> {
-      const { error } = await supabase.from("sync_state").upsert(
-        { key: "import_last_completed_year", value: String(year) },
-        { onConflict: "key" },
-      );
+      const { error } = await supabase
+        .from("sync_state")
+        .upsert({ key: "import_last_completed_year", value: String(year) }, { onConflict: "key" });
       if (error) throw new Error(`saveImportProgress failed: ${error.message}`);
     },
   };

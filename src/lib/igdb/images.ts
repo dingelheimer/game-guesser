@@ -25,17 +25,14 @@ export function igdbImageUrl(imageId: string, size: IgdbImageSize): string {
 }
 
 /** Screenshot shown during the guessing phase — desktop. */
-export const screenshotUrl = (imageId: string): string =>
-  igdbImageUrl(imageId, "screenshot_big");
+export const screenshotUrl = (imageId: string): string => igdbImageUrl(imageId, "screenshot_big");
 
 /** Screenshot shown during the guessing phase — mobile. */
 export const screenshotUrlMobile = (imageId: string): string =>
   igdbImageUrl(imageId, "screenshot_med");
 
 /** Cover art revealed after the player places their card. */
-export const coverUrl = (imageId: string): string =>
-  igdbImageUrl(imageId, "cover_big");
+export const coverUrl = (imageId: string): string => igdbImageUrl(imageId, "cover_big");
 
 /** Small thumbnail used in the timeline. */
-export const thumbnailUrl = (imageId: string): string =>
-  igdbImageUrl(imageId, "thumb");
+export const thumbnailUrl = (imageId: string): string => igdbImageUrl(imageId, "thumb");

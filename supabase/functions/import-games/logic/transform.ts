@@ -130,9 +130,7 @@ export function transformGame(game: IgdbGameInput): GameInsert | null {
     follows: game.follows ?? 0,
     hypes: game.hypes ?? 0,
     igdb_updated_at:
-      game.updated_at !== undefined
-        ? new Date(game.updated_at * 1000).toISOString()
-        : null,
+      game.updated_at !== undefined ? new Date(game.updated_at * 1000).toISOString() : null,
   };
 }
 
@@ -140,9 +138,7 @@ export function transformGame(game: IgdbGameInput): GameInsert | null {
  * Convert an IGDB platform to a database insert payload.
  * Returns null if name is missing.
  */
-export function transformPlatform(
-  platform: IgdbPlatformInput,
-): PlatformInsert | null {
+export function transformPlatform(platform: IgdbPlatformInput): PlatformInsert | null {
   if (platform.name === undefined) return null;
   return { igdb_id: platform.id, name: platform.name };
 }
@@ -160,10 +156,7 @@ export function transformGenre(genre: IgdbGenreInput): GenreInsert | null {
  * Convert an IGDB cover to a database insert payload.
  * Returns null if image_id is missing.
  */
-export function transformCover(
-  cover: IgdbCoverInput,
-  gameDbId: number,
-): CoverInsert | null {
+export function transformCover(cover: IgdbCoverInput, gameDbId: number): CoverInsert | null {
   if (cover.image_id === undefined) return null;
   return {
     game_id: gameDbId,
@@ -211,17 +204,9 @@ export const IGDB_PAGE_SIZE = 500;
  * @param offset - Pagination offset (0, 500, 1000, ...)
  * @param minRatingCount - Minimum rating_count to exclude obscure games
  */
-export function buildImportQuery(
-  year: number,
-  offset: number,
-  minRatingCount: number,
-): string {
-  const startUnix = Math.floor(
-    new Date(`${String(year)}-01-01T00:00:00Z`).getTime() / 1000,
-  );
-  const endUnix = Math.floor(
-    new Date(`${String(year + 1)}-01-01T00:00:00Z`).getTime() / 1000,
-  );
+export function buildImportQuery(year: number, offset: number, minRatingCount: number): string {
+  const startUnix = Math.floor(new Date(`${String(year)}-01-01T00:00:00Z`).getTime() / 1000);
+  const endUnix = Math.floor(new Date(`${String(year + 1)}-01-01T00:00:00Z`).getTime() / 1000);
   return [
     "fields id, name, slug, first_release_date, summary,",
     "       rating, rating_count, total_rating, total_rating_count,",

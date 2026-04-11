@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  buildSoloShareSummary,
-  copySoloShareSummary,
-  getSoloDifficultyLabel,
-} from "./share";
+import { buildSoloShareSummary, copySoloShareSummary, getSoloDifficultyLabel } from "./share";
 
 describe("getSoloDifficultyLabel", () => {
   it("returns the UI label for a difficulty tier", () => {
