@@ -48,7 +48,17 @@ export function GameCard({
   size = "hero",
   className,
 }: GameCardProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotion() ?? false;
+  const motionEase = [0.4, 0, 0.2, 1] as const;
+  const sizeClasses =
+    size === "timeline"
+      ? "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]"
+      : "w-[70vw] shrink-0 md:w-[240px] lg:w-[300px]";
+  const aspectRatioClass = isRevealed ? "aspect-[3/4]" : "aspect-video";
+  const flipTransition = reduceMotion ? { duration: 0 } : { duration: 0.6, ease: motionEase };
+  const layoutTransition = reduceMotion
+    ? { duration: 0 }
+    : { layout: { duration: 0.35, ease: motionEase } };
 
   const screenshotSrc =
     screenshotImageId !== null
@@ -59,22 +69,18 @@ export function GameCard({
 
   const screenshotSizes =
     size === "timeline"
-      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px"
-      : "(max-width: 768px) 80vw, (max-width: 1024px) 240px, 300px";
+      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, (max-width: 1280px) 200px, 220px"
+      : "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px";
 
   const coverSizes =
     size === "timeline"
-      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px"
+      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, (max-width: 1280px) 200px, 220px"
       : "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px";
 
   if (isLoading) {
     return (
       <div
-        className={cn(
-          "w-[70vw] shrink-0 md:w-[240px] lg:w-[300px]",
-          "aspect-[3/4] overflow-hidden rounded-2xl",
-          className,
-        )}
+        className={cn(sizeClasses, aspectRatioClass, "overflow-hidden rounded-2xl", className)}
         aria-busy="true"
         aria-label="Loading game card"
       >
@@ -86,18 +92,18 @@ export function GameCard({
   const rotateY = isRevealed ? 180 : 0;
 
   return (
-    <div
-      className={cn("aspect-[3/4] w-[70vw] shrink-0 md:w-[240px] lg:w-[300px]", className)}
+    <motion.div
+      layout={!reduceMotion}
+      className={cn(sizeClasses, aspectRatioClass, className)}
       style={{ perspective: "1000px" }}
+      transition={layoutTransition}
     >
       <motion.div
         className="relative h-full w-full"
         style={{ transformStyle: "preserve-3d" }}
         animate={{ rotateY }}
         initial={false}
-        transition={
-          reduceMotion === true ? { duration: 0 } : { duration: 0.6, ease: [0.4, 0, 0.2, 1] }
-        }
+        transition={flipTransition}
         aria-label={isRevealed ? `${title}, ${String(releaseYear)}` : "Mystery game card"}
       >
         {/* ── Front face — Screenshot (hidden state) ─────────────────── */}
@@ -115,7 +121,7 @@ export function GameCard({
               alt="Game screenshot"
               fill
               sizes={screenshotSizes}
-              className="object-contain"
+              className="object-cover"
               priority={!isRevealed}
             />
           ) : (
@@ -188,6 +194,6 @@ export function GameCard({
           </div>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

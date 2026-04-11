@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -7,6 +7,17 @@ import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 afterEach(cleanup);
 import { Timeline } from "./Timeline";
 import type { TimelineItem } from "./Timeline";
+
+interface MockDndContextProps {
+  children: React.ReactNode;
+  sensors?: unknown;
+  onDragStart?: () => void;
+  onDragOver?: (event: { over: { id: string } | null }) => void;
+  onDragEnd?: (event: { over: { id: string } | null }) => void;
+  onDragCancel?: () => void;
+}
+
+let lastDndContextProps: MockDndContextProps | null = null;
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -40,7 +51,10 @@ vi.mock("framer-motion", () => ({
 }));
 
 vi.mock("@dnd-kit/core", () => ({
-  DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DndContext: ({ children, ...rest }: MockDndContextProps) => {
+    lastDndContextProps = { children, ...rest };
+    return <>{children}</>;
+  },
   DragOverlay: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useDroppable: vi.fn((opts: { id: string }) => ({
     setNodeRef: vi.fn(),
@@ -116,11 +130,23 @@ function getDropZone(index: number): HTMLElement {
   return zone;
 }
 
+/** Returns the active drag overlay wrapper while a drag is in progress. */
+function getDragOverlay(container: HTMLElement): HTMLDivElement {
+  const overlay = Array.from(container.querySelectorAll("div")).find((element) =>
+    element.className.includes("scale-95 rotate-2"),
+  );
+  if (!(overlay instanceof HTMLDivElement)) {
+    throw new Error("Expected drag overlay wrapper");
+  }
+  return overlay;
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("Timeline", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastDndContextProps = null;
   });
 
   // ── Structure ──────────────────────────────────────────────────────────────
@@ -156,6 +182,20 @@ describe("Timeline", () => {
       // Year text appears in both the GameCard face and the YearMarker badge.
       expect(screen.getAllByText("2004").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("2011").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("centers the desktop rail and applies the xl timeline sizing classes", () => {
+      const { container } = render(
+        <Timeline placedCards={[card1, card2]} pendingCard={pendingCard} />,
+      );
+      const rail = screen.getByRole("group", { name: "Your timeline" });
+      const timelineCard = Array.from(container.querySelectorAll("div")).find((element) =>
+        element.className.includes("xl:w-[220px]"),
+      );
+
+      expect(rail.className).toContain("md:justify-center");
+      expect(timelineCard?.className).toContain("w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]");
+      expect(getDropZone(0)).toHaveClass("xl:h-[293px]");
     });
 
     it("renders the pending card screenshot when provided", () => {
@@ -351,6 +391,48 @@ describe("Timeline", () => {
       await user.keyboard("{ArrowRight}");
       await user.keyboard("{ArrowRight}");
       expect(document.activeElement).toBe(zones[2]);
+    });
+  });
+
+  describe("drag overlay", () => {
+    it("adds the drop-zone glow to the overlay when hovering a valid zone", () => {
+      const { container } = render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
+
+      act(() => {
+        lastDndContextProps?.onDragStart?.();
+      });
+
+      act(() => {
+        lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
+      });
+
+      const overlay = getDragOverlay(container);
+
+      expect(overlay.className).toContain("ring-primary-400");
+      expect(overlay.className).toContain("shadow-[0_0_24px_rgba(139,92,246,0.45)]");
+      expect(overlay.className).toContain("ring-2");
+    });
+
+    it("removes the overlay glow when no valid zone is active", () => {
+      const { container } = render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
+
+      act(() => {
+        lastDndContextProps?.onDragStart?.();
+      });
+      act(() => {
+        lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
+      });
+
+      expect(getDragOverlay(container).className).toContain("ring-primary-400");
+
+      act(() => {
+        lastDndContextProps?.onDragOver?.({ over: null });
+      });
+
+      expect(getDragOverlay(container).className).not.toContain("ring-primary-400");
+      expect(getDragOverlay(container).className).not.toContain(
+        "shadow-[0_0_24px_rgba(139,92,246,0.45)]",
+      );
     });
   });
 });
