@@ -21,6 +21,8 @@ interface GameOverScreenProps {
   score: number;
   turnsPlayed: number;
   bestStreak: number;
+  bonusPointsEarned: number;
+  bonusOpportunities: number;
   timelineItems: TimelineItem[];
   failedCard: RevealedCardData | null;
   validPositions: number[] | null;
@@ -103,6 +105,8 @@ export function GameOverScreen({
   score,
   turnsPlayed,
   bestStreak,
+  bonusPointsEarned,
+  bonusOpportunities,
   timelineItems,
   failedCard,
   validPositions,
@@ -186,6 +190,20 @@ export function GameOverScreen({
               <StatCard label="Turns played" value={turnsPlayed} />
               <StatCard label="Best streak" value={bestStreak} />
             </div>
+
+            {bonusOpportunities > 0 && (
+              <div className="bg-surface-800/75 rounded-2xl border border-white/10 p-4">
+                <p className="text-text-secondary text-xs font-semibold tracking-[0.18em] uppercase">
+                  Platform bonus performance
+                </p>
+                <p className="text-text-primary mt-2 text-base font-semibold">
+                  Platform Bonuses:{" "}
+                  <span className="font-mono tabular-nums">
+                    {bonusPointsEarned}/{bonusOpportunities}
+                  </span>
+                </p>
+              </div>
+            )}
 
             {endedOnIncorrectPlacement &&
               failedCard !== null &&

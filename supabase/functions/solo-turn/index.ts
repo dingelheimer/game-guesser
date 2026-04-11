@@ -18,11 +18,20 @@ import { processTurn } from "./logic/turn.ts";
 import { createSoloTurnDbOperations } from "./logic/db.ts";
 import type { SessionUpdate } from "./logic/db.ts";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed. Use POST." }), {
       status: 405,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
 
@@ -37,7 +46,7 @@ Deno.serve(async (req: Request) => {
     if (typeof sid !== "string" || sid.trim() === "") {
       return new Response(
         JSON.stringify({ error: "Missing required parameter: session_id (string)" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
+        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }
 
@@ -46,7 +55,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           error: "Missing required parameter: position (non-negative integer)",
         }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
+        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }
 
@@ -55,7 +64,7 @@ Deno.serve(async (req: Request) => {
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
 
@@ -67,7 +76,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         error: "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not configured",
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
     );
   }
 
@@ -81,14 +90,14 @@ Deno.serve(async (req: Request) => {
     if (session.status !== "active") {
       return new Response(JSON.stringify({ error: "Session is not active" }), {
         status: 409,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
       });
     }
 
     if (session.deck.length === 0) {
       return new Response(JSON.stringify({ error: "Session deck is empty — no card to place" }), {
         status: 409,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
       });
     }
 
@@ -165,13 +174,13 @@ Deno.serve(async (req: Request) => {
         ...(platformOptions !== undefined && { platform_options: platformOptions }),
         ...(correctPlatformIds !== undefined && { correct_platform_ids: correctPlatformIds }),
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
+      { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
 });
