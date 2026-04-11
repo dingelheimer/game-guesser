@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildInitialSession,
-  shuffle,
-} from "../../../supabase/functions/solo-start/logic/session";
+import { buildInitialSession, shuffle } from "../../../supabase/functions/solo-start/logic/session";
 import type { EligibleGame } from "../../../supabase/functions/solo-start/logic/session";
 
 // ---------------------------------------------------------------------------

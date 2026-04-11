@@ -304,5 +304,4 @@ export type Cover = Database["public"]["Tables"]["covers"]["Row"];
 export type Screenshot = Database["public"]["Tables"]["screenshots"]["Row"];
 export type SyncState = Database["public"]["Tables"]["sync_state"]["Row"];
 export type SoloSession = Database["public"]["Tables"]["solo_sessions"]["Row"];
-export type GameByDifficulty =
-  Database["public"]["Views"]["games_by_difficulty"]["Row"];
+export type GameByDifficulty = Database["public"]["Views"]["games_by_difficulty"]["Row"];

@@ -46,9 +46,7 @@ const DIFFICULTY_MAX_RANK: Record<string, number | null> = {
   extreme: null,
 };
 
-export function createSoloStartDbOperations(
-  supabase: SupabaseClient,
-): SoloStartDbOperations {
+export function createSoloStartDbOperations(supabase: SupabaseClient): SoloStartDbOperations {
   return {
     async fetchEligibleGames(difficulty: string): Promise<EligibleGame[]> {
       const maxRank = DIFFICULTY_MAX_RANK[difficulty] ?? null;
@@ -141,9 +139,7 @@ export function createSoloStartDbOperations(
         name: game.name as string,
         release_year: game.release_year as number,
         cover_image_id: cover.igdb_image_id as string,
-        screenshot_image_ids: (screenshots ?? []).map(
-          (s) => s.igdb_image_id as string,
-        ),
+        screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
         platform_names: platformNames,
       };
     },
@@ -165,9 +161,7 @@ export function createSoloStartDbOperations(
 
       return {
         game_id: gameId,
-        screenshot_image_ids: (screenshots ?? []).map(
-          (s) => s.igdb_image_id as string,
-        ),
+        screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
       };
     },
 
@@ -176,9 +170,7 @@ export function createSoloStartDbOperations(
       state: InitialSessionState,
       anchorReleaseYear: number,
     ): Promise<string> {
-      const timeline = [
-        { game_id: state.anchor.id, release_year: anchorReleaseYear },
-      ];
+      const timeline = [{ game_id: state.anchor.id, release_year: anchorReleaseYear }];
 
       const { data, error } = await supabase
         .from("solo_sessions")
@@ -191,9 +183,7 @@ export function createSoloStartDbOperations(
         .single();
 
       if (error !== null || data === null) {
-        throw new Error(
-          `Failed to create solo session: ${error?.message ?? "no data"}`,
-        );
+        throw new Error(`Failed to create solo session: ${error?.message ?? "no data"}`);
       }
 
       return (data as { id: string }).id;
