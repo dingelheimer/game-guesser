@@ -83,8 +83,4 @@ export interface IgdbGame {
 
 // --- Error codes ---
 
-export type IgdbErrorCode =
-  | "rate_limit"
-  | "unauthorized"
-  | "api_error"
-  | "network_error";
+export type IgdbErrorCode = "rate_limit" | "unauthorized" | "api_error" | "network_error";

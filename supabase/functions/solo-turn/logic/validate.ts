@@ -32,8 +32,7 @@ export function isValidPlacement(
   if (position < 0 || position > timeline.length) return false;
 
   const prevYear = position > 0 ? timeline[position - 1]!.release_year : -Infinity;
-  const nextYear =
-    position < timeline.length ? timeline[position]!.release_year : Infinity;
+  const nextYear = position < timeline.length ? timeline[position]!.release_year : Infinity;
 
   return newYear >= prevYear && newYear <= nextYear;
 }
@@ -43,10 +42,7 @@ export function isValidPlacement(
  * current timeline.  At least one index is always valid (the full range
  * covers −∞ to +∞).
  */
-export function findValidPositions(
-  timeline: readonly TimelineEntry[],
-  newYear: number,
-): number[] {
+export function findValidPositions(timeline: readonly TimelineEntry[], newYear: number): number[] {
   const valid: number[] = [];
   for (let i = 0; i <= timeline.length; i++) {
     if (isValidPlacement(timeline, newYear, i)) {

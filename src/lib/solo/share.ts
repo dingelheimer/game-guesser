@@ -68,8 +68,7 @@ export async function copySoloShareSummary({
     });
   } catch (error: unknown) {
     notify.error("Could not copy summary", {
-      description:
-        error instanceof Error ? error.message : "The browser blocked clipboard access.",
+      description: error instanceof Error ? error.message : "The browser blocked clipboard access.",
     });
   }
 }

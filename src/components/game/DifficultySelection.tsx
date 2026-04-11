@@ -64,35 +64,39 @@ export function DifficultySelection({ onSelect, disabled = false }: DifficultySe
   return (
     <div className="flex flex-col items-center gap-8 px-4 py-12">
       <div className="text-center">
-        <h1 className="font-display text-4xl font-bold text-text-primary">Solo Mode</h1>
-        <p className="mt-2 text-text-secondary">
+        <h1 className="font-display text-text-primary text-4xl font-bold">Solo Mode</h1>
+        <p className="text-text-secondary mt-2">
           Place games in chronological order. One wrong placement ends the game.
         </p>
       </div>
 
       <div className="grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
-        {DIFFICULTIES.map(({ tier, label, description, Icon, colorClass, borderClass, bgClass }) => (
-          <button
-            key={tier}
-            onClick={() => { onSelect(tier); }}
-            disabled={disabled}
-            className={cn(
-              "flex flex-col gap-3 rounded-xl border p-5 text-left",
-              "bg-surface-800 transition-all duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              "disabled:pointer-events-none disabled:opacity-50",
-              borderClass,
-              bgClass,
-            )}
-            aria-label={`${label} difficulty: ${description}`}
-          >
-            <Icon className={cn("size-7", colorClass)} />
-            <div>
-              <div className={cn("font-display text-lg font-bold", colorClass)}>{label}</div>
-              <div className="mt-0.5 text-sm text-text-secondary">{description}</div>
-            </div>
-          </button>
-        ))}
+        {DIFFICULTIES.map(
+          ({ tier, label, description, Icon, colorClass, borderClass, bgClass }) => (
+            <button
+              key={tier}
+              onClick={() => {
+                onSelect(tier);
+              }}
+              disabled={disabled}
+              className={cn(
+                "flex flex-col gap-3 rounded-xl border p-5 text-left",
+                "bg-surface-800 transition-all duration-150",
+                "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+                "disabled:pointer-events-none disabled:opacity-50",
+                borderClass,
+                bgClass,
+              )}
+              aria-label={`${label} difficulty: ${description}`}
+            >
+              <Icon className={cn("size-7", colorClass)} />
+              <div>
+                <div className={cn("font-display text-lg font-bold", colorClass)}>{label}</div>
+                <div className="text-text-secondary mt-0.5 text-sm">{description}</div>
+              </div>
+            </button>
+          ),
+        )}
       </div>
     </div>
   );

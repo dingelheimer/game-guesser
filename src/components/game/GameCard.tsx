@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useReducedMotion, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { coverUrl, screenshotUrl } from "@/lib/igdb/images";
+import { coverUrl, screenshotUrl, screenshotUrlMobile } from "@/lib/igdb/images";
 
 export interface GameCardProps {
   /** IGDB image ID for the screenshot shown during guessing. */
@@ -21,6 +21,12 @@ export interface GameCardProps {
   isRevealed: boolean;
   /** Show skeleton placeholder while images are loading. */
   isLoading?: boolean;
+  /**
+   * Card size variant.
+   * - `"hero"` (default): current-card area; uses full-size screenshots.
+   * - `"timeline"`: compact placed card; uses mobile-optimised screenshots.
+   */
+  size?: "hero" | "timeline";
   className?: string;
 }
 
@@ -39,16 +45,34 @@ export function GameCard({
   platform,
   isRevealed,
   isLoading = false,
+  size = "hero",
   className,
 }: GameCardProps) {
   const reduceMotion = useReducedMotion();
+
+  const screenshotSrc =
+    screenshotImageId !== null
+      ? size === "timeline"
+        ? screenshotUrlMobile(screenshotImageId)
+        : screenshotUrl(screenshotImageId)
+      : null;
+
+  const screenshotSizes =
+    size === "timeline"
+      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px"
+      : "(max-width: 768px) 80vw, (max-width: 1024px) 240px, 300px";
+
+  const coverSizes =
+    size === "timeline"
+      ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, 200px"
+      : "(max-width: 768px) 70vw, (max-width: 1024px) 240px, 300px";
 
   if (isLoading) {
     return (
       <div
         className={cn(
-          "w-[70vw] md:w-[200px]",
-          "aspect-[3/4] rounded-2xl overflow-hidden",
+          "w-[70vw] shrink-0 md:w-[240px] lg:w-[300px]",
+          "aspect-[3/4] overflow-hidden rounded-2xl",
           className,
         )}
         aria-busy="true"
@@ -63,7 +87,7 @@ export function GameCard({
 
   return (
     <div
-      className={cn("w-[70vw] md:w-[200px] aspect-[3/4]", className)}
+      className={cn("aspect-[3/4] w-[70vw] shrink-0 md:w-[240px] lg:w-[300px]", className)}
       style={{ perspective: "1000px" }}
     >
       <motion.div
@@ -72,42 +96,40 @@ export function GameCard({
         animate={{ rotateY }}
         initial={false}
         transition={
-          reduceMotion === true
-            ? { duration: 0 }
-            : { duration: 0.6, ease: [0.4, 0, 0.2, 1] }
+          reduceMotion === true ? { duration: 0 } : { duration: 0.6, ease: [0.4, 0, 0.2, 1] }
         }
         aria-label={isRevealed ? `${title}, ${String(releaseYear)}` : "Mystery game card"}
       >
         {/* ── Front face — Screenshot (hidden state) ─────────────────── */}
         <div
           className={cn(
-            "absolute inset-0 rounded-2xl overflow-hidden",
-            "bg-surface-800 border border-white/10",
+            "absolute inset-0 overflow-hidden rounded-2xl",
+            "bg-surface-900 border border-white/10",
           )}
           style={{ backfaceVisibility: "hidden" }}
           aria-hidden={isRevealed}
         >
-          {screenshotImageId !== null ? (
+          {screenshotSrc !== null ? (
             <Image
-              src={screenshotUrl(screenshotImageId)}
+              src={screenshotSrc}
               alt="Game screenshot"
               fill
-              sizes="(max-width: 768px) 70vw, 200px"
-              className="object-cover"
+              sizes={screenshotSizes}
+              className="object-contain"
               priority={!isRevealed}
             />
           ) : (
-            <div className="h-full w-full bg-surface-700" />
+            <div className="bg-surface-800 h-full w-full" />
           )}
 
           {/* Gradient overlay */}
-          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-surface-900/90 to-transparent" />
+          <div className="from-surface-900/90 absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t to-transparent" />
 
           {/* "?" badge */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span
               className={cn(
-                "text-6xl font-bold text-white/80 font-display",
+                "font-display text-6xl font-bold text-white/80",
                 "drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]",
               )}
               aria-hidden="true"
@@ -120,10 +142,9 @@ export function GameCard({
         {/* ── Back face — Revealed state ─────────────────────────────── */}
         <div
           className={cn(
-            "absolute inset-0 rounded-2xl overflow-hidden",
+            "absolute inset-0 overflow-hidden rounded-2xl",
             "bg-surface-800 border border-white/10",
-            isRevealed &&
-              "ring-2 ring-primary-500 shadow-[0_0_20px_rgba(139,92,246,0.5)]",
+            isRevealed && "ring-primary-500 shadow-[0_0_20px_rgba(139,92,246,0.5)] ring-2",
           )}
           style={{
             backfaceVisibility: "hidden",
@@ -138,12 +159,12 @@ export function GameCard({
                 src={coverUrl(coverImageId)}
                 alt={`${title} cover art`}
                 fill
-                sizes="(max-width: 768px) 70vw, 200px"
+                sizes={coverSizes}
                 className="object-cover"
                 priority={isRevealed}
               />
             ) : (
-              <div className="h-full w-full bg-surface-700" />
+              <div className="bg-surface-700 h-full w-full" />
             )}
           </div>
 
@@ -151,19 +172,19 @@ export function GameCard({
           <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-3">
             {/* Release year */}
             <span
-              className="font-mono tabular-nums text-3xl font-bold leading-none text-text-primary"
+              className="text-text-primary font-mono text-3xl leading-none font-bold tabular-nums"
               aria-label={`Release year: ${String(releaseYear)}`}
             >
               {releaseYear}
             </span>
 
             {/* Title */}
-            <span className="line-clamp-2 text-sm font-semibold leading-tight text-text-primary">
+            <span className="text-text-primary line-clamp-2 text-sm leading-tight font-semibold">
               {title}
             </span>
 
             {/* Platform */}
-            <span className="text-xs text-text-secondary">{platform}</span>
+            <span className="text-text-secondary text-xs">{platform}</span>
           </div>
         </div>
       </motion.div>

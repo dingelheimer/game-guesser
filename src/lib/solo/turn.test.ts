@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { processTurn } from "../../../supabase/functions/solo-turn/logic/turn";
-import type {
-  SessionSnapshot,
-} from "../../../supabase/functions/solo-turn/logic/turn";
+import type { SessionSnapshot } from "../../../supabase/functions/solo-turn/logic/turn";
 import type { TimelineEntry } from "../../../supabase/functions/solo-turn/logic/validate";
 
 // ---------------------------------------------------------------------------
@@ -130,20 +128,12 @@ describe("processTurn — correct placement", () => {
   });
 
   it("updates best_streak when current streak exceeds it", () => {
-    const result = processTurn(
-      baseSession({ current_streak: 5, best_streak: 5 }),
-      2000,
-      1,
-    );
+    const result = processTurn(baseSession({ current_streak: 5, best_streak: 5 }), 2000, 1);
     expect(result.new_best_streak).toBe(6);
   });
 
   it("keeps best_streak when current streak does not exceed it", () => {
-    const result = processTurn(
-      baseSession({ current_streak: 2, best_streak: 10 }),
-      2000,
-      1,
-    );
+    const result = processTurn(baseSession({ current_streak: 2, best_streak: 10 }), 2000, 1);
     expect(result.new_best_streak).toBe(10);
   });
 

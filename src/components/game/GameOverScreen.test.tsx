@@ -19,21 +19,14 @@ vi.mock("sonner", () => ({
 
 vi.mock("framer-motion", () => ({
   motion: {
-    section: ({
-      children,
-      ...props
-    }: ComponentProps<"section">) => <section {...props}>{children}</section>,
+    section: ({ children, ...props }: ComponentProps<"section">) => (
+      <section {...props}>{children}</section>
+    ),
   },
 }));
 
 vi.mock("./GameCard", () => ({
-  GameCard: ({
-    title,
-    releaseYear,
-  }: {
-    title: string;
-    releaseYear: number;
-  }) => (
+  GameCard: ({ title, releaseYear }: { title: string; releaseYear: number }) => (
     <div data-testid="game-card">
       {title} ({String(releaseYear)})
     </div>

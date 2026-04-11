@@ -20,10 +20,10 @@ import type { SessionUpdate } from "./logic/db.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed. Use POST." }),
-      { status: 405, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed. Use POST." }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Parse and validate request body
@@ -53,10 +53,10 @@ Deno.serve(async (req: Request) => {
     sessionId = sid;
     position = pos;
   } catch {
-    return new Response(
-      JSON.stringify({ error: "Invalid JSON body" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Validate Supabase environment
@@ -79,17 +79,17 @@ Deno.serve(async (req: Request) => {
     const session = await db.loadSession(sessionId);
 
     if (session.status !== "active") {
-      return new Response(
-        JSON.stringify({ error: "Session is not active" }),
-        { status: 409, headers: { "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Session is not active" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     if (session.deck.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Session deck is empty — no card to place" }),
-        { status: 409, headers: { "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Session deck is empty — no card to place" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // 2. Get the release year for the current card
