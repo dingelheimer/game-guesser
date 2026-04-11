@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { EligibleGame, InitialSessionState } from "./session.ts";
+import { getDisplayName } from "../../solo-turn/logic/platform-names.ts";
 
 /** Full game data returned to the client for a revealed card. */
 export interface RevealedCardData {
@@ -120,8 +121,7 @@ export function createSoloStartDbOperations(supabase: SupabaseClient): SoloStart
       const { data: platforms, error: platformErr } = await supabase
         .from("game_platforms")
         .select("platforms(name)")
-        .eq("game_id", gameId)
-        .limit(3);
+        .eq("game_id", gameId);
 
       if (platformErr !== null) {
         throw new Error(
@@ -131,7 +131,7 @@ export function createSoloStartDbOperations(supabase: SupabaseClient): SoloStart
 
       const platformNames = (platforms ?? []).flatMap((row) => {
         const p = row.platforms as { name: string } | null;
-        return p !== null ? [p.name] : [];
+        return p !== null ? [getDisplayName(p.name)] : [];
       });
 
       return {
