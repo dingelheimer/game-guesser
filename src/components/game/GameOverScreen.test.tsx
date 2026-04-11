@@ -78,6 +78,8 @@ describe("GameOverScreen", () => {
         score={4}
         turnsPlayed={5}
         bestStreak={4}
+        bonusPointsEarned={2}
+        bonusOpportunities={4}
         timelineItems={timelineItems}
         failedCard={failedCard}
         validPositions={[2]}
@@ -92,6 +94,8 @@ describe("GameOverScreen", () => {
     expect(screen.getByText("Final score")).toBeInTheDocument();
     expect(screen.getByText("Turns played")).toBeInTheDocument();
     expect(screen.getByText("Best streak")).toBeInTheDocument();
+    expect(screen.getByText(/Platform Bonuses:/i)).toBeInTheDocument();
+    expect(screen.getByText("2/4")).toBeInTheDocument();
     expect(screen.getByLabelText(/Correct slot:/)).toBeInTheDocument();
   });
 
@@ -102,6 +106,8 @@ describe("GameOverScreen", () => {
         score={2}
         turnsPlayed={3}
         bestStreak={2}
+        bonusPointsEarned={1}
+        bonusOpportunities={2}
         timelineItems={timelineItems}
         failedCard={failedCard}
         validPositions={[1]}
@@ -127,6 +133,8 @@ describe("GameOverScreen", () => {
         score={6}
         turnsPlayed={7}
         bestStreak={6}
+        bonusPointsEarned={0}
+        bonusOpportunities={0}
         timelineItems={timelineItems}
         failedCard={failedCard}
         validPositions={[1, 2]}
@@ -142,5 +150,6 @@ describe("GameOverScreen", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Correct slot:/)).toHaveLength(2);
+    expect(screen.queryByText(/Platform Bonuses:/i)).not.toBeInTheDocument();
   });
 });
