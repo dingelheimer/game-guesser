@@ -6,11 +6,11 @@
 const DISPLAY_NAMES: Record<string, string> = {
   // PC / Misc
   "PC (Microsoft Windows)": "PC",
-  "Mac": "Mac",
-  "Linux": "Linux",
+  Mac: "Mac",
+  Linux: "Linux",
   "Web browser": "Browser",
   // PlayStation
-  "PlayStation": "PS1",
+  PlayStation: "PS1",
   "PlayStation 2": "PS2",
   "PlayStation 3": "PS3",
   "PlayStation 4": "PS4",
@@ -18,7 +18,7 @@ const DISPLAY_NAMES: Record<string, string> = {
   "PlayStation Portable": "PSP",
   "PlayStation Vita": "PS Vita",
   // Xbox
-  "Xbox": "Xbox",
+  Xbox: "Xbox",
   "Xbox 360": "Xbox 360",
   "Xbox One": "Xbox One",
   "Xbox Series X|S": "Xbox Series X/S",
@@ -26,8 +26,8 @@ const DISPLAY_NAMES: Record<string, string> = {
   "Nintendo Entertainment System": "NES",
   "Super Nintendo Entertainment System": "SNES",
   "Nintendo 64": "N64",
-  "GameCube": "GameCube",
-  "Wii": "Wii",
+  GameCube: "GameCube",
+  Wii: "Wii",
   "Wii U": "Wii U",
   "Nintendo Switch": "Switch",
   // Nintendo — handheld
@@ -43,7 +43,7 @@ const DISPLAY_NAMES: Record<string, string> = {
   "Sega 32X": "Sega 32X",
   "Sega CD": "Sega CD",
   "Sega Saturn": "Saturn",
-  "Dreamcast": "Dreamcast",
+  Dreamcast: "Dreamcast",
   "Sega Game Gear": "Game Gear",
   // Atari
   "Atari 2600": "Atari 2600",
@@ -52,8 +52,8 @@ const DISPLAY_NAMES: Record<string, string> = {
   "Atari Jaguar": "Jaguar",
   "Atari Lynx": "Lynx",
   // Mobile / Other
-  "iOS": "iOS",
-  "Android": "Android",
+  iOS: "iOS",
+  Android: "Android",
   "Windows Phone": "Windows Phone",
 };
 
