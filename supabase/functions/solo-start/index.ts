@@ -18,11 +18,20 @@ import { createSoloStartDbOperations } from "./logic/db.ts";
 
 const VALID_DIFFICULTIES = new Set(["easy", "medium", "hard", "extreme"]);
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed. Use POST." }), {
       status: 405,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
 
@@ -37,14 +46,14 @@ Deno.serve(async (req: Request) => {
           error:
             'Missing or invalid parameter: difficulty must be "easy", "medium", "hard", or "extreme"',
         }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
+        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }
     difficulty = d;
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
 
@@ -56,7 +65,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         error: "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not configured",
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
     );
   }
 
@@ -72,7 +81,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           error: `Not enough games in the "${difficulty}" pool (found ${eligibleGames.length.toString()}, need at least 2)`,
         }),
-        { status: 503, headers: { "Content-Type": "application/json" } },
+        { status: 503, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }
 
@@ -100,13 +109,13 @@ Deno.serve(async (req: Request) => {
         timeline: [anchorCard],
         current_card: currentCard,
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
+      { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
 });
