@@ -6,16 +6,17 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { signUpAction, type AuthActionState } from "@/lib/auth/actions";
-import { UsernameAvailability } from "./username-availability";
+import { UsernameAvailability } from "@/components/auth/UsernameAvailability";
 
 const initialState: AuthActionState = {};
 
-export function SignUpForm() {
+export function SignUpForm({ next }: { next?: string | undefined }) {
   const [state, formAction, isPending] = useActionState(signUpAction, initialState);
   const [username, setUsername] = useState("");
 
   return (
     <form action={formAction} className="space-y-4">
+      {next !== undefined && <input type="hidden" name="next" value={next} />}
       {state.error !== undefined && (
         <p className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm" role="alert">
           {state.error}
@@ -101,7 +102,10 @@ export function SignUpForm() {
 
       <p className="text-text-secondary text-center text-sm">
         Already have an account?{" "}
-        <Link href="/auth/login" className="text-primary-400 hover:underline">
+        <Link
+          href={next !== undefined ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login"}
+          className="text-primary-400 hover:underline"
+        >
           Sign in
         </Link>
       </p>

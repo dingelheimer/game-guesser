@@ -1,14 +1,65 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { DifficultySelection } from "@/components/game/DifficultySelection";
 import { SoloGame } from "@/components/game/SoloGame";
+import { submitScoreAction } from "@/lib/auth/actions";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 
-export function SoloGamePage() {
+interface PendingScore {
+  score: number;
+  streak: number;
+  timestamp: number;
+}
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+export function SoloGamePage({
+  username,
+  hasPendingScore,
+}: {
+  username: string | null;
+  hasPendingScore: boolean;
+}) {
   const phase = useSoloGameStore((s) => s.phase);
   const startGame = useSoloGameStore((s) => s.startGame);
+  const router = useRouter();
+
+  // On mount, submit pending score if user just signed up/logged in
+  useEffect(() => {
+    if (!hasPendingScore) return;
+
+    // Clean up the ?saved=pending query param regardless of outcome
+    router.replace("/play/solo", { scroll: false });
+
+    const raw = sessionStorage.getItem("pending_score");
+    if (raw === null) return;
+
+    let pending: PendingScore;
+    try {
+      pending = JSON.parse(raw) as PendingScore;
+    } catch {
+      sessionStorage.removeItem("pending_score");
+      return;
+    }
+
+    sessionStorage.removeItem("pending_score");
+
+    // Silently discard stale scores (> 1 hour old)
+    if (Date.now() - pending.timestamp > ONE_HOUR_MS) return;
+
+    void submitScoreAction(pending.score, pending.streak).then((result) => {
+      if ("success" in result) {
+        toast.success("Score saved! Your score has been added to the leaderboard.");
+      } else {
+        toast.error(`Could not save score: ${result.error}`);
+      }
+    });
+  }, []);
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -51,7 +102,7 @@ export function SoloGamePage() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <SoloGame />
+          <SoloGame username={username} />
         </motion.div>
       )}
     </AnimatePresence>
