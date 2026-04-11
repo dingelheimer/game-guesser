@@ -2,7 +2,8 @@
 
 import { Fragment } from "react";
 import { motion } from "framer-motion";
-import { BarChart3, RotateCcw, Share2, Trophy } from "lucide-react";
+import { BarChart3, Loader2, RotateCcw, Share2, Trophy } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { GameCard } from "@/components/game/GameCard";
 import type { TimelineItem } from "@/components/game/Timeline";
@@ -14,7 +15,9 @@ import {
   copySoloShareSummary,
   getSoloDifficultyLabel,
 } from "@/lib/solo/share";
-import type { DifficultyTier } from "@/types/supabase";
+import type { DifficultyTier } from "@/lib/difficulty";
+
+export type ScoreStatus = "idle" | "submitting" | "saved" | "error";
 
 interface GameOverScreenProps {
   difficulty: DifficultyTier | null;
@@ -27,6 +30,10 @@ interface GameOverScreenProps {
   failedCard: RevealedCardData | null;
   validPositions: number[] | null;
   endedOnIncorrectPlacement: boolean;
+  /** null = unauthenticated guest */
+  username: string | null;
+  scoreStatus: ScoreStatus;
+  scoreError?: string | undefined;
   onPlayAgain: () => void;
   onChangeDifficulty: () => void;
 }
@@ -111,6 +118,9 @@ export function GameOverScreen({
   failedCard,
   validPositions,
   endedOnIncorrectPlacement,
+  username,
+  scoreStatus,
+  scoreError,
   onPlayAgain,
   onChangeDifficulty,
 }: GameOverScreenProps) {
@@ -287,6 +297,51 @@ export function GameOverScreen({
                 Share Result
               </Button>
             </div>
+
+            {/* Score save status */}
+            {username !== null ? (
+              <div
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium",
+                  scoreStatus === "saved" &&
+                    "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+                  scoreStatus === "submitting" &&
+                    "border-white/10 bg-surface-800/80 text-text-secondary",
+                  scoreStatus === "error" && "border-rose-500/30 bg-rose-500/10 text-rose-300",
+                  scoreStatus === "idle" && "border-white/10 bg-surface-800/80 text-text-secondary",
+                )}
+                role="status"
+                aria-live="polite"
+              >
+                {scoreStatus === "submitting" && (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Saving score…
+                  </>
+                )}
+                {scoreStatus === "saved" && (
+                  <>
+                    <Trophy className="size-4 text-yellow-400" aria-hidden="true" />
+                    Score saved!{" "}
+                    <Link href="/leaderboard" className="text-primary-400 hover:underline">
+                      View leaderboard →
+                    </Link>
+                  </>
+                )}
+                {scoreStatus === "error" && (
+                  <>{scoreError ?? "Failed to save score."}</>
+                )}
+                {scoreStatus === "idle" && <>Preparing to save score…</>}
+              </div>
+            ) : (
+              <Link
+                href={`/auth/signup?next=${encodeURIComponent("/play/solo?saved=pending")}`}
+                className="bg-primary-500 hover:bg-primary-400 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors"
+              >
+                <Trophy className="size-4" aria-hidden="true" />
+                Sign up to save your score
+              </Link>
+            )}
           </div>
         </div>
       </div>

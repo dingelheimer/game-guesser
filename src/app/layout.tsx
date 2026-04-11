@@ -7,6 +7,8 @@ import { Header } from "@/components/layouts/header";
 import { BottomNav } from "@/components/layouts/bottom-nav";
 import { Footer } from "@/components/layouts/footer";
 import { NoiseOverlay } from "@/components/layouts/noise-overlay";
+import { AuthListener } from "@/components/auth/AuthListener";
+import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -39,11 +41,26 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let username: string | null = null;
+  if (user !== null) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    username = profile?.username ?? null;
+  }
+
   return (
     <html
       lang="en"
@@ -59,11 +76,12 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <TooltipProvider>
             <NoiseOverlay />
-            <Header />
+            <Header username={username} />
             <main className="flex flex-1 flex-col pb-16 md:pb-0">{children}</main>
             <Footer />
-            <BottomNav />
+            <BottomNav username={username} />
             <Toaster />
+            <AuthListener />
           </TooltipProvider>
         </ThemeProvider>
       </body>
