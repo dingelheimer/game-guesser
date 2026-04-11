@@ -46,15 +46,9 @@ export interface DbOperations {
   upsertGenres(genres: GenreInsert[]): Promise<IdMap[]>;
   upsertCovers(covers: CoverInsert[]): Promise<void>;
   /** Delete all existing screenshots for gameDbId, then insert the new set. */
-  replaceScreenshots(
-    gameDbId: number,
-    screenshots: ScreenshotInsert[],
-  ): Promise<void>;
+  replaceScreenshots(gameDbId: number, screenshots: ScreenshotInsert[]): Promise<void>;
   /** Delete all platform associations for gameDbId, then insert fresh ones. */
-  replaceGamePlatforms(
-    gameDbId: number,
-    platformDbIds: number[],
-  ): Promise<void>;
+  replaceGamePlatforms(gameDbId: number, platformDbIds: number[]): Promise<void>;
   /** Delete all genre associations for gameDbId, then insert fresh ones. */
   replaceGameGenres(gameDbId: number, genreDbIds: number[]): Promise<void>;
   /** Recompute popularity_score and popularity_rank_per_year for all games. */
@@ -107,10 +101,7 @@ interface BatchResult {
 }
 
 /** Process one page of IGDB game records into the database. */
-export async function processBatch(
-  games: IgdbGameInput[],
-  db: DbOperations,
-): Promise<BatchResult> {
+export async function processBatch(games: IgdbGameInput[], db: DbOperations): Promise<BatchResult> {
   let imported = 0;
   let skipped = 0;
 

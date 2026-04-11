@@ -73,7 +73,12 @@ function getCredentials(): { clientId: string; clientSecret: string } {
   const clientId = process.env.TWITCH_CLIENT_ID;
   const clientSecret = process.env.TWITCH_CLIENT_SECRET;
 
-  if (clientId === undefined || clientId === "" || clientSecret === undefined || clientSecret === "") {
+  if (
+    clientId === undefined ||
+    clientId === "" ||
+    clientSecret === undefined ||
+    clientSecret === ""
+  ) {
     throw new IgdbError(
       "unauthorized",
       "TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET environment variables must be set",
@@ -87,10 +92,7 @@ function getCredentials(): { clientId: string; clientSecret: string } {
 // Token management
 // ---------------------------------------------------------------------------
 
-async function fetchNewToken(
-  clientId: string,
-  clientSecret: string,
-): Promise<CachedToken> {
+async function fetchNewToken(clientId: string, clientSecret: string): Promise<CachedToken> {
   const url = new URL(TWITCH_TOKEN_URL);
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("client_secret", clientSecret);
@@ -218,9 +220,7 @@ export async function fetchCovers(query: string): Promise<IgdbCover[]> {
 }
 
 /** Fetch screenshot records from IGDB. */
-export async function fetchScreenshots(
-  query: string,
-): Promise<IgdbScreenshot[]> {
+export async function fetchScreenshots(query: string): Promise<IgdbScreenshot[]> {
   return igdbRequest<IgdbScreenshot>("screenshots", query);
 }
 

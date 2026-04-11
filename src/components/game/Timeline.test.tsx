@@ -206,11 +206,7 @@ describe("Timeline", () => {
       const user = userEvent.setup();
       const onPlace = vi.fn();
       render(
-        <Timeline
-          placedCards={[card1, card2]}
-          pendingCard={pendingCard}
-          onPlaceCard={onPlace}
-        />,
+        <Timeline placedCards={[card1, card2]} pendingCard={pendingCard} onPlaceCard={onPlace} />,
       );
 
       await user.click(getDropZone(2));
@@ -234,16 +230,12 @@ describe("Timeline", () => {
 
     it("labels zone 0 as 'before [first card]' when placed cards exist", () => {
       render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
-      expect(
-        screen.getByRole("button", { name: /before Half-Life 2/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /before Half-Life 2/i })).toBeInTheDocument();
     });
 
     it("labels the last zone as 'after [last card]'", () => {
       render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
-      expect(
-        screen.getByRole("button", { name: /after Half-Life 2/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /after Half-Life 2/i })).toBeInTheDocument();
     });
 
     it("labels an intermediate zone as 'between [card A] and [card B]'", () => {
@@ -321,9 +313,7 @@ describe("Timeline", () => {
     it("places a card with Enter on a focused drop zone", async () => {
       const user = userEvent.setup();
       const onPlace = vi.fn();
-      render(
-        <Timeline placedCards={[card1]} pendingCard={pendingCard} onPlaceCard={onPlace} />,
-      );
+      render(<Timeline placedCards={[card1]} pendingCard={pendingCard} onPlaceCard={onPlace} />);
 
       getDropZone(1).focus();
       await user.keyboard("{Enter}");

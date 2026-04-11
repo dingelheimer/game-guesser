@@ -59,9 +59,7 @@ export interface SoloTurnDbOperations {
   fetchReleaseYear: (gameId: number) => Promise<number>;
 }
 
-export function createSoloTurnDbOperations(
-  supabase: SupabaseClient,
-): SoloTurnDbOperations {
+export function createSoloTurnDbOperations(supabase: SupabaseClient): SoloTurnDbOperations {
   return {
     async loadSession(sessionId: string): Promise<LoadedSession> {
       const { data, error } = await supabase
@@ -73,19 +71,14 @@ export function createSoloTurnDbOperations(
         .single();
 
       if (error !== null || data === null) {
-        throw new Error(
-          `Session not found: ${error?.message ?? "no data"}`,
-        );
+        throw new Error(`Session not found: ${error?.message ?? "no data"}`);
       }
 
       return data as LoadedSession;
     },
 
     async saveSession(sessionId: string, update: SessionUpdate): Promise<void> {
-      const { error } = await supabase
-        .from("solo_sessions")
-        .update(update)
-        .eq("id", sessionId);
+      const { error } = await supabase.from("solo_sessions").update(update).eq("id", sessionId);
 
       if (error !== null) {
         throw new Error(`Failed to save session: ${error.message}`);
@@ -169,9 +162,7 @@ export function createSoloTurnDbOperations(
         name: game.name as string,
         release_year: game.release_year as number,
         cover_image_id: cover.igdb_image_id as string,
-        screenshot_image_ids: (screenshots ?? []).map(
-          (s) => s.igdb_image_id as string,
-        ),
+        screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
         platform_names: platformNames,
       };
     },
@@ -193,9 +184,7 @@ export function createSoloTurnDbOperations(
 
       return {
         game_id: gameId,
-        screenshot_image_ids: (screenshots ?? []).map(
-          (s) => s.igdb_image_id as string,
-        ),
+        screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
       };
     },
   };

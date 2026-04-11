@@ -70,4 +70,3 @@ export function submitTurn(sessionId: string, position: number): Promise<TurnRes
     position,
   });
 }
-

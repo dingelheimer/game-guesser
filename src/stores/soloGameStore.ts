@@ -7,13 +7,7 @@ import type { HiddenCardData, RevealedCardData } from "@/lib/solo/api";
 
 // ── Phase type ────────────────────────────────────────────────────────────────
 
-export type GamePhase =
-  | "idle"
-  | "starting"
-  | "placing"
-  | "submitting"
-  | "revealing"
-  | "game_over";
+export type GamePhase = "idle" | "starting" | "placing" | "submitting" | "revealing" | "game_over";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
