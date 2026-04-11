@@ -14,7 +14,7 @@ import {
   copySoloShareSummary,
   getSoloDifficultyLabel,
 } from "@/lib/solo/share";
-import type { DifficultyTier } from "@/types/supabase";
+import type { DifficultyTier } from "@/lib/difficulty";
 
 interface GameOverScreenProps {
   difficulty: DifficultyTier | null;
