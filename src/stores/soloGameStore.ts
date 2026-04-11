@@ -38,6 +38,20 @@ function insertAtPosition<T>(arr: T[], item: T, position: number): T[] {
   return [...arr.slice(0, position), item, ...arr.slice(position)];
 }
 
+function pickCorrectionTarget(validPositions: readonly number[], droppedPosition: number): number {
+  const firstValidPosition = validPositions[0];
+  if (firstValidPosition === undefined) return droppedPosition;
+
+  return validPositions.reduce((bestPosition, candidatePosition) => {
+    const bestDistance = Math.abs(bestPosition - droppedPosition);
+    const candidateDistance = Math.abs(candidatePosition - droppedPosition);
+
+    if (candidateDistance < bestDistance) return candidatePosition;
+    if (candidateDistance === bestDistance) return Math.min(bestPosition, candidatePosition);
+    return bestPosition;
+  }, firstValidPosition);
+}
+
 export function checkPlatformGuess(selected: number[], correct: number[]): "correct" | "incorrect" {
   if (selected.length !== correct.length) return "incorrect";
   const sortedSelected = [...selected].sort((a, b) => a - b);
@@ -69,6 +83,10 @@ export interface SoloGameState {
   revealedCard: RevealedCardData | null;
 
   timelineItems: TimelineItem[];
+  /** Position where the current card was last dropped. */
+  droppedPosition: number | null;
+  /** Target position for incorrect-placement slide animation. */
+  correctionTargetPosition: number | null;
 
   score: number;
   turnsPlayed: number;
@@ -93,6 +111,8 @@ export interface SoloGameState {
 
   startGame: (difficulty: DifficultyTier) => Promise<void>;
   placeCard: (position: number) => Promise<void>;
+  moveCardToCorrectPosition: () => void;
+  revealMovedCard: () => void;
   submitPlatformGuess: (selectedPlatformIds: number[]) => void;
   advanceTurn: () => void;
   resetGame: () => void;
@@ -112,6 +132,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   revealedCard: null,
 
   timelineItems: [],
+  droppedPosition: null,
+  correctionTargetPosition: null,
 
   score: 0,
   turnsPlayed: 0,
@@ -138,6 +160,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         nextCard: null,
         revealedCard: null,
         timelineItems: res.timeline.map(revealedToTimelineItem),
+        droppedPosition: null,
+        correctionTargetPosition: null,
         score: 0,
         turnsPlayed: 0,
         bestStreak: 0,
@@ -162,19 +186,37 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
     const { phase, sessionId, currentCard, timelineItems } = get();
     if (phase !== "placing" || sessionId === null || currentCard === null) return;
 
-    set({ phase: "submitting", error: null });
+    const tentativeTimelineItems = insertAtPosition(
+      timelineItems,
+      hiddenToTimelineItem(currentCard),
+      position,
+    );
+
+    set({
+      phase: "submitting",
+      error: null,
+      droppedPosition: position,
+      timelineItems: tentativeTimelineItems,
+    });
     try {
       const result = await api.submitTurn(sessionId, position);
+      const correctionTargetPosition = result.correct
+        ? null
+        : pickCorrectionTarget(result.valid_positions ?? [], position);
 
       const newTimelineItems = result.correct
-        ? insertAtPosition(timelineItems, revealedToTimelineItem(result.revealed_card), position)
-        : timelineItems;
+        ? tentativeTimelineItems.map((item, index) =>
+            index === position ? revealedToTimelineItem(result.revealed_card) : item,
+          )
+        : tentativeTimelineItems;
 
       set((state) => ({
         phase: "revealing",
         revealedCard: result.revealed_card,
         nextCard: result.next_card ?? null,
         timelineItems: newTimelineItems,
+        droppedPosition: position,
+        correctionTargetPosition,
         score: result.score,
         turnsPlayed: result.turns_played,
         bestStreak: result.best_streak,
@@ -192,9 +234,54 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
     } catch (err) {
       set({
         phase: "placing",
+        timelineItems,
+        droppedPosition: null,
+        correctionTargetPosition: null,
         error: err instanceof Error ? err.message : String(err),
       });
     }
+  },
+
+  moveCardToCorrectPosition() {
+    const { droppedPosition, correctionTargetPosition, timelineItems } = get();
+
+    if (
+      droppedPosition === null ||
+      correctionTargetPosition === null ||
+      droppedPosition === correctionTargetPosition
+    ) {
+      return;
+    }
+
+    const movingCard = timelineItems[droppedPosition];
+    if (movingCard === undefined) return;
+
+    const timelineWithoutMovingCard = timelineItems.filter((_, index) => index !== droppedPosition);
+
+    set({
+      timelineItems: insertAtPosition(
+        timelineWithoutMovingCard,
+        movingCard,
+        correctionTargetPosition,
+      ),
+      droppedPosition: correctionTargetPosition,
+    });
+  },
+
+  revealMovedCard() {
+    const { revealedCard, timelineItems, droppedPosition, correctionTargetPosition } = get();
+    if (revealedCard === null) return;
+
+    const revealPosition = correctionTargetPosition ?? droppedPosition;
+    if (revealPosition === null) return;
+
+    set({
+      timelineItems: timelineItems.map((item, index) =>
+        index === revealPosition ? revealedToTimelineItem(revealedCard) : item,
+      ),
+      droppedPosition: revealPosition,
+      correctionTargetPosition: null,
+    });
   },
 
   submitPlatformGuess(selectedPlatformIds: number[]) {
@@ -225,6 +312,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       currentCard: nextCard,
       nextCard: null,
       revealedCard: null,
+      droppedPosition: null,
+      correctionTargetPosition: null,
       lastPlacementCorrect: null,
       validPositions: null,
       availablePlatforms: [],
@@ -243,6 +332,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       nextCard: null,
       revealedCard: null,
       timelineItems: [],
+      droppedPosition: null,
+      correctionTargetPosition: null,
       score: 0,
       turnsPlayed: 0,
       bestStreak: 0,

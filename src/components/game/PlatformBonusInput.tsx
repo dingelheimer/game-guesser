@@ -73,7 +73,9 @@ export function PlatformBonusInput({
           <button
             key={platform.id}
             type="button"
-            onClick={() => { toggleChip(platform.id); }}
+            onClick={() => {
+              toggleChip(platform.id);
+            }}
             disabled={submitted}
             aria-pressed={selected.has(platform.id)}
             className={cn(
