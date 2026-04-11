@@ -90,20 +90,28 @@ test.describe("Page layout frame", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("header is visible", async ({ page }) => {
-    await expect(page.getByRole("banner")).toBeVisible();
+  test("navigation is visible — header on desktop, bottom nav on mobile", async ({ page }) => {
+    const viewport = page.viewportSize();
+    if (viewport && viewport.width >= 768) {
+      // Desktop/tablet: top header should be visible
+      await expect(page.getByRole("banner")).toBeVisible();
+    } else {
+      // Mobile: bottom nav replaces the header
+      await expect(page.getByRole("navigation")).toBeVisible();
+    }
   });
 
-  test("header does not overflow viewport horizontally", async ({ page }) => {
+  test("header does not overflow viewport horizontally (desktop only)", async ({ page }) => {
+    const viewport = page.viewportSize();
+    if (!viewport || viewport.width < 768) {
+      // Header is hidden on mobile — skip this check
+      return;
+    }
     const header = page.getByRole("banner");
     const box = await header.boundingBox();
     expect(box).not.toBeNull();
     if (box) {
-      const viewport = page.viewportSize();
-      expect(viewport).not.toBeNull();
-      if (viewport) {
-        expect(box.width).toBeLessThanOrEqual(viewport.width + 1);
-      }
+      expect(box.width).toBeLessThanOrEqual(viewport.width + 1);
     }
   });
 
