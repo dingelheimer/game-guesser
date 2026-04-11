@@ -11,8 +11,6 @@ import { Timeline } from "@/components/game/Timeline";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 import { hiddenToTimelineItem } from "@/stores/soloGameStore";
 
-// ── Result overlay (correct / incorrect indicator) ────────────────────────────
-
 function PlacementResult({ correct }: { correct: boolean }) {
   return (
     <motion.div
@@ -29,8 +27,6 @@ function PlacementResult({ correct }: { correct: boolean }) {
     </motion.div>
   );
 }
-
-// ── Main SoloGame component ───────────────────────────────────────────────────
 
 export function SoloGame() {
   const phase = useSoloGameStore((s) => s.phase);
@@ -61,11 +57,14 @@ export function SoloGame() {
   const isSubmitting = phase === "submitting";
   const isPlacing = phase === "placing" || phase === "submitting";
   const isRevealing = phase === "revealing";
+  const isPlatformBonusPending =
+    isRevealing &&
+    lastPlacementCorrect === true &&
+    availablePlatforms.length > 0 &&
+    platformBonusResult === null;
 
   const pendingTimelineItem =
     isPlacing && currentCard !== null ? hiddenToTimelineItem(currentCard) : null;
-
-  // ── Game over screen ──────────────────────────────────────────────────────
 
   if (phase === "game_over") {
     return (
@@ -92,15 +91,16 @@ export function SoloGame() {
     );
   }
 
-  // ── Active game ───────────────────────────────────────────────────────────
-
   const gameIdOrNone = (id: number | undefined): string => (id !== undefined ? String(id) : "none");
   const cardKey = isRevealing
     ? `revealed-${gameIdOrNone(revealedCard?.game_id)}`
     : `hidden-${gameIdOrNone(currentCard?.game_id)}`;
+  const revealedPlatform = isPlatformBonusPending
+    ? ""
+    : (revealedCard?.platform_names[0] ?? "Unknown");
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col">
+    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col">
       {/* Score bar */}
       {difficulty !== null && (
         <ScoreBar
@@ -136,6 +136,8 @@ export function SoloGame() {
             }
             className={cn(
               "relative",
+              // Desktop dragging uses the timeline card; mobile still relies on the hero card.
+              isPlacing && "md:hidden",
               isRevealing &&
                 lastPlacementCorrect === false &&
                 "rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.4)] ring-2 ring-rose-500",
@@ -150,7 +152,7 @@ export function SoloGame() {
               coverImageId={isRevealing ? (revealedCard?.cover_image_id ?? null) : null}
               title={isRevealing ? (revealedCard?.name ?? "?") : "?"}
               releaseYear={isRevealing ? (revealedCard?.release_year ?? 0) : 0}
-              platform={isRevealing ? (revealedCard?.platform_names[0] ?? "Unknown") : "?"}
+              platform={isRevealing ? revealedPlatform : "?"}
               isRevealed={isRevealing}
               isLoading={isSubmitting}
             />

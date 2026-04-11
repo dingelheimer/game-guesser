@@ -13,11 +13,10 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { GameCard } from "./GameCard";
-
-// ── Public types ──────────────────────────────────────────────────────────────
 
 export interface TimelineItem {
   id: string;
@@ -46,8 +45,6 @@ export interface TimelineProps {
   className?: string;
 }
 
-// ── Internal constants ────────────────────────────────────────────────────────
-
 const PENDING_DRAGGABLE_ID = "pending-card";
 const ZONE_DATA_ATTR = "data-zone-index";
 
@@ -61,8 +58,6 @@ function parseZoneIndex(id: string): number | null {
   return isNaN(n) ? null : n;
 }
 
-// ── YearMarker ────────────────────────────────────────────────────────────────
-
 function YearMarker({ year }: { year: number }) {
   return (
     <div className="flex flex-col items-center md:flex-row" aria-hidden="true">
@@ -74,8 +69,6 @@ function YearMarker({ year }: { year: number }) {
     </div>
   );
 }
-
-// ── DropZone ──────────────────────────────────────────────────────────────────
 
 interface DropZoneProps {
   index: number;
@@ -134,13 +127,13 @@ function DropZone({
         "min-h-[44px] min-w-[44px]",
         // Mobile: full width, variable height
         "w-full",
-        // Desktop: auto width (grows with animation), height matches timeline cards (aspect-[3/4] at md:180px → 240px, lg:200px → 267px)
-        "md:h-[240px] md:w-auto lg:h-[267px]",
+        // Desktop: auto width (grows with animation), height matches timeline cards.
+        "md:h-[240px] md:w-auto lg:h-[267px] xl:h-[293px]",
         isActive
           ? "border-primary-400 bg-primary-500/20"
           : isFirst
             ? "border-primary-500/60 bg-primary-500/10 hover:border-primary-400/70"
-            : "border-white/35 bg-transparent hover:border-primary-400/50",
+            : "hover:border-primary-400/50 border-white/35 bg-transparent",
       )}
       style={{ touchAction: "none" }}
       onClick={onSelect}
@@ -175,7 +168,7 @@ function DropZone({
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-primary-400 select-none text-xl font-bold leading-none"
+            className="text-primary-400 text-xl leading-none font-bold select-none"
           >
             +
           </motion.span>
@@ -194,8 +187,6 @@ function DropZone({
     </button>
   );
 }
-
-// ── DraggablePendingCard ──────────────────────────────────────────────────────
 
 function DraggablePendingCard({ card }: { card: TimelineItem }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -224,11 +215,10 @@ function DraggablePendingCard({ card }: { card: TimelineItem }) {
   );
 }
 
-// ── Timeline ──────────────────────────────────────────────────────────────────
-
 export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: TimelineProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const [isDragging, setIsDragging] = useState(false);
+  const [activeDropZoneId, setActiveDropZoneId] = useState<string | null>(null);
   /**
    * Roving tabindex: tracks which drop zone has tabIndex=0.
    * Keyboard users Tab into zone 0, then use arrow keys to navigate.
@@ -237,6 +227,7 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
 
   const hasPending = pendingCard != null;
   const zoneCount = placedCards.length + 1;
+  const isOverlayOverValidDropZone = activeDropZoneId !== null;
 
   // Reset the keyboard cursor to zone 0 whenever a new card is placed.
   useEffect(() => {
@@ -272,8 +263,19 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
     [zoneCount],
   );
 
+  function handleDragOver(event: DragOverEvent) {
+    const overId = event.over?.id;
+    if (typeof overId !== "string" || parseZoneIndex(overId) === null) {
+      setActiveDropZoneId(null);
+      return;
+    }
+
+    setActiveDropZoneId(overId);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     setIsDragging(false);
+    setActiveDropZoneId(null);
     const overId = event.over?.id;
     if (typeof overId === "string") {
       const idx = parseZoneIndex(overId);
@@ -286,33 +288,31 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
       sensors={sensors}
       onDragStart={() => {
         setIsDragging(true);
+        setActiveDropZoneId(null);
       }}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
         setIsDragging(false);
+        setActiveDropZoneId(null);
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
-        {/* ── Pending card (drag source) — desktop only ──────────────── */}
-        {/* On mobile, players use tap-to-place via drop zone buttons.     */}
-        {/* Hiding the hero-sized card on mobile avoids doubling the card  */}
-        {/* height (it already appears in the card area) and prevents the  */}
-        {/* heavy vertical scroll needed to reach the drop zones.          */}
+        {/* Desktop drag source only; mobile uses tap-to-place drop zones. */}
         {hasPending && (
           <div className="hidden justify-center md:flex">
             <DraggablePendingCard card={pendingCard} />
           </div>
         )}
 
-        {/* ── Timeline rail ──────────────────────────────────────────── */}
         <div
           className={cn(
             // Mobile: vertical stack, full width
             "flex flex-col items-stretch gap-2",
             // Desktop: horizontal row with horizontal scroll; px-4 prevents content from clipping at edges
-            "md:flex-row md:items-end md:gap-3 md:overflow-x-auto md:px-4 md:pb-4",
+            "md:flex-row md:items-end md:justify-center md:gap-3 md:overflow-x-auto md:px-4 md:pb-4",
             // Always maintain a minimum height so the section doesn't collapse
-            "min-h-[80px] md:min-h-[300px]",
+            "min-h-[80px] md:min-h-[300px] xl:min-h-[326px]",
             placedCards.length === 0 && "justify-center",
           )}
           role="group"
@@ -353,7 +353,7 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
                   platform={card.platform}
                   isRevealed={card.isRevealed}
                   size="timeline"
-                  className="w-[40vw] md:w-[180px] lg:w-[200px]"
+                  className="w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]"
                 />
                 <YearMarker year={card.releaseYear} />
               </div>
@@ -391,10 +391,16 @@ export function Timeline({ placedCards, pendingCard, onPlaceCard, className }: T
         </div>
       </div>
 
-      {/* ── Drag overlay — ghost card while dragging ───────────────────── */}
       <DragOverlay>
         {isDragging && pendingCard ? (
-          <div className="pointer-events-none scale-95 rotate-2 opacity-80" aria-hidden="true">
+          <div
+            className={cn(
+              "pointer-events-none scale-95 rotate-2 opacity-80 transition-shadow duration-150",
+              isOverlayOverValidDropZone &&
+                "ring-primary-400 shadow-[0_0_24px_rgba(139,92,246,0.45)] ring-2",
+            )}
+            aria-hidden="true"
+          >
             <GameCard
               screenshotImageId={pendingCard.screenshotImageId}
               coverImageId={pendingCard.coverImageId}
