@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import type React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameOverScreen } from "./GameOverScreen";
@@ -15,6 +16,12 @@ vi.mock("sonner", () => ({
     success: toastSuccess,
     error: toastError,
   },
+}));
+
+vi.mock("next/link", () => ({
+  default: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
+    <a href={href} className={className}>{children}</a>
+  ),
 }));
 
 vi.mock("framer-motion", () => ({
@@ -84,6 +91,8 @@ describe("GameOverScreen", () => {
         failedCard={failedCard}
         validPositions={[2]}
         endedOnIncorrectPlacement
+        username={null}
+        scoreStatus="idle"
         onPlayAgain={vi.fn()}
         onChangeDifficulty={vi.fn()}
       />,
@@ -112,6 +121,8 @@ describe("GameOverScreen", () => {
         failedCard={failedCard}
         validPositions={[1]}
         endedOnIncorrectPlacement
+        username={null}
+        scoreStatus="idle"
         onPlayAgain={vi.fn()}
         onChangeDifficulty={vi.fn()}
       />,
@@ -139,6 +150,8 @@ describe("GameOverScreen", () => {
         failedCard={failedCard}
         validPositions={[1, 2]}
         endedOnIncorrectPlacement
+        username={null}
+        scoreStatus="idle"
         onPlayAgain={vi.fn()}
         onChangeDifficulty={vi.fn()}
       />,
