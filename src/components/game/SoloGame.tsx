@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GameCard } from "@/components/game/GameCard";
 import { GameOverScreen } from "@/components/game/GameOverScreen";
+import type { ScoreStatus } from "@/components/game/GameOverScreen";
 import { PlatformBonusInput } from "@/components/game/PlatformBonusInput";
 import { ScoreBar } from "@/components/game/ScoreBar";
 import { Timeline } from "@/components/game/Timeline";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 import { hiddenToTimelineItem } from "@/stores/soloGameStore";
+import { submitScoreAction } from "@/lib/auth/actions";
 
 function PlacementResult({ correct }: { correct: boolean }) {
   return (
@@ -32,9 +34,10 @@ function PlacementResult({ correct }: { correct: boolean }) {
 type IncorrectPlacementStage = "idle" | "indicator" | "sliding" | "revealing" | "done";
 
 /** Renders the solo game play surface, including the hero card, result controls, and timeline. */
-export function SoloGame() {
+export function SoloGame({ username }: { username: string | null }) {
   const phase = useSoloGameStore((s) => s.phase);
   const difficulty = useSoloGameStore((s) => s.difficulty);
+  const sessionId = useSoloGameStore((s) => s.sessionId);
   const currentCard = useSoloGameStore((s) => s.currentCard);
   const revealedCard = useSoloGameStore((s) => s.revealedCard);
   const timelineItems = useSoloGameStore((s) => s.timelineItems);
@@ -62,6 +65,11 @@ export function SoloGame() {
   const [incorrectPlacementStage, setIncorrectPlacementStage] =
     useState<IncorrectPlacementStage>("idle");
 
+  // Track which sessionId we've already submitted a score for (prevents double-submit)
+  const submittedSessionRef = useRef<string | null>(null);
+  const [scoreStatus, setScoreStatus] = useState<ScoreStatus>("idle");
+  const [scoreError, setScoreError] = useState<string | undefined>(undefined);
+
   const isSubmitting = phase === "submitting";
   const isPlacing = phase === "placing";
   const isRevealing = phase === "revealing";
@@ -79,6 +87,39 @@ export function SoloGame() {
     isRevealing &&
     lastPlacementCorrect !== null &&
     (lastPlacementCorrect || incorrectPlacementStage === "done");
+
+  // Auto-submit score when game ends; save to sessionStorage for guests
+  useEffect(() => {
+    if (phase !== "game_over" || sessionId === null) return;
+    if (submittedSessionRef.current === sessionId) return;
+    submittedSessionRef.current = sessionId;
+
+    if (username !== null) {
+      setScoreStatus("submitting");
+      void submitScoreAction(score, bestStreak).then((result) => {
+        if ("success" in result) {
+          setScoreStatus("saved");
+        } else {
+          setScoreStatus("error");
+          setScoreError(result.error);
+        }
+      });
+    } else {
+      // Guest: persist score for post-signup submission
+      sessionStorage.setItem(
+        "pending_score",
+        JSON.stringify({ score, streak: bestStreak, timestamp: Date.now() }),
+      );
+    }
+  }, [phase, sessionId, score, bestStreak, username]);
+
+  // Reset score status when a new game session starts
+  useEffect(() => {
+    if (phase === "starting") {
+      setScoreStatus("idle");
+      setScoreError(undefined);
+    }
+  }, [phase]);
 
   useEffect(() => {
     if (!isIncorrectReveal || revealedCard === null) {
@@ -133,6 +174,9 @@ export function SoloGame() {
         failedCard={revealedCard}
         validPositions={validPositions}
         endedOnIncorrectPlacement={lastPlacementCorrect === false}
+        username={username}
+        scoreStatus={scoreStatus}
+        scoreError={scoreError}
         onPlayAgain={() => {
           if (difficulty !== null) {
             void useSoloGameStore.getState().startGame(difficulty);

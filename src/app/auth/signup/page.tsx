@@ -7,7 +7,12 @@ export const metadata: Metadata = {
   title: "Create Account",
 };
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
   return (
     <div className="flex flex-1 items-center justify-center p-6">
       <div className="border-border/50 bg-surface-800 w-full max-w-sm space-y-6 rounded-2xl border p-8">
@@ -20,7 +25,7 @@ export default function SignUpPage() {
           <p className="text-text-secondary text-sm">Join to save your scores and compete</p>
         </div>
 
-        <SignUpForm />
+        <SignUpForm next={next} />
       </div>
     </div>
   );

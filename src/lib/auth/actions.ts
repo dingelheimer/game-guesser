@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
+  success?: boolean | undefined;
   error?: string | undefined;
   fieldErrors?: {
     email?: string[] | undefined;
@@ -13,6 +14,8 @@ export type AuthActionState = {
     username?: string[] | undefined;
   };
 };
+
+export type SubmitScoreResult = { success: true } | { error: string };
 
 const usernameField = z
   .string()
@@ -31,10 +34,16 @@ const signUpSchema = z.object({
   email: z.email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   username: usernameField,
+  next: z.string().optional(),
 });
 
 const updateUsernameSchema = z.object({
   username: usernameField,
+});
+
+const submitScoreSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  streak: z.number().int().min(0),
 });
 
 function str(value: FormDataEntryValue | null): string {
@@ -93,6 +102,7 @@ export async function signUpAction(
     email: str(formData.get("email")),
     password: str(formData.get("password")),
     username: str(formData.get("username")),
+    next: optionalStr(formData.get("next")),
   });
 
   if (!parsed.success) {
@@ -158,7 +168,7 @@ export async function signUpAction(
     return { error: "Failed to create profile. Please try again." };
   }
 
-  redirect("/");
+  redirect(parsed.data.next ?? "/");
 }
 
 export async function signOutAction(): Promise<void> {
@@ -224,5 +234,50 @@ export async function updateUsernameAction(
     return { error: "Failed to update username. Please try again." };
   }
 
-  return {};
+  revalidatePath("/profile");
+  return { success: true };
+}
+
+export async function submitScoreAction(
+  score: number,
+  streak: number,
+): Promise<SubmitScoreResult> {
+  const parsed = submitScoreSchema.safeParse({ score, streak });
+  if (!parsed.success) {
+    return { error: "Invalid score data." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError !== null || user === null) {
+    return { error: "You must be signed in to submit a score." };
+  }
+
+  // Rate limit: reject if user submitted a score within the last 10 seconds
+  const tenSecondsAgo = new Date(Date.now() - 10_000).toISOString();
+  const { data: recent } = await supabase
+    .from("leaderboard_entries")
+    .select("id")
+    .eq("user_id", user.id)
+    .gt("created_at", tenSecondsAgo)
+    .limit(1)
+    .maybeSingle();
+
+  if (recent !== null) {
+    return { error: "Please wait a moment before submitting another score." };
+  }
+
+  const { error: insertError } = await supabase
+    .from("leaderboard_entries")
+    .insert({ user_id: user.id, score: parsed.data.score, streak: parsed.data.streak });
+
+  if (insertError !== null) {
+    return { error: "Failed to save score. Please try again." };
+  }
+
+  return { success: true };
 }
