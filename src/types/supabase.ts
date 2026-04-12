@@ -1,4 +1,3 @@
-/* eslint-disable */
 export type Json =
   | string
   | number
@@ -149,6 +148,107 @@ export type Database = {
             columns: ["platform_id"]
             isOneToOne: false
             referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_players: {
+        Row: {
+          display_name: string
+          game_session_id: string
+          score: number
+          timeline: Json
+          tokens: number
+          turn_position: number
+          user_id: string
+        }
+        Insert: {
+          display_name: string
+          game_session_id: string
+          score?: number
+          timeline?: Json
+          tokens?: number
+          turn_position: number
+          user_id: string
+        }
+        Update: {
+          display_name?: string
+          game_session_id?: string
+          score?: number
+          timeline?: Json
+          tokens?: number
+          turn_position?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_game_session_id_fkey"
+            columns: ["game_session_id"]
+            isOneToOne: false
+            referencedRelation: "game_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_game_session_id_fkey"
+            columns: ["game_session_id"]
+            isOneToOne: false
+            referencedRelation: "game_sessions_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_sessions: {
+        Row: {
+          active_player_id: string | null
+          created_at: string
+          current_turn: Json | null
+          deck: number[]
+          deck_cursor: number
+          id: string
+          room_id: string
+          settings: Json
+          status: string
+          turn_number: number
+          turn_order: string[]
+          updated_at: string
+          winner_id: string | null
+        }
+        Insert: {
+          active_player_id?: string | null
+          created_at?: string
+          current_turn?: Json | null
+          deck: number[]
+          deck_cursor?: number
+          id?: string
+          room_id: string
+          settings?: Json
+          status?: string
+          turn_number?: number
+          turn_order: string[]
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Update: {
+          active_player_id?: string | null
+          created_at?: string
+          current_turn?: Json | null
+          deck?: number[]
+          deck_cursor?: number
+          id?: string
+          room_id?: string
+          settings?: Json
+          status?: string
+          turn_number?: number
+          turn_order?: string[]
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -495,6 +595,56 @@ export type Database = {
       }
     }
     Views: {
+      game_sessions_safe: {
+        Row: {
+          active_player_id: string | null
+          created_at: string | null
+          current_turn: Json | null
+          id: string | null
+          room_id: string | null
+          settings: Json | null
+          status: string | null
+          turn_number: number | null
+          turn_order: string[] | null
+          updated_at: string | null
+          winner_id: string | null
+        }
+        Insert: {
+          active_player_id?: string | null
+          created_at?: string | null
+          current_turn?: Json | null
+          id?: string | null
+          room_id?: string | null
+          settings?: Json | null
+          status?: string | null
+          turn_number?: number | null
+          turn_order?: string[] | null
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Update: {
+          active_player_id?: string | null
+          created_at?: string | null
+          current_turn?: Json | null
+          id?: string | null
+          room_id?: string | null
+          settings?: Json | null
+          status?: string | null
+          turn_number?: number | null
+          turn_order?: string[] | null
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       games_by_difficulty: {
         Row: {
           created_at: string | null
