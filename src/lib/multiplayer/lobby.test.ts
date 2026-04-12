@@ -3,6 +3,7 @@ import {
   DEFAULT_LOBBY_SETTINGS,
   DisplayNameSchema,
   generateRoomCode,
+  LobbyPresenceSchema,
   LobbySettingsSchema,
   RoomCodeSchema,
 } from "./lobby";
@@ -85,6 +86,42 @@ describe("LobbySettingsSchema", () => {
       startingTokens: 11,
       winCondition: 21,
       variant: "chaos",
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe("LobbyPresenceSchema — joinedAt datetime offset", () => {
+  const basePresence = {
+    userId: "00000000-0000-4000-8000-000000000001",
+    displayName: "Alex",
+    role: "player",
+    status: "connected",
+  };
+
+  it("accepts a Supabase PostgREST +00:00 offset timestamp", () => {
+    const parsed = LobbyPresenceSchema.safeParse({
+      ...basePresence,
+      joinedAt: "2026-04-12T13:33:20.123456+00:00",
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("accepts a UTC Z-suffix timestamp", () => {
+    const parsed = LobbyPresenceSchema.safeParse({
+      ...basePresence,
+      joinedAt: "2026-04-12T13:33:20Z",
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a timestamp without any offset", () => {
+    const parsed = LobbyPresenceSchema.safeParse({
+      ...basePresence,
+      joinedAt: "2026-04-12T13:33:20",
     });
 
     expect(parsed.success).toBe(false);

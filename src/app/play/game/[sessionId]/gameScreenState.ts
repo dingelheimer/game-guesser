@@ -28,7 +28,7 @@ export const GameStartedPayloadSchema = z.object({
  */
 export const PlacementMadePayloadSchema = z.object({
   activePlayerId: z.uuid(),
-  challengeDeadline: z.iso.datetime().optional(),
+  challengeDeadline: z.iso.datetime({ offset: true }).optional(),
   position: z.number().int(),
 });
 
@@ -45,7 +45,7 @@ export const ChallengeMadePayloadSchema = z.object({
  */
 export const TurnStartedPayloadSchema = z.object({
   activePlayerId: z.uuid(),
-  deadline: z.iso.datetime().nullable().optional(),
+  deadline: z.iso.datetime({ offset: true }).nullable().optional(),
   screenshot: z.union([z.string(), z.object({ screenshotImageId: z.string() })]),
   turnNumber: z.number().int(),
 });
@@ -67,7 +67,7 @@ export const TurnRevealedPayloadSchema = z.object({
   challengeResult: z.enum(["challenger_wins", "challenger_loses"]).optional(),
   challengerId: z.uuid().optional(),
   isCorrect: z.boolean(),
-  platformBonusDeadline: z.iso.datetime().optional(),
+  platformBonusDeadline: z.iso.datetime({ offset: true }).optional(),
   platformOptions: z.array(PlatformOptionSchema).optional(),
   position: z.number().int(),
   scores: z.record(z.string(), z.number().int()),
