@@ -15,20 +15,15 @@ export type EnsureMultiplayerSessionResult =
 
 /**
  * Ensure the browser has a Supabase user session before calling multiplayer Server Actions.
+ *
+ * When no session exists at all, `getUser()` returns `AuthSessionMissingError` with a null user.
+ * We treat that as "no session" and fall through to `signInAnonymously()`.
  */
 export async function ensureMultiplayerSession(): Promise<EnsureMultiplayerSessionResult> {
   const supabase = createClient();
   const {
     data: { user },
-    error: getUserError,
   } = await supabase.auth.getUser();
-
-  if (getUserError !== null) {
-    return {
-      success: false,
-      message: "Couldn't verify your session. Please try again.",
-    };
-  }
 
   if (user !== null) {
     return {
