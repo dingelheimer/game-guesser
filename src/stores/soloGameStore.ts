@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { DifficultyTier } from "@/lib/difficulty";
+import { checkPlatformGuess, type PlatformOption } from "@/lib/platformBonus";
 import type { TimelineItem } from "@/components/game/Timeline";
 import * as api from "@/lib/solo/api";
 import type { HiddenCardData, RevealedCardData } from "@/lib/solo/api";
@@ -52,19 +53,8 @@ function pickCorrectionTarget(validPositions: readonly number[], droppedPosition
   }, firstValidPosition);
 }
 
-export function checkPlatformGuess(selected: number[], correct: number[]): "correct" | "incorrect" {
-  if (selected.length !== correct.length) return "incorrect";
-  const sortedSelected = [...selected].sort((a, b) => a - b);
-  const sortedCorrect = [...correct].sort((a, b) => a - b);
-  return sortedSelected.every((id, i) => id === sortedCorrect[i]) ? "correct" : "incorrect";
-}
-
-// ── Platform option type ──────────────────────────────────────────────────────
-
-export interface PlatformOption {
-  id: number;
-  name: string;
-}
+export { checkPlatformGuess };
+export type { PlatformOption };
 
 // ── Store interface ───────────────────────────────────────────────────────────
 
