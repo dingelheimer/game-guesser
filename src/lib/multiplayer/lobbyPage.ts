@@ -14,7 +14,7 @@ import {
 } from "./lobby";
 
 const LobbyRoomIdSchema = z.uuid();
-const JoinedAtSchema = z.iso.datetime();
+const JoinedAtSchema = z.iso.datetime({ offset: true });
 
 /**
  * Serializable player record used by the multiplayer lobby page.
