@@ -330,24 +330,29 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
     setIsStarting(true);
     setStartError(null);
 
-    const result = await startGame(initialRoom.roomId);
-    if (!result.success) {
-      setIsStarting(false);
-      setStartError(result.error.message);
-      return;
-    }
+    try {
+      const result = await startGame(initialRoom.roomId);
+      if (!result.success) {
+        setStartError(result.error.message);
+        return;
+      }
 
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "game_started",
-      payload: {
-        sessionId: result.data.gameSessionId,
-        turnOrder: result.data.turnOrder,
-        startingCards: result.data.startingCards,
-        firstCard: result.data.firstCard,
-      },
-    });
-    router.push(`/play/game/${result.data.gameSessionId}`);
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "game_started",
+        payload: {
+          sessionId: result.data.gameSessionId,
+          turnOrder: result.data.turnOrder,
+          startingCards: result.data.startingCards,
+          firstCard: result.data.firstCard,
+        },
+      });
+      router.push(`/play/game/${result.data.gameSessionId}`);
+    } catch (err: unknown) {
+      setStartError(err instanceof Error ? err.message : "Failed to start the game. Please try again.");
+    } finally {
+      setIsStarting(false);
+    }
   }
 
   return (
