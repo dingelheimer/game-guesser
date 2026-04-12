@@ -48,15 +48,12 @@ export function buildConnectedPresence(
       }
 
       const player = playersByUserId.get(parsedPresence.data.userId);
-      if (player === undefined) {
-        continue;
-      }
 
       connectedPlayers.set(parsedPresence.data.userId, {
         ...parsedPresence.data,
-        displayName: player.displayName,
-        joinedAt: player.joinedAt,
-        role: player.role,
+        displayName: player?.displayName ?? parsedPresence.data.displayName,
+        joinedAt: player?.joinedAt ?? parsedPresence.data.joinedAt,
+        role: player?.role ?? parsedPresence.data.role,
       });
     }
   }
@@ -65,6 +62,7 @@ export function buildConnectedPresence(
     const leftIndex = playerOrder.get(left.userId) ?? Number.MAX_SAFE_INTEGER;
     const rightIndex = playerOrder.get(right.userId) ?? Number.MAX_SAFE_INTEGER;
 
-    return leftIndex - rightIndex;
+    if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+    return new Date(left.joinedAt).getTime() - new Date(right.joinedAt).getTime();
   });
 }
