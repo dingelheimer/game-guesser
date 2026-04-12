@@ -337,9 +337,7 @@ describe("LobbyScreen — disconnect handling", () => {
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Failed to transfer host. Please try again."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Failed to transfer host. Please try again.")).toBeInTheDocument();
     });
   });
 
