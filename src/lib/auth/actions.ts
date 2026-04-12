@@ -238,10 +238,7 @@ export async function updateUsernameAction(
   return { success: true };
 }
 
-export async function submitScoreAction(
-  score: number,
-  streak: number,
-): Promise<SubmitScoreResult> {
+export async function submitScoreAction(score: number, streak: number): Promise<SubmitScoreResult> {
   const parsed = submitScoreSchema.safeParse({ score, streak });
   if (!parsed.success) {
     return { error: "Invalid score data." };

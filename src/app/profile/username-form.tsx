@@ -17,7 +17,10 @@ export function UsernameForm({ currentUsername }: { currentUsername: string }) {
   return (
     <form action={formAction} className="space-y-3">
       {state.success === true && (
-        <p className="flex items-center gap-1.5 rounded-lg bg-green-400/10 p-3 text-sm text-green-400" role="status">
+        <p
+          className="flex items-center gap-1.5 rounded-lg bg-green-400/10 p-3 text-sm text-green-400"
+          role="status"
+        >
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           Username updated successfully.
         </p>
