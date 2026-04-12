@@ -44,7 +44,7 @@ export const TurnStateSchema = z.object({
   challengeResult: z.enum(["challenger_wins", "challenger_loses"]).optional(),
   platformOptions: z.array(PlatformOptionSchema).optional(),
   platformBonusCorrect: z.boolean().optional(),
-  phaseDeadline: z.iso.datetime().optional(),
+  phaseDeadline: z.iso.datetime({ offset: true }).optional(),
 });
 
 /** Persistent turn state stored in game_sessions.current_turn JSONB. */
