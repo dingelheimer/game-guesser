@@ -11,6 +11,7 @@ import {
   RoomCodeSchema,
 } from "./lobby";
 import {
+  cleanupStaleRooms,
   ensureRoomStillJoinable,
   findActiveRoomId,
   getAuthenticatedUserId,
@@ -105,6 +106,8 @@ export async function createRoom(displayName: string): Promise<Result<CreateRoom
   if (!userIdResult.success) {
     return userIdResult;
   }
+
+  await cleanupStaleRooms(supabase);
 
   const activeRoomResult = await findActiveRoomId(supabase, userIdResult.data);
   if (!activeRoomResult.success) {
@@ -203,6 +206,8 @@ export async function joinRoom(
   if (room === null) {
     return fail(appError("NOT_FOUND", "That room code does not match an open lobby."));
   }
+
+  await cleanupStaleRooms(supabase);
 
   const activeRoomResult = await findActiveRoomId(supabase, userIdResult.data);
   if (!activeRoomResult.success) {

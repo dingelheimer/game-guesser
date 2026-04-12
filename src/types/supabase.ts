@@ -707,6 +707,10 @@ export type Database = {
       };
     };
     Functions: {
+      abandon_stale_rooms: {
+        Args: { stale_threshold_hours?: number };
+        Returns: number;
+      };
       build_deck: { Args: { p_max_rank?: number }; Returns: number[] };
       claim_host: {
         Args: { expected_host_id: string; target_room_id: string };
