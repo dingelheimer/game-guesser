@@ -58,7 +58,7 @@ export default async function ProfilePage() {
               <Trophy className="text-primary-400 h-5 w-5" />
             </div>
             <div>
-              <p className="text-text-secondary text-xs font-medium uppercase tracking-wide">
+              <p className="text-text-secondary text-xs font-medium tracking-wide uppercase">
                 Personal Best
               </p>
               {bestScore !== null ? (
@@ -71,12 +71,11 @@ export default async function ProfilePage() {
         </div>
 
         {/* Username edit card */}
-        <div className="border-border/50 bg-surface-800 rounded-2xl border p-5 space-y-4">
+        <div className="border-border/50 bg-surface-800 space-y-4 rounded-2xl border p-5">
           <div>
             <h2 className="text-text-primary text-sm font-semibold">Username</h2>
             <p className="text-text-secondary text-xs">
-              Currently:{" "}
-              <span className="text-text-primary font-medium">{username}</span>
+              Currently: <span className="text-text-primary font-medium">{username}</span>
             </p>
           </div>
           <UsernameForm currentUsername={username} />
@@ -85,8 +84,7 @@ export default async function ProfilePage() {
         {/* Sign out */}
         <div className="border-border/50 bg-surface-800 rounded-2xl border p-5">
           <p className="text-text-secondary mb-3 text-sm">
-            Signed in as{" "}
-            <span className="text-text-primary font-medium">{user.email}</span>
+            Signed in as <span className="text-text-primary font-medium">{user.email}</span>
           </p>
           <form action={signOutAction}>
             <Button type="submit" variant="outline" className="w-full gap-2">
@@ -97,7 +95,7 @@ export default async function ProfilePage() {
         </div>
 
         <div className="text-center">
-          <Link href="/play/solo" className="text-primary-400 hover:underline text-sm">
+          <Link href="/play/solo" className="text-primary-400 text-sm hover:underline">
             ← Back to game
           </Link>
         </div>

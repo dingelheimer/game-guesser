@@ -20,7 +20,16 @@ const mocks = vi.hoisted(() => {
   const mockFrom = vi.fn(() => ({ select: mockSelect, insert: mockInsert }));
   const mockGetUser = vi.fn();
 
-  return { mockInsert, mockMaybeSingle, mockLimit, mockGt, mockEq, mockSelect, mockFrom, mockGetUser };
+  return {
+    mockInsert,
+    mockMaybeSingle,
+    mockLimit,
+    mockGt,
+    mockEq,
+    mockSelect,
+    mockFrom,
+    mockGetUser,
+  };
 });
 
 vi.mock("@/lib/supabase/server", () => ({
