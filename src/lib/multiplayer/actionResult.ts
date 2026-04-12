@@ -11,6 +11,9 @@ export type AppErrorCode =
 /** Field-level validation errors returned by multiplayer Server Actions. */
 export type FieldErrors = Partial<Record<string, string[]>>;
 
+/** Extra payload carried by a CONFLICT error when an active room blocks the action. */
+export type ConflictDetails = Readonly<{ activeRoomId: string }>;
+
 /** Discriminated application error used by multiplayer Server Actions. */
 export type AppError =
   | Readonly<{
@@ -19,7 +22,12 @@ export type AppError =
       fieldErrors?: FieldErrors;
     }>
   | Readonly<{
-      code: Exclude<AppErrorCode, "VALIDATION_ERROR">;
+      code: "CONFLICT";
+      message: string;
+      details?: ConflictDetails;
+    }>
+  | Readonly<{
+      code: Exclude<AppErrorCode, "VALIDATION_ERROR" | "CONFLICT">;
       message: string;
     }>;
 
@@ -39,9 +47,33 @@ export function fail(error: AppError): Result<never, AppError> {
 }
 
 /** Build a typed multiplayer action error. */
-export function appError(code: AppErrorCode, message: string, fieldErrors?: FieldErrors): AppError {
+export function appError(
+  code: "VALIDATION_ERROR",
+  message: string,
+  fieldErrors?: FieldErrors,
+): AppError;
+export function appError(
+  code: "CONFLICT",
+  message: string,
+  details?: ConflictDetails,
+): AppError;
+export function appError(
+  code: Exclude<AppErrorCode, "VALIDATION_ERROR" | "CONFLICT">,
+  message: string,
+): AppError;
+export function appError(
+  code: AppErrorCode,
+  message: string,
+  extra?: FieldErrors | ConflictDetails,
+): AppError {
   if (code === "VALIDATION_ERROR") {
+    const fieldErrors = extra as FieldErrors | undefined;
     return fieldErrors === undefined ? { code, message } : { code, message, fieldErrors };
+  }
+
+  if (code === "CONFLICT") {
+    const details = extra as ConflictDetails | undefined;
+    return details === undefined ? { code, message } : { code, message, details };
   }
 
   return { code, message };
