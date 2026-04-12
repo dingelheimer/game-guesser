@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "./actionHelpers";
 import type { LobbySettings } from "./lobby";
 import { LobbySettingsSchema } from "./lobby";
 import { getAuthenticatedUserId, getRoomPlayerCount } from "./actionHelpers";
 import { appError, fail, getFieldErrors, ok, type AppError, type Result } from "./actionResult";
+import { buildDeck, fisherYatesShuffle, type TimelineEntry, type TurnState } from "./deck";
+import type { Json } from "@/types/supabase";
 
 const updateSettingsSchema = z.object({
   roomId: z.uuid(),
@@ -26,6 +29,7 @@ const startGameSchema = z.object({
 type HostRoomState = Readonly<{
   hostId: string;
   status: string;
+  settings: LobbySettings;
 }>;
 
 /**
@@ -41,6 +45,9 @@ export type UpdateSettingsResult = Readonly<{
  */
 export type StartGameResult = Readonly<{
   gameSessionId: string;
+  turnOrder: readonly string[];
+  startingCards: Readonly<Record<string, TimelineEntry>>;
+  firstCard: Readonly<{ screenshotImageId: string }>;
 }>;
 
 function revalidateMultiplayerPaths(roomId: string): void {
@@ -54,7 +61,7 @@ async function getRoomState(
 ): Promise<Result<HostRoomState, AppError>> {
   const { data: room, error } = await supabase
     .from("rooms")
-    .select("host_id, status")
+    .select("host_id, status, settings")
     .eq("id", roomId)
     .maybeSingle();
 
@@ -69,6 +76,7 @@ async function getRoomState(
   return ok({
     hostId: room.host_id,
     status: room.status,
+    settings: LobbySettingsSchema.parse(room.settings ?? {}),
   });
 }
 
@@ -168,7 +176,167 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
     return fail(appError("CONFLICT", "This room is no longer in the lobby."));
   }
 
-  const { data: updatedRoom, error } = await supabase
+  // Fetch room players (user IDs + display names for turn order and player rows).
+  const { data: roomPlayers, error: roomPlayersError } = await supabase
+    .from("room_players")
+    .select("user_id, display_name")
+    .eq("room_id", parsed.data.roomId);
+
+  if (roomPlayersError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to load the room players. Please try again."));
+  }
+
+  const serviceClient = createServiceClient();
+
+  // Build shuffled deck of game IDs based on room difficulty setting.
+  let deck: number[];
+  try {
+    deck = await buildDeck(serviceClient, roomResult.data.settings.difficulty);
+  } catch {
+    return fail(appError("INTERNAL_ERROR", "Failed to build the game deck. Please try again."));
+  }
+
+  // Deck must have at least N+1 cards: one starting card per player + first turn card.
+  const playerCount = roomPlayers.length;
+  if (deck.length < playerCount + 1) {
+    return fail(
+      appError(
+        "INTERNAL_ERROR",
+        "Not enough games are available for this difficulty. Try a different difficulty setting.",
+      ),
+    );
+  }
+
+  // Randomise turn order using Fisher-Yates.
+  const turnOrder = fisherYatesShuffle(roomPlayers.map((p) => p.user_id));
+
+  // Deal one starting card per player; the next card is the first active turn card.
+  const startingGameIds = deck.slice(0, playerCount);
+  const firstTurnGameId = deck.at(playerCount);
+  const firstActivePlayerId = turnOrder.at(0);
+
+  if (firstTurnGameId === undefined || firstActivePlayerId === undefined) {
+    return fail(appError("INTERNAL_ERROR", "Failed to prepare the first turn. Please try again."));
+  }
+
+  // Fetch metadata for all starting cards + the first turn card in one query.
+  const allGameIds = [...startingGameIds, firstTurnGameId];
+  const { data: gameRows, error: gameRowsError } = await serviceClient
+    .from("games")
+    .select("id, name, release_year")
+    .in("id", allGameIds);
+
+  if (gameRowsError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to load game data. Please try again."));
+  }
+
+  const gameById = new Map(gameRows.map((g) => [g.id, g]));
+
+  // Fetch the screenshot for the first turn card (pick first non-rejected).
+  const { data: screenshotRows, error: screenshotsError } = await serviceClient
+    .from("screenshots")
+    .select("game_id, igdb_image_id")
+    .eq("game_id", firstTurnGameId)
+    .neq("curation", "rejected")
+    .order("sort_order", { ascending: true })
+    .limit(1);
+
+  if (screenshotsError !== null || screenshotRows.length === 0) {
+    return fail(
+      appError("INTERNAL_ERROR", "Failed to load the first turn screenshot. Please try again."),
+    );
+  }
+
+  const firstScreenshotId = screenshotRows[0]?.igdb_image_id;
+  if (firstScreenshotId === undefined) {
+    return fail(appError("INTERNAL_ERROR", "First turn screenshot data missing."));
+  }
+
+  // Build starting-card timeline entries, keyed by user ID.
+  const playerByUserId = new Map(roomPlayers.map((p) => [p.user_id, p]));
+  const startingCards: Record<string, TimelineEntry> = {};
+
+  for (let i = 0; i < turnOrder.length; i++) {
+    const userId = turnOrder.at(i);
+    const gameId = startingGameIds.at(i);
+    if (userId === undefined || gameId === undefined) continue;
+    const game = gameById.get(gameId);
+    if (game === undefined) continue;
+
+    startingCards[userId] = {
+      gameId,
+      releaseYear: game.release_year,
+      name: game.name,
+    };
+  }
+
+  // Compute phase deadline from turn timer setting.
+  const { turnTimer } = roomResult.data.settings;
+  const phaseDeadline =
+    turnTimer !== "unlimited"
+      ? new Date(Date.now() + parseInt(turnTimer, 10) * 1000).toISOString()
+      : undefined;
+
+  const firstTurnGame = gameById.get(firstTurnGameId);
+  if (firstTurnGame === undefined) {
+    return fail(appError("INTERNAL_ERROR", "First turn card data missing."));
+  }
+
+  const currentTurn: TurnState = {
+    phase: "placing",
+    activePlayerId: firstActivePlayerId,
+    gameId: firstTurnGameId,
+    screenshotImageId: firstScreenshotId,
+    ...(phaseDeadline !== undefined && { phaseDeadline }),
+  };
+
+  // Insert game session row (service role — bypasses RLS).
+  const { data: gameSession, error: sessionError } = await serviceClient
+    .from("game_sessions")
+    .insert({
+      room_id: parsed.data.roomId,
+      deck,
+      deck_cursor: playerCount + 1,
+      current_turn: currentTurn as unknown as Json,
+      turn_number: 1,
+      turn_order: turnOrder,
+      active_player_id: firstActivePlayerId,
+      settings: roomResult.data.settings as unknown as Json,
+    })
+    .select("id")
+    .single();
+
+  if (sessionError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to create the game session. Please try again."));
+  }
+
+  const gameSessionId = gameSession.id;
+
+  // Insert one game_players row per player (service role — bypasses RLS).
+  const gamePlayers = turnOrder.map((userId, index) => {
+    const player = playerByUserId.get(userId);
+    const startingCard = startingCards[userId];
+    const timeline: TimelineEntry[] = startingCard !== undefined ? [startingCard] : [];
+
+    return {
+      game_session_id: gameSessionId,
+      user_id: userId,
+      display_name: player?.display_name ?? userId,
+      tokens: roomResult.data.settings.startingTokens,
+      score: 0,
+      turn_position: index,
+      timeline: timeline as unknown as Json,
+    };
+  });
+
+  const { error: playersError } = await serviceClient.from("game_players").insert(gamePlayers);
+
+  if (playersError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to create player records. Please try again."));
+  }
+
+  // Flip room status to playing (optimistic lock — ensures only one start succeeds).
+  const { data: updatedRoom, error: roomUpdateError } = await supabase
     .from("rooms")
     .update({ status: "playing" })
     .eq("id", parsed.data.roomId)
@@ -176,7 +344,7 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
     .select("id")
     .maybeSingle();
 
-  if (error !== null) {
+  if (roomUpdateError !== null) {
     return fail(appError("INTERNAL_ERROR", "Failed to start the game. Please try again."));
   }
 
@@ -186,7 +354,10 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
 
   revalidateMultiplayerPaths(parsed.data.roomId);
   return ok({
-    gameSessionId: globalThis.crypto.randomUUID(),
+    gameSessionId,
+    turnOrder,
+    startingCards,
+    firstCard: { screenshotImageId: firstScreenshotId },
   });
 }
 

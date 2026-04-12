@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  REALTIME_SUBSCRIBE_STATES,
-  type RealtimeChannel,
-  type RealtimePresenceState,
-} from "@supabase/realtime-js";
+import { REALTIME_SUBSCRIBE_STATES, type RealtimeChannel } from "@supabase/realtime-js";
 import { Copy, Loader2, LogOut, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -19,7 +15,8 @@ import {
   type LobbyPresence,
   type LobbySettings,
 } from "@/lib/multiplayer/lobby";
-import type { LobbyRoomPageData, LobbyRoomPagePlayer } from "@/lib/multiplayer/lobbyPage";
+import { buildConnectedPresence, buildSeedPresence } from "@/lib/multiplayer/presence";
+import type { LobbyRoomPageData } from "@/lib/multiplayer/lobbyPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LobbyHostControls } from "./LobbyHostControls";
@@ -36,7 +33,19 @@ const SettingsUpdatedPayloadSchema = LobbySettingsSchema;
 const PlayerKickedPayloadSchema = z.object({ userId: z.uuid() });
 
 /** Broadcast payload schema for the game_started event. */
-const GameStartedPayloadSchema = z.object({ gameSessionId: z.uuid() });
+const GameStartedPayloadSchema = z.object({
+  sessionId: z.uuid(),
+  turnOrder: z.array(z.uuid()),
+  startingCards: z.record(
+    z.uuid(),
+    z.object({
+      gameId: z.number().int(),
+      releaseYear: z.number().int().nullable(),
+      name: z.string(),
+    }),
+  ),
+  firstCard: z.object({ screenshotImageId: z.string() }),
+});
 
 /** Broadcast payload schema for the host_transferred event. */
 const HostTransferredPayloadSchema = z.object({ newHostId: z.uuid() });
@@ -47,53 +56,6 @@ const HostTransferredPayloadSchema = z.object({ newHostId: z.uuid() });
 export type LobbyScreenProps = Readonly<{
   initialRoom: LobbyRoomPageData;
 }>;
-
-function buildSeedPresence(players: readonly LobbyRoomPagePlayer[]): LobbyPresence[] {
-  return players.map((player) => ({
-    userId: player.userId,
-    displayName: player.displayName,
-    role: player.role,
-    status: "connected",
-    joinedAt: player.joinedAt,
-  }));
-}
-
-function buildConnectedPlayers(
-  roomPlayers: readonly LobbyRoomPagePlayer[],
-  rawPresenceState: RealtimePresenceState<Record<string, unknown>>,
-): LobbyPresence[] {
-  const playerOrder = new Map(roomPlayers.map((player, index) => [player.userId, index]));
-  const playersByUserId = new Map(roomPlayers.map((player) => [player.userId, player]));
-  const connectedPlayers = new Map<string, LobbyPresence>();
-
-  for (const presenceEntries of Object.values(rawPresenceState)) {
-    for (const presenceEntry of presenceEntries) {
-      const parsedPresence = LobbyPresenceSchema.safeParse(presenceEntry);
-      if (!parsedPresence.success) {
-        continue;
-      }
-
-      const roomPlayer = playersByUserId.get(parsedPresence.data.userId);
-      if (roomPlayer === undefined) {
-        continue;
-      }
-
-      connectedPlayers.set(parsedPresence.data.userId, {
-        ...parsedPresence.data,
-        displayName: roomPlayer.displayName,
-        joinedAt: roomPlayer.joinedAt,
-        role: roomPlayer.role,
-      });
-    }
-  }
-
-  return [...connectedPlayers.values()].sort((left, right) => {
-    const leftIndex = playerOrder.get(left.userId) ?? Number.MAX_SAFE_INTEGER;
-    const rightIndex = playerOrder.get(right.userId) ?? Number.MAX_SAFE_INTEGER;
-
-    return leftIndex - rightIndex;
-  });
-}
 
 /**
  * Client-side realtime multiplayer lobby screen.
@@ -152,7 +114,7 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
 
     const syncPlayers = () => {
       setPlayers(
-        buildConnectedPlayers(
+        buildConnectedPresence(
           initialRoom.players,
           channel.presenceState<Record<string, unknown>>(),
         ),
@@ -181,7 +143,7 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
         const payload: unknown = msg.payload;
         const parsed = GameStartedPayloadSchema.safeParse(payload);
         if (!parsed.success) return;
-        router.push(`/play/game/${parsed.data.gameSessionId}`);
+        router.push(`/play/game/${parsed.data.sessionId}`);
       })
       .on("broadcast", { event: "host_transferred" }, (msg) => {
         const payload: unknown = msg.payload;
@@ -378,7 +340,12 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
     void channelRef.current?.send({
       type: "broadcast",
       event: "game_started",
-      payload: { gameSessionId: result.data.gameSessionId },
+      payload: {
+        sessionId: result.data.gameSessionId,
+        turnOrder: result.data.turnOrder,
+        startingCards: result.data.startingCards,
+        firstCard: result.data.firstCard,
+      },
     });
   }
 

@@ -4,20 +4,24 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { PlatformOption } from "@/stores/soloGameStore";
+import type { PlatformOption } from "@/lib/platformBonus";
 
 export interface PlatformBonusInputProps {
   platforms: PlatformOption[];
   correctPlatformIds: number[];
   result: "correct" | "incorrect" | null;
+  incorrectMessage?: string;
   onSubmit: (selectedIds: number[]) => void;
+  successMessage?: string;
 }
 
 export function PlatformBonusInput({
   platforms,
   correctPlatformIds,
   result,
+  incorrectMessage = "✗ Not quite — correct platforms are highlighted",
   onSubmit,
+  successMessage = "🎮 +1 bonus!",
 }: PlatformBonusInputProps) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const reduceMotion = useReducedMotion();
@@ -49,8 +53,11 @@ export function PlatformBonusInput({
         ? "bg-sky-500/30 text-sky-300 border-sky-500/60 ring-1 ring-sky-500/40"
         : "bg-surface-700/60 text-text-secondary border-white/10 hover:border-white/20 hover:text-text-primary";
     }
-    if (result === "correct") {
+    if (result === "correct" && correctSet.has(id)) {
       return "bg-emerald-500/30 text-emerald-300 border-emerald-500/50";
+    }
+    if (result === "correct") {
+      return "bg-surface-700/30 text-text-secondary/30 border-white/5";
     }
     // incorrect result — show correct in green, wrong selections in red, rest dimmed
     if (correctSet.has(id)) {
@@ -115,9 +122,7 @@ export function PlatformBonusInput({
           role="status"
           aria-live="polite"
         >
-          {result === "correct"
-            ? "🎮 +1 bonus!"
-            : "✗ Not quite — correct platforms are highlighted"}
+          {result === "correct" ? successMessage : incorrectMessage}
         </motion.div>
       )}
     </div>
