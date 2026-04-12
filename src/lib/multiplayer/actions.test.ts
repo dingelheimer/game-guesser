@@ -227,6 +227,7 @@ describe("createRoom", () => {
       error: {
         code: "CONFLICT",
         message: "You are already in an active room.",
+        details: { activeRoomId: "room-active" },
       },
     });
   });
@@ -326,6 +327,26 @@ describe("joinRoom", () => {
       error: {
         code: "NOT_FOUND",
         message: "That room code does not match an open lobby.",
+      },
+    });
+  });
+
+  it("returns conflict with activeRoomId when the user is already in another active room", async () => {
+    authenticate("player-1");
+    queueResults(
+      { data: { id: "room-1", max_players: 10 } },
+      { data: [{ room_id: "room-other" }] },
+      { data: [{ id: "room-other" }] },
+    );
+
+    const result = await joinRoom("ABC234", "Player One");
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: "You are already in another active room.",
+        details: { activeRoomId: "room-other" },
       },
     });
   });
