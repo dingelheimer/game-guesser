@@ -306,9 +306,9 @@ export function GameOverScreen({
                   scoreStatus === "saved" &&
                     "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
                   scoreStatus === "submitting" &&
-                    "border-white/10 bg-surface-800/80 text-text-secondary",
+                    "bg-surface-800/80 text-text-secondary border-white/10",
                   scoreStatus === "error" && "border-rose-500/30 bg-rose-500/10 text-rose-300",
-                  scoreStatus === "idle" && "border-white/10 bg-surface-800/80 text-text-secondary",
+                  scoreStatus === "idle" && "bg-surface-800/80 text-text-secondary border-white/10",
                 )}
                 role="status"
                 aria-live="polite"
@@ -328,9 +328,7 @@ export function GameOverScreen({
                     </Link>
                   </>
                 )}
-                {scoreStatus === "error" && (
-                  <>{scoreError ?? "Failed to save score."}</>
-                )}
+                {scoreStatus === "error" && <>{scoreError ?? "Failed to save score."}</>}
                 {scoreStatus === "idle" && <>Preparing to save score…</>}
               </div>
             ) : (
