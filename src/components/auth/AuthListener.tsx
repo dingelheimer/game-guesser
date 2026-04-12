@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Subscribes to Supabase auth state changes and keeps the Next.js router in sync.
  * Mount once in the root layout. Redirects to "/" on sign-out and refreshes
- * server components on any auth event (sign-in, token refresh, etc.).
+ * server components only on sign-in and token-refresh events to avoid an
+ * infinite refresh loop triggered by INITIAL_SESSION on every page load.
  */
 export function AuthListener() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export function AuthListener() {
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         router.push("/");
-      } else {
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         router.refresh();
       }
     });

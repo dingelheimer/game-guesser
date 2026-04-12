@@ -57,7 +57,7 @@ export const LobbyPresenceSchema = z.object({
   displayName: DisplayNameSchema,
   role: LobbyPlayerRoleSchema,
   status: LobbyPresenceStatusSchema,
-  joinedAt: z.iso.datetime(),
+  joinedAt: z.iso.datetime({ offset: true }),
 });
 
 /** Validated room code value derived from {@link RoomCodeSchema}. */
