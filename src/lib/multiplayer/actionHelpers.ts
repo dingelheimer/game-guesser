@@ -8,6 +8,16 @@ const ACTIVE_ROOM_STATUSES = ["lobby", "playing"] as const;
 /** Server Supabase client type used by multiplayer Server Actions. */
 export type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
+/** Call the abandon_stale_rooms RPC to mark the calling user's stale rooms as abandoned.
+ *  Errors are logged but never propagate — cleanup failure must not block room creation or join.
+ */
+export async function cleanupStaleRooms(supabase: SupabaseClient): Promise<void> {
+  const { error } = await supabase.rpc("abandon_stale_rooms");
+  if (error !== null) {
+    console.error("[cleanupStaleRooms] Failed to clean up stale rooms:", error.message);
+  }
+}
+
 /** Check whether a Supabase error represents a unique-constraint violation. */
 export function isUniqueViolation(error: { code?: string } | null): boolean {
   return error?.code === "23505";

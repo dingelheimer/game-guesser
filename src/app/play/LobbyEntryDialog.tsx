@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { createRoom, joinRoom } from "@/lib/multiplayer/actions";
+import { createRoom, joinRoom, leaveRoom } from "@/lib/multiplayer/actions";
 import { getFieldErrors, type FieldErrors } from "@/lib/multiplayer/actionResult";
 import { ensureMultiplayerSession } from "@/lib/multiplayer/browser";
 import { DisplayNameSchema, RoomCodeSchema } from "@/lib/multiplayer/lobby";
@@ -41,6 +41,7 @@ type LobbyEntryState = Readonly<{
   roomCode: string;
   formError: string | null;
   fieldErrors: FieldErrors | undefined;
+  conflictRoomId: string | null;
 }>;
 
 function normalizeRoomCodeInput(value: string): string {
@@ -56,6 +57,7 @@ function buildInitialState(defaultDisplayName: string | null): LobbyEntryState {
     roomCode: "",
     formError: null,
     fieldErrors: undefined,
+    conflictRoomId: null,
   };
 }
 
@@ -144,6 +146,7 @@ export function LobbyEntryDialog({
         ...current,
         formError: null,
         fieldErrors: undefined,
+        conflictRoomId: null,
       }));
 
       const sessionResult = await ensureMultiplayerSession();
@@ -159,11 +162,14 @@ export function LobbyEntryDialog({
       const result = await createRoom(parsed.data.displayName);
       if (!result.success) {
         setIsPending(false);
+        const activeRoomId =
+          result.error.code === "CONFLICT" ? (result.error.details?.activeRoomId ?? null) : null;
         setState((current) => ({
           ...current,
-          formError: result.error.message,
+          formError: activeRoomId === null ? result.error.message : null,
           fieldErrors:
             result.error.code === "VALIDATION_ERROR" ? result.error.fieldErrors : undefined,
+          conflictRoomId: activeRoomId,
         }));
         return;
       }
@@ -191,6 +197,7 @@ export function LobbyEntryDialog({
       ...current,
       formError: null,
       fieldErrors: undefined,
+      conflictRoomId: null,
     }));
 
     const sessionResult = await ensureMultiplayerSession();
@@ -206,17 +213,76 @@ export function LobbyEntryDialog({
     const result = await joinRoom(parsed.data.code, parsed.data.displayName);
     if (!result.success) {
       setIsPending(false);
+      const activeRoomId =
+        result.error.code === "CONFLICT" ? (result.error.details?.activeRoomId ?? null) : null;
       setState((current) => ({
         ...current,
-        formError: result.error.message,
+        formError: activeRoomId === null ? result.error.message : null,
         fieldErrors:
           result.error.code === "VALIDATION_ERROR" ? result.error.fieldErrors : undefined,
+        conflictRoomId: activeRoomId,
       }));
       return;
     }
 
     handleOpenChange(false);
     router.push(`/play/lobby/${result.data.roomId}`);
+  }
+
+  async function handleLeaveAndRetry(): Promise<void> {
+    const conflictRoomId = state.conflictRoomId;
+    if (conflictRoomId === null) return;
+
+    const { displayName, roomCode } = state;
+
+    setIsPending(true);
+    setState((current) => ({ ...current, formError: null, conflictRoomId: null }));
+
+    const leaveResult = await leaveRoom(conflictRoomId);
+    if (!leaveResult.success) {
+      setIsPending(false);
+      setState((current) => ({
+        ...current,
+        formError: leaveResult.error.message,
+      }));
+      return;
+    }
+
+    if (mode === "create") {
+      const result = await createRoom(displayName);
+      if (!result.success) {
+        setIsPending(false);
+        const activeRoomId =
+          result.error.code === "CONFLICT" ? (result.error.details?.activeRoomId ?? null) : null;
+        setState((current) => ({
+          ...current,
+          formError: activeRoomId === null ? result.error.message : null,
+          fieldErrors:
+            result.error.code === "VALIDATION_ERROR" ? result.error.fieldErrors : undefined,
+          conflictRoomId: activeRoomId,
+        }));
+        return;
+      }
+      handleOpenChange(false);
+      router.push(`/play/lobby/${result.data.roomId}`);
+    } else {
+      const result = await joinRoom(roomCode, displayName);
+      if (!result.success) {
+        setIsPending(false);
+        const activeRoomId =
+          result.error.code === "CONFLICT" ? (result.error.details?.activeRoomId ?? null) : null;
+        setState((current) => ({
+          ...current,
+          formError: activeRoomId === null ? result.error.message : null,
+          fieldErrors:
+            result.error.code === "VALIDATION_ERROR" ? result.error.fieldErrors : undefined,
+          conflictRoomId: activeRoomId,
+        }));
+        return;
+      }
+      handleOpenChange(false);
+      router.push(`/play/lobby/${result.data.roomId}`);
+    }
   }
 
   return (
@@ -234,10 +300,51 @@ export function LobbyEntryDialog({
             void handleSubmit();
           }}
         >
-          {state.formError !== null && (
-            <p className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm" role="alert">
-              {state.formError}
-            </p>
+          {state.conflictRoomId !== null ? (
+            (() => {
+              const activeRoomId = state.conflictRoomId;
+              return (
+                <div
+                  className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm space-y-3"
+                  role="alert"
+                >
+                  <p>You have an active room. Would you like to rejoin it or leave it?</p>
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={() => {
+                        handleOpenChange(false);
+                        router.push(`/play/lobby/${activeRoomId}`);
+                      }}
+                    >
+                      Rejoin
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => void handleLeaveAndRetry()}
+                    >
+                      {isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Leaving…
+                        </>
+                      ) : (
+                        "Leave & Continue"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()
+          ) : (
+            state.formError !== null && (
+              <p className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm" role="alert">
+                {state.formError}
+              </p>
+            )
           )}
 
           {mode === "join" && (
