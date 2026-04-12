@@ -7,15 +7,18 @@ type MockQueryResult = {
 };
 
 type MockOperation = {
-  action: "delete" | "insert" | "select" | "update";
+  action: "delete" | "insert" | "rpc" | "select" | "update";
+  args?: unknown;
   columns?: string;
+  fn?: string;
   options?: unknown;
   payload?: unknown;
-  table: string;
+  table?: string;
 };
 
 const mocks = vi.hoisted(() => {
   const queryResults: MockQueryResult[] = [];
+  const rpcResults: MockQueryResult[] = [];
   const operations: MockOperation[] = [];
   const mockGetUser = vi.fn();
   const mockGenerateRoomCode = vi.fn();
@@ -76,9 +79,16 @@ const mocks = vi.hoisted(() => {
     }),
   }));
 
+  const mockRpc = vi.fn((fn: string, args?: unknown) => {
+    operations.push({ action: "rpc", fn, ...(args === undefined ? {} : { args }) });
+    const result = rpcResults.shift() ?? { data: 0, error: null };
+    return { data: result.data ?? null, error: result.error ?? null };
+  });
+
   const mockCreateClient = vi.fn(async () => ({
     auth: { getUser: mockGetUser },
     from: mockFrom,
+    rpc: mockRpc,
   }));
 
   return {
@@ -89,6 +99,7 @@ const mocks = vi.hoisted(() => {
     mockRevalidatePath,
     operations,
     queryResults,
+    rpcResults,
   };
 });
 
@@ -114,6 +125,10 @@ import { createRoom, joinRoom } from "./actions";
 
 function queueResults(...results: readonly MockQueryResult[]) {
   mocks.queryResults.push(...results);
+}
+
+function queueRpcResults(...results: readonly MockQueryResult[]) {
+  mocks.rpcResults.push(...results);
 }
 
 function authenticate(userId = "user-1") {
@@ -148,6 +163,7 @@ describe("createRoom", () => {
     vi.clearAllMocks();
     mocks.operations.length = 0;
     mocks.queryResults.length = 0;
+    mocks.rpcResults.length = 0;
     mocks.mockGenerateRoomCode.mockReset();
   });
 
@@ -211,6 +227,7 @@ describe("createRoom", () => {
       error: {
         code: "CONFLICT",
         message: "You are already in an active room.",
+        details: { activeRoomId: "room-active" },
       },
     });
   });
@@ -233,6 +250,36 @@ describe("createRoom", () => {
     expect(mocks.mockCreateClient).not.toHaveBeenCalled();
     expect(mocks.mockGetUser).not.toHaveBeenCalled();
   });
+  it("calls abandon_stale_rooms before checking for active rooms", async () => {
+    authenticate("host-1");
+    mocks.mockGenerateRoomCode.mockReturnValue("ABC234");
+    queueResults({ data: [] }, { data: { id: "room-1" } }, { error: null });
+
+    await createRoom("Alex");
+
+    const rpcOp = mocks.operations.find((op) => op.action === "rpc" && op.fn === "abandon_stale_rooms");
+    expect(rpcOp).toBeDefined();
+
+    const rpcIndex = rpcOp === undefined ? -1 : mocks.operations.indexOf(rpcOp);
+    const firstSelectIndex = mocks.operations.findIndex(
+      (op) => op.action === "select" && op.table === "room_players",
+    );
+    expect(rpcIndex).toBeLessThan(firstSelectIndex);
+  });
+
+  it("proceeds with room creation even if abandon_stale_rooms fails", async () => {
+    authenticate("host-1");
+    mocks.mockGenerateRoomCode.mockReturnValue("ABC234");
+    queueRpcResults({ data: null, error: { message: "RPC error" } });
+    queueResults({ data: [] }, { data: { id: "room-1" } }, { error: null });
+
+    const result = await createRoom("Alex");
+
+    expect(result).toEqual({
+      success: true,
+      data: { roomCode: "ABC234", roomId: "room-1" },
+    });
+  });
 });
 
 describe("joinRoom", () => {
@@ -240,6 +287,7 @@ describe("joinRoom", () => {
     vi.clearAllMocks();
     mocks.operations.length = 0;
     mocks.queryResults.length = 0;
+    mocks.rpcResults.length = 0;
     mocks.mockGenerateRoomCode.mockReset();
   });
 
@@ -279,6 +327,26 @@ describe("joinRoom", () => {
       error: {
         code: "NOT_FOUND",
         message: "That room code does not match an open lobby.",
+      },
+    });
+  });
+
+  it("returns conflict with activeRoomId when the user is already in another active room", async () => {
+    authenticate("player-1");
+    queueResults(
+      { data: { id: "room-1", max_players: 10 } },
+      { data: [{ room_id: "room-other" }] },
+      { data: [{ id: "room-other" }] },
+    );
+
+    const result = await joinRoom("ABC234", "Player One");
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: "You are already in another active room.",
+        details: { activeRoomId: "room-other" },
       },
     });
   });
@@ -363,5 +431,27 @@ describe("joinRoom", () => {
       },
     });
     expect(mocks.mockCreateClient).not.toHaveBeenCalled();
+  });
+
+  it("calls abandon_stale_rooms before checking for active rooms", async () => {
+    authenticate("player-1");
+    queueResults(
+      { data: { id: "room-1", max_players: 10 } },
+      { data: [] },
+      { error: null },
+      { data: { status: "lobby", max_players: 10 } },
+      { count: 2, error: null },
+    );
+
+    await joinRoom("ab2cd3", "Sam");
+
+    const rpcOp = mocks.operations.find((op) => op.action === "rpc" && op.fn === "abandon_stale_rooms");
+    expect(rpcOp).toBeDefined();
+
+    const rpcIndex = rpcOp === undefined ? -1 : mocks.operations.indexOf(rpcOp);
+    const firstRoomPlayersSelectIndex = mocks.operations.findIndex(
+      (op) => op.action === "select" && op.table === "room_players",
+    );
+    expect(rpcIndex).toBeLessThan(firstRoomPlayersSelectIndex);
   });
 });

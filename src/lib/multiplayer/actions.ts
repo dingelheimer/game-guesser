@@ -11,6 +11,7 @@ import {
   RoomCodeSchema,
 } from "./lobby";
 import {
+  cleanupStaleRooms,
   ensureRoomStillJoinable,
   findActiveRoomId,
   getAuthenticatedUserId,
@@ -106,13 +107,19 @@ export async function createRoom(displayName: string): Promise<Result<CreateRoom
     return userIdResult;
   }
 
+  await cleanupStaleRooms(supabase);
+
   const activeRoomResult = await findActiveRoomId(supabase, userIdResult.data);
   if (!activeRoomResult.success) {
     return activeRoomResult;
   }
 
   if (activeRoomResult.data !== null) {
-    return fail(appError("CONFLICT", "You are already in an active room."));
+    return fail(
+      appError("CONFLICT", "You are already in an active room.", {
+        activeRoomId: activeRoomResult.data,
+      }),
+    );
   }
 
   for (let attempt = 0; attempt < ROOM_CODE_RETRY_LIMIT; attempt += 1) {
@@ -204,6 +211,8 @@ export async function joinRoom(
     return fail(appError("NOT_FOUND", "That room code does not match an open lobby."));
   }
 
+  await cleanupStaleRooms(supabase);
+
   const activeRoomResult = await findActiveRoomId(supabase, userIdResult.data);
   if (!activeRoomResult.success) {
     return activeRoomResult;
@@ -214,7 +223,11 @@ export async function joinRoom(
   }
 
   if (activeRoomResult.data !== null) {
-    return fail(appError("CONFLICT", "You are already in another active room."));
+    return fail(
+      appError("CONFLICT", "You are already in another active room.", {
+        activeRoomId: activeRoomResult.data,
+      }),
+    );
   }
 
   const { error: insertError } = await supabase.from("room_players").insert({
