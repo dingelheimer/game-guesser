@@ -9,6 +9,8 @@ import { Footer } from "@/components/layouts/footer";
 import { NoiseOverlay } from "@/components/layouts/noise-overlay";
 import { AuthListener } from "@/components/auth/AuthListener";
 import { createClient } from "@/lib/supabase/server";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -84,6 +86,8 @@ export default async function RootLayout({
             <AuthListener />
           </TooltipProvider>
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
