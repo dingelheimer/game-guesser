@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/lib/auth/actions";
 
 const navItems = [
-  { href: "/play/solo", label: "Play", icon: Gamepad2 },
+  { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/rules", label: "Rules", icon: HelpCircle },
 ] as const;
