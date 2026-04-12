@@ -347,6 +347,7 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
         firstCard: result.data.firstCard,
       },
     });
+    router.push(`/play/game/${result.data.gameSessionId}`);
   }
 
   return (
