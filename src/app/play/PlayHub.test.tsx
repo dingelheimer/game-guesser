@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayHub } from "./PlayHub";
 import { ensureMultiplayerSession } from "@/lib/multiplayer/browser";
-import { createRoom, joinRoom } from "@/lib/multiplayer/actions";
+import { createRoom, joinRoom, leaveRoom } from "@/lib/multiplayer/actions";
 
 const pushMock = vi.fn();
 
@@ -20,6 +20,7 @@ vi.mock("@/lib/multiplayer/browser", () => ({
 vi.mock("@/lib/multiplayer/actions", () => ({
   createRoom: vi.fn(),
   joinRoom: vi.fn(),
+  leaveRoom: vi.fn(),
 }));
 
 describe("PlayHub", () => {
@@ -42,6 +43,10 @@ describe("PlayHub", () => {
       data: {
         roomId: "room-456",
       },
+    });
+    vi.mocked(leaveRoom).mockResolvedValue({
+      success: true,
+      data: { roomId: "room-conflict" },
     });
   });
 
@@ -142,6 +147,140 @@ describe("PlayHub", () => {
     await waitFor(() => {
       expect(within(dialog).getByRole("alert")).toHaveTextContent(
         "That room code does not match an open lobby.",
+      );
+    });
+  });
+
+  it("shows rejoin/leave prompt when createRoom returns a conflict with activeRoomId", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(createRoom).mockResolvedValue({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: "You are already in an active room.",
+        details: { activeRoomId: "room-conflict" },
+      },
+    });
+
+    render(<PlayHub defaultDisplayName="Alex" />);
+
+    await user.click(screen.getByRole("button", { name: "Create Room" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Create Room" }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole("alert")).toHaveTextContent(
+        "You have an active room. Would you like to rejoin it or leave it?",
+      );
+    });
+
+    expect(within(dialog).getByRole("button", { name: "Rejoin" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Leave & Continue" })).toBeInTheDocument();
+  });
+
+  it("navigates to the existing room when Rejoin is clicked", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(createRoom).mockResolvedValue({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: "You are already in an active room.",
+        details: { activeRoomId: "room-conflict" },
+      },
+    });
+
+    render(<PlayHub defaultDisplayName="Alex" />);
+
+    await user.click(screen.getByRole("button", { name: "Create Room" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Create Room" }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole("button", { name: "Rejoin" })).toBeInTheDocument();
+    });
+
+    await user.click(within(dialog).getByRole("button", { name: "Rejoin" }));
+
+    expect(pushMock).toHaveBeenCalledWith("/play/lobby/room-conflict");
+  });
+
+  it("calls leaveRoom and retries createRoom when Leave & Continue is clicked", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(createRoom)
+      .mockResolvedValueOnce({
+        success: false,
+        error: {
+          code: "CONFLICT",
+          message: "You are already in an active room.",
+          details: { activeRoomId: "room-conflict" },
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { roomCode: "NEW234", roomId: "room-new" },
+      });
+
+    render(<PlayHub defaultDisplayName="Alex" />);
+
+    await user.click(screen.getByRole("button", { name: "Create Room" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Create Room" }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole("button", { name: "Leave & Continue" })).toBeInTheDocument();
+    });
+
+    await user.click(within(dialog).getByRole("button", { name: "Leave & Continue" }));
+
+    await waitFor(() => {
+      expect(leaveRoom).toHaveBeenCalledWith("room-conflict");
+      expect(createRoom).toHaveBeenCalledTimes(2);
+      expect(pushMock).toHaveBeenCalledWith("/play/lobby/room-new");
+    });
+  });
+
+  it("shows error message when leaveRoom fails during Leave & Continue", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(createRoom).mockResolvedValue({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: "You are already in an active room.",
+        details: { activeRoomId: "room-conflict" },
+      },
+    });
+
+    vi.mocked(leaveRoom).mockResolvedValue({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Failed to leave the room. Please try again.",
+      },
+    });
+
+    render(<PlayHub defaultDisplayName="Alex" />);
+
+    await user.click(screen.getByRole("button", { name: "Create Room" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Create Room" }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole("button", { name: "Leave & Continue" })).toBeInTheDocument();
+    });
+
+    await user.click(within(dialog).getByRole("button", { name: "Leave & Continue" }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole("alert")).toHaveTextContent(
+        "Failed to leave the room. Please try again.",
       );
     });
   });

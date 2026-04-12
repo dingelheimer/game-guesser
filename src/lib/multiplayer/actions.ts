@@ -115,7 +115,11 @@ export async function createRoom(displayName: string): Promise<Result<CreateRoom
   }
 
   if (activeRoomResult.data !== null) {
-    return fail(appError("CONFLICT", "You are already in an active room."));
+    return fail(
+      appError("CONFLICT", "You are already in an active room.", {
+        activeRoomId: activeRoomResult.data,
+      }),
+    );
   }
 
   for (let attempt = 0; attempt < ROOM_CODE_RETRY_LIMIT; attempt += 1) {
@@ -219,7 +223,11 @@ export async function joinRoom(
   }
 
   if (activeRoomResult.data !== null) {
-    return fail(appError("CONFLICT", "You are already in another active room."));
+    return fail(
+      appError("CONFLICT", "You are already in another active room.", {
+        activeRoomId: activeRoomResult.data,
+      }),
+    );
   }
 
   const { error: insertError } = await supabase.from("room_players").insert({
