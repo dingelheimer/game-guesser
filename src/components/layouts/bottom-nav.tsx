@@ -12,7 +12,7 @@ export type BottomNavProps = {
 /** Mobile-only bottom navigation bar with auth-aware profile link. */
 export function BottomNav({ username }: BottomNavProps) {
   const navItems = [
-    { href: "/play/solo", label: "Play", icon: Gamepad2 },
+    { href: "/play", label: "Play", icon: Gamepad2 },
     { href: "/leaderboard", label: "Board", icon: Trophy },
     { href: "/rules", label: "Rules", icon: HelpCircle },
     username !== null
