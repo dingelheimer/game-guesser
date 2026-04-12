@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getLobbyRoomPageData } from "@/lib/multiplayer/lobbyPage";
+import { LobbyExpiredRedirect } from "./LobbyExpiredRedirect";
 import { LobbyScreen } from "./LobbyScreen";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function LobbyPage({ params }: { params: Promise<{ roomId: 
   const room = await getLobbyRoomPageData(roomId);
 
   if (room === null) {
-    redirect("/play");
+    return <LobbyExpiredRedirect />;
   }
 
   return <LobbyScreen initialRoom={room} />;
