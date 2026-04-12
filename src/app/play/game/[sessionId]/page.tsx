@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getMultiplayerGamePageData } from "@/lib/multiplayer/gamePage";
+import { GameScreen } from "./GameScreen";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Game",
 };
 
 /**
- * Placeholder game session page shown after the host starts the multiplayer game.
+ * Multiplayer game route that server-loads the active session before hydrating realtime UI.
  */
 export default async function GamePage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
+  const game = await getMultiplayerGamePageData(sessionId);
 
-  return (
-    <div className="flex flex-1 items-center justify-center px-4 py-8">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold">Game in progress</h1>
-        <p className="text-muted-foreground text-sm">Session: {sessionId}</p>
-      </div>
-    </div>
-  );
+  if (game === null) {
+    redirect("/play");
+  }
+
+  return <GameScreen initialGame={game} />;
 }

@@ -149,7 +149,12 @@ describe("LobbyScreen — host controls", () => {
     });
     vi.mocked(startGame).mockResolvedValue({
       success: true,
-      data: { gameSessionId: SESSION_ID },
+      data: {
+        gameSessionId: SESSION_ID,
+        turnOrder: [HOST_ID, PLAYER_ID],
+        startingCards: {},
+        firstCard: { screenshotImageId: "sc_stub" },
+      },
     });
     vi.mocked(updateSettings).mockResolvedValue({
       success: true,
@@ -257,7 +262,7 @@ describe("LobbyScreen — host controls", () => {
     expect(mocks.sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
         event: "game_started",
-        payload: { gameSessionId: SESSION_ID },
+        payload: expect.objectContaining({ sessionId: SESSION_ID }),
       }),
     );
   });
@@ -266,7 +271,14 @@ describe("LobbyScreen — host controls", () => {
     render(<LobbyScreen initialRoom={playerRoom} />);
 
     act(() => {
-      mocks.broadcastHandlers["game_started"]?.({ payload: { gameSessionId: SESSION_ID } });
+      mocks.broadcastHandlers["game_started"]?.({
+        payload: {
+          sessionId: SESSION_ID,
+          turnOrder: [HOST_ID, PLAYER_ID],
+          startingCards: {},
+          firstCard: { screenshotImageId: "sc_stub" },
+        },
+      });
     });
 
     await waitFor(() => {
