@@ -352,7 +352,7 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
     return fail(appError("CONFLICT", "This room is no longer in the lobby."));
   }
 
-  revalidateMultiplayerPaths(parsed.data.roomId);
+  revalidatePath("/play");
   return ok({
     gameSessionId,
     turnOrder,

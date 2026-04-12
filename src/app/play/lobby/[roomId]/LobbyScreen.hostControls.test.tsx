@@ -249,7 +249,7 @@ describe("LobbyScreen — host controls", () => {
     expect(screen.getByRole("button", { name: /start game/i })).toBeDisabled();
   });
 
-  it("Start Game calls startGame and broadcasts game_started", async () => {
+  it("Start Game calls startGame, broadcasts game_started, and navigates the host directly", async () => {
     const user = userEvent.setup();
     render(<LobbyScreen initialRoom={hostRoom} />);
 
@@ -265,6 +265,8 @@ describe("LobbyScreen — host controls", () => {
         payload: expect.objectContaining({ sessionId: SESSION_ID }),
       }),
     );
+
+    expect(mocks.pushMock).toHaveBeenCalledWith(`/play/game/${SESSION_ID}`);
   });
 
   it("game_started broadcast redirects all players to /play/game/[sessionId]", async () => {
