@@ -16,7 +16,7 @@ import { TimelineEntrySchema, TurnPhaseSchema, TurnStateSchema, type TurnPhase }
 const SessionIdSchema = z.uuid();
 const SessionStatusSchema = z.enum(["active", "finished", "abandoned"]);
 const RoomPlayerPresenceRowSchema = z.object({
-  joined_at: z.iso.datetime(),
+  joined_at: z.iso.datetime({ offset: true }),
   role: LobbyPlayerRoleSchema,
   user_id: z.uuid(),
 });
