@@ -10,6 +10,8 @@ export default tseslint.config(
       "build/**",
       "next-env.d.ts",
       "*.mjs",
+      // Generated file — do not lint
+      "src/types/supabase.ts",
       // Deno Edge Functions — use Deno LSP for type-checking these files
       "supabase/functions/**",
     ],
