@@ -25,9 +25,9 @@ const knownPlayer: PresencePlayer = {
 function makePresenceState(
   entries: Array<Record<string, unknown>>,
 ): RealtimePresenceState<Record<string, unknown>> {
-  return Object.fromEntries(
-    entries.map((e, i) => [String(i), [e]]),
-  ) as RealtimePresenceState<Record<string, unknown>>;
+  return Object.fromEntries(entries.map((e, i) => [String(i), [e]])) as RealtimePresenceState<
+    Record<string, unknown>
+  >;
 }
 
 describe("buildSeedPresence", () => {

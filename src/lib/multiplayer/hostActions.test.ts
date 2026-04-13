@@ -182,7 +182,12 @@ describe("updateSettings", () => {
       tokensEnabled: false,
       startingTokens: 0,
       winCondition: 15,
+      gameMode: "competitive",
       variant: "expert",
+      genreLockId: null,
+      consoleLockFamily: null,
+      decadeStart: null,
+      speedRound: false,
     } as const;
 
     queueResults(
@@ -207,7 +212,12 @@ describe("updateSettings", () => {
       tokensEnabled: true,
       startingTokens: 2,
       winCondition: 10,
+      gameMode: "competitive",
       variant: "standard",
+      genreLockId: null,
+      consoleLockFamily: null,
+      decadeStart: null,
+      speedRound: false,
     });
 
     expect(result).toEqual({
@@ -233,7 +243,12 @@ describe("startGame", () => {
     tokensEnabled: true,
     startingTokens: 2,
     winCondition: 10,
+    gameMode: "competitive",
     variant: "standard",
+    genreLockId: null,
+    consoleLockFamily: null,
+    decadeStart: null,
+    speedRound: false,
   };
 
   const deck = [101, 102, 103, 104, 105];

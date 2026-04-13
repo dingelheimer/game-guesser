@@ -52,11 +52,7 @@ export function appError(
   message: string,
   fieldErrors?: FieldErrors,
 ): AppError;
-export function appError(
-  code: "CONFLICT",
-  message: string,
-  details?: ConflictDetails,
-): AppError;
+export function appError(code: "CONFLICT", message: string, details?: ConflictDetails): AppError;
 export function appError(
   code: Exclude<AppErrorCode, "VALIDATION_ERROR" | "CONFLICT">,
   message: string,

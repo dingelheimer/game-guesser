@@ -1,11 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -202,6 +197,9 @@ export type Database = {
           room_id: string;
           settings: Json;
           status: string;
+          team_score: number | null;
+          team_timeline: Json | null;
+          team_tokens: number | null;
           turn_number: number;
           turn_order: string[];
           updated_at: string;
@@ -217,6 +215,9 @@ export type Database = {
           room_id: string;
           settings?: Json;
           status?: string;
+          team_score?: number | null;
+          team_timeline?: Json | null;
+          team_tokens?: number | null;
           turn_number?: number;
           turn_order: string[];
           updated_at?: string;
@@ -232,6 +233,9 @@ export type Database = {
           room_id?: string;
           settings?: Json;
           status?: string;
+          team_score?: number | null;
+          team_timeline?: Json | null;
+          team_tokens?: number | null;
           turn_number?: number;
           turn_order?: string[];
           updated_at?: string;
@@ -362,16 +366,19 @@ export type Database = {
       };
       platforms: {
         Row: {
+          family: string;
           id: number;
           igdb_id: number;
           name: string;
         };
         Insert: {
+          family?: string;
           id?: never;
           igdb_id: number;
           name: string;
         };
         Update: {
+          family?: string;
           id?: never;
           igdb_id?: number;
           name?: string;
@@ -598,6 +605,9 @@ export type Database = {
           room_id: string | null;
           settings: Json | null;
           status: string | null;
+          team_score: number | null;
+          team_timeline: Json | null;
+          team_tokens: number | null;
           turn_number: number | null;
           turn_order: string[] | null;
           updated_at: string | null;
@@ -611,6 +621,9 @@ export type Database = {
           room_id?: string | null;
           settings?: Json | null;
           status?: string | null;
+          team_score?: number | null;
+          team_timeline?: Json | null;
+          team_tokens?: number | null;
           turn_number?: number | null;
           turn_order?: string[] | null;
           updated_at?: string | null;
@@ -624,6 +637,9 @@ export type Database = {
           room_id?: string | null;
           settings?: Json | null;
           status?: string | null;
+          team_score?: number | null;
+          team_timeline?: Json | null;
+          team_tokens?: number | null;
           turn_number?: number | null;
           turn_order?: string[] | null;
           updated_at?: string | null;
@@ -717,6 +733,10 @@ export type Database = {
         Returns: Json;
       };
       compute_popularity_scores: { Args: never; Returns: undefined };
+      is_game_session_member: {
+        Args: { check_session_id: string };
+        Returns: boolean;
+      };
       is_room_member: { Args: { check_room_id: string }; Returns: boolean };
       leave_room: { Args: { target_room_id: string }; Returns: string };
     };
