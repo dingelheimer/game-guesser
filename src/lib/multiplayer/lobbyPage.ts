@@ -8,6 +8,7 @@ import {
   LobbySettingsSchema,
   RoomCodeSchema,
   type DisplayName,
+  type LobbyGenre,
   type LobbyPlayerRole,
   type LobbySettings,
   type RoomCode,
@@ -26,11 +27,14 @@ export type LobbyRoomPagePlayer = Readonly<{
   userId: string;
 }>;
 
+export type { LobbyGenre };
+
 /**
  * Serializable room payload loaded server-side for the multiplayer lobby page.
  */
 export type LobbyRoomPageData = Readonly<{
   currentUserId: string;
+  genres: readonly LobbyGenre[];
   hostId: string;
   maxPlayers: number;
   players: readonly LobbyRoomPagePlayer[];
@@ -87,20 +91,24 @@ export async function getLobbyRoomPageData(roomId: string): Promise<LobbyRoomPag
     return null;
   }
 
-  const [{ data: membership, error: membershipError }, { data: room, error: roomError }] =
-    await Promise.all([
-      supabase
-        .from("room_players")
-        .select("user_id")
-        .eq("room_id", parsedRoomId.data)
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("rooms")
-        .select("id, code, host_id, max_players, settings, status")
-        .eq("id", parsedRoomId.data)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: membership, error: membershipError },
+    { data: room, error: roomError },
+    { data: genreRows, error: genresError },
+  ] = await Promise.all([
+    supabase
+      .from("room_players")
+      .select("user_id")
+      .eq("room_id", parsedRoomId.data)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("rooms")
+      .select("id, code, host_id, max_players, settings, status")
+      .eq("id", parsedRoomId.data)
+      .maybeSingle(),
+    supabase.from("genres").select("id, name").order("name", { ascending: true }),
+  ]);
 
   if (membershipError !== null) {
     throw new Error("Failed to verify lobby membership.");
@@ -108,6 +116,10 @@ export async function getLobbyRoomPageData(roomId: string): Promise<LobbyRoomPag
 
   if (roomError !== null) {
     throw new Error("Failed to load the lobby room.");
+  }
+
+  if (genresError !== null) {
+    throw new Error("Failed to load genres.");
   }
 
   if (membership === null || room === null || room.status !== "lobby") {
@@ -136,6 +148,7 @@ export async function getLobbyRoomPageData(roomId: string): Promise<LobbyRoomPag
 
   return {
     currentUserId: user.id,
+    genres: genreRows.map((g) => ({ id: g.id, name: g.name })),
     hostId: room.host_id,
     maxPlayers: room.max_players,
     players: players.map(parseLobbyRoomPlayer),

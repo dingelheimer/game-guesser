@@ -16,6 +16,8 @@ export const TurnPhaseSchema = z.enum([
   "challenge_window",
   "revealing",
   "platform_bonus",
+  "team_voting",
+  "expert_verification",
   "complete",
 ]);
 

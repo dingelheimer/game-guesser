@@ -103,11 +103,17 @@ const baseSettings = {
   tokensEnabled: true,
   startingTokens: 2,
   winCondition: 10,
+  gameMode: "competitive",
   variant: "standard",
+  genreLockId: null,
+  consoleLockFamily: null,
+  decadeStart: null,
+  speedRound: false,
 } as const;
 
 const hostRoom = {
   currentUserId: HOST_ID,
+  genres: [],
   hostId: HOST_ID,
   maxPlayers: 10,
   players: [
@@ -131,6 +137,7 @@ const hostRoom = {
 
 const playerRoom = {
   currentUserId: PLAYER_ID,
+  genres: [],
   hostId: HOST_ID,
   maxPlayers: 10,
   players: hostRoom.players,
