@@ -26,11 +26,23 @@ export const LobbyPlayerRoleSchema = z.enum(["host", "player"]);
 /** Shared lobby settings schema for multiplayer room configuration. */
 export const LobbySettingsSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard", "extreme"]).default("easy"),
-  turnTimer: z.enum(["30", "60", "unlimited"]).default("60"),
+  turnTimer: z.enum(["10", "30", "60", "unlimited"]).default("60"),
   tokensEnabled: z.boolean().default(true),
   startingTokens: z.number().int().min(0).max(10).default(2),
   winCondition: z.number().int().min(5).max(20).default(10),
-  variant: z.enum(["standard", "pro", "expert", "teamwork"]).default("standard"),
+  /** Room-level game mode: competitive (normal) or teamwork (co-op). */
+  gameMode: z.enum(["competitive", "teamwork"]).default("competitive"),
+  /** Gameplay variant applied in competitive mode. */
+  variant: z.enum(["standard", "pro", "expert"]).default("standard"),
+  // House rules — null means no filter applied.
+  /** Genre lock: restrict deck to games matching this genre ID. */
+  genreLockId: z.number().int().nullable().default(null),
+  /** Console lock: restrict deck to platforms with this family slug. */
+  consoleLockFamily: z.string().nullable().default(null),
+  /** Decade start: restrict deck to games released within a 10-year window. */
+  decadeStart: z.number().int().nullable().default(null),
+  /** Speed round: override turn timer to 10 seconds at game start. */
+  speedRound: z.boolean().default(false),
 });
 
 /** Shared display name schema for multiplayer lobby forms. */
@@ -77,6 +89,12 @@ export type LobbyPresenceStatus = z.infer<typeof LobbyPresenceStatusSchema>;
 
 /** Multiplayer lobby presence payload derived from {@link LobbyPresenceSchema}. */
 export type LobbyPresence = z.infer<typeof LobbyPresenceSchema>;
+
+/** A minimal genre record used to populate house rule dropdowns. */
+export type LobbyGenre = Readonly<{
+  id: number;
+  name: string;
+}>;
 
 /** Default lobby settings applied to newly created multiplayer rooms. */
 export const DEFAULT_LOBBY_SETTINGS = LobbySettingsSchema.parse({});

@@ -349,7 +349,9 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
       });
       router.push(`/play/game/${result.data.gameSessionId}`);
     } catch (err: unknown) {
-      setStartError(err instanceof Error ? err.message : "Failed to start the game. Please try again.");
+      setStartError(
+        err instanceof Error ? err.message : "Failed to start the game. Please try again.",
+      );
     } finally {
       setIsStarting(false);
     }
@@ -419,6 +421,7 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
 
         <LobbySettingsPanel
           settings={settings}
+          genres={initialRoom.genres}
           isHost={isHost}
           isSaving={isSavingSettings}
           onSettingChange={(patch) => void handleUpdateSettings(patch)}
