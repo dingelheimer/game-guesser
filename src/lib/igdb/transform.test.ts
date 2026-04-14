@@ -132,6 +132,15 @@ describe("transformPlatform", () => {
     expect(transformPlatform({ id: 48, name: "PlayStation 4" })).toEqual({
       igdb_id: 48,
       name: "PlayStation 4",
+      family: "playstation",
+    });
+  });
+
+  it("maps unknown platform id to family 'other'", () => {
+    expect(transformPlatform({ id: 99999, name: "Unknown Platform" })).toEqual({
+      igdb_id: 99999,
+      name: "Unknown Platform",
+      family: "other",
     });
   });
 

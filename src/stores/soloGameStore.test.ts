@@ -419,4 +419,71 @@ describe("useSoloGameStore", () => {
     expect(s.validPositions).toBeNull();
     expect(s.lastPlacementCorrect).toBeNull();
   });
+
+  it("advanceTurn keeps PRO reveals blocked until the platform bonus is answered", () => {
+    store.setState({
+      phase: "revealing",
+      variant: "pro",
+      lastPlacementCorrect: true,
+      nextCard: mockHiddenCard,
+      availablePlatforms: [{ id: 1, name: "PC" }],
+      platformBonusResult: null,
+    });
+
+    store.getState().advanceTurn();
+
+    const s = store.getState();
+    expect(s.phase).toBe("revealing");
+    expect(s.currentCard).toBeNull();
+  });
+
+  it("advanceTurn ends a PRO run after an incorrect platform bonus", () => {
+    store.setState({
+      phase: "revealing",
+      variant: "pro",
+      lastPlacementCorrect: true,
+      nextCard: mockHiddenCard,
+      availablePlatforms: [{ id: 1, name: "PC" }],
+      platformBonusResult: "incorrect",
+    });
+
+    store.getState().advanceTurn();
+
+    expect(store.getState().phase).toBe("game_over");
+  });
+
+  it("startGame passes house rules to the API and stores them in state", async () => {
+    mockStartGame.mockResolvedValueOnce({
+      session_id: "ses-1",
+      difficulty: "easy",
+      score: 0,
+      timeline: [mockRevealedCard],
+      current_card: mockHiddenCard,
+    });
+
+    const houseRules = { genreLockId: 7, consoleLockFamily: "nintendo", decadeStart: 1990 };
+    await store.getState().startGame("easy", houseRules, "pro");
+
+    expect(mockStartGame).toHaveBeenCalledWith("easy", houseRules);
+    const s = store.getState();
+    expect(s.phase).toBe("placing");
+    expect(s.houseRules).toEqual(houseRules);
+    expect(s.variant).toBe("pro");
+  });
+
+  it("startGame without house rules stores null in state", async () => {
+    mockStartGame.mockResolvedValueOnce({
+      session_id: "ses-2",
+      difficulty: "hard",
+      score: 0,
+      timeline: [mockRevealedCard],
+      current_card: mockHiddenCard,
+    });
+
+    await store.getState().startGame("hard");
+
+    expect(mockStartGame).toHaveBeenCalledWith("hard", undefined);
+    expect(store.getState().houseRules).toBeNull();
+    expect(store.getState().variant).toBe("standard");
+  });
 });

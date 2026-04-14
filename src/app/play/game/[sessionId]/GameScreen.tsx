@@ -5,19 +5,24 @@ import { REALTIME_SUBSCRIBE_STATES, type RealtimeChannel } from "@supabase/realt
 import { Clock3, Signal, Trophy } from "lucide-react";
 import {
   proceedFromChallenge,
+  proceedFromExpertVerification,
   proceedFromPlatformBonus,
   skipTurn,
   submitChallenge,
+  submitExpertVerification,
   submitPlacement,
   submitPlatformBonus,
+  submitTeamVote,
   type TurnFollowUpResult,
 } from "@/lib/multiplayer/gameActions";
 import { LobbyPresenceSchema, type LobbyPresence } from "@/lib/multiplayer/lobby";
 import type { MultiplayerGamePageData } from "@/lib/multiplayer/gamePage";
 import { buildConnectedPresence, buildSeedPresence } from "@/lib/multiplayer/presence";
 import type {
+  ExpertVerificationResultPayload,
   GameOverPayload,
   PlatformBonusResultPayload,
+  TeamGameOverPayload,
   TurnRevealedPayload,
   TurnSkippedReason,
 } from "@/lib/multiplayer/turns";
@@ -30,6 +35,7 @@ import {
   buildTimelineCardFromEntry,
   buildHiddenTurnCard,
   ChallengeMadePayloadSchema,
+  ExpertVerificationResultPayloadSchema,
   formatCountdown,
   formatPhaseLabel,
   GameOverPayloadSchema,
@@ -41,13 +47,19 @@ import {
   previewFailedReveal,
   previewPlacement,
   reconcilePlayers,
+  TeamGameOverPayloadSchema,
+  TeamVoteResolvedPayloadSchema,
+  TeamVoteUpdatedPayloadSchema,
   TurnRevealedPayloadSchema,
   TurnSkippedPayloadSchema,
   TurnStartedPayloadSchema,
 } from "./gameScreenState";
 import { MultiplayerGameOverView } from "./MultiplayerGameOverView";
 import { MultiplayerChallengePanel } from "./MultiplayerChallengePanel";
+import { MultiplayerExpertVerificationPanel } from "./MultiplayerExpertVerificationPanel";
 import { MultiplayerPlatformBonusPanel } from "./MultiplayerPlatformBonusPanel";
+import { MultiplayerTeamworkGameOver } from "./MultiplayerTeamworkGameOver";
+import { TeamVotingPanel } from "./TeamVotingPanel";
 
 const FAILED_PLACEMENT_PREVIEW_MS = 900;
 const TURN_FOLLOW_UP_DELAY_MS = 1500;
@@ -60,6 +72,8 @@ type PlacementFeedback = Readonly<{
 }> | null;
 
 type PlatformBonusState = PlatformBonusResultPayload | null;
+
+type ExpertVerificationState = ExpertVerificationResultPayload | null;
 
 type DisconnectGraceState = Readonly<{
   deadline: string;
@@ -85,6 +99,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const progressionTimeoutRef = useRef<number | null>(null);
   const challengeRequestKeyRef = useRef<string | null>(null);
   const platformBonusRequestKeyRef = useRef<string | null>(null);
+  const expertVerificationRequestKeyRef = useRef<string | null>(null);
   const skipRequestKeyRef = useRef<string | null>(null);
   const [game, setGame] = useState(initialGame);
   const [presence, setPresence] = useState<LobbyPresence[]>(() =>
@@ -99,11 +114,31 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const [disconnectCountdown, setDisconnectCountdown] = useState<number | null>(null);
   const [disconnectGrace, setDisconnectGrace] = useState<DisconnectGraceState>(null);
   const [isSubmittingChallenge, setIsSubmittingChallenge] = useState(false);
+  const [isSubmittingExpertVerification, setIsSubmittingExpertVerification] = useState(false);
   const [isSubmittingPlatformBonus, setIsSubmittingPlatformBonus] = useState(false);
   const [isSubmittingPlacement, setIsSubmittingPlacement] = useState(false);
   const [isSkippingTurn, setIsSkippingTurn] = useState(false);
   const [placementFeedback, setPlacementFeedback] = useState<PlacementFeedback>(null);
   const [platformBonusResult, setPlatformBonusResult] = useState<PlatformBonusState>(null);
+  const [expertVerificationResult, setExpertVerificationResult] =
+    useState<ExpertVerificationState>(null);
+  const [teamGameOver, setTeamGameOver] = useState<TeamGameOverPayload | null>(
+    initialGame.status === "finished" && initialGame.settings.gameMode === "teamwork"
+      ? initialGame.winner === null
+        ? {
+            finalTeamScore: initialGame.teamScore ?? 0,
+            finalTeamTimeline:
+              initialGame.teamTimeline?.map((card) => ({
+                gameId: card.gameId,
+                name: card.title,
+                releaseYear: card.releaseYear,
+              })) ?? [],
+            teamWin: false,
+          }
+        : null
+      : null,
+  );
+  const [isSubmittingTeamVote, setIsSubmittingTeamVote] = useState(false);
 
   playersRef.current = game.players;
 
@@ -115,6 +150,16 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     () => game.players.find((player) => player.userId === game.currentTurn.activePlayerId) ?? null,
     [game.currentTurn.activePlayerId, game.players],
   );
+  const platformBonusPlayerId =
+    game.currentTurn.platformBonusPlayerId ?? game.currentTurn.activePlayerId;
+  const platformBonusPlayer = useMemo(
+    () => game.players.find((player) => player.userId === platformBonusPlayerId) ?? null,
+    [game.players, platformBonusPlayerId],
+  );
+  const phasePlayer =
+    game.currentTurn.phase === "platform_bonus" || game.currentTurn.phase === "expert_verification"
+      ? (platformBonusPlayer ?? activePlayer)
+      : activePlayer;
   const placingTurnKey =
     game.currentTurn.phase === "placing"
       ? `${String(game.turnNumber)}:${game.currentTurn.activePlayerId}`
@@ -187,8 +232,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setGame((current) => ({
         ...current,
@@ -198,6 +245,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           phase: challengeDeadline !== undefined ? "challenge_window" : "revealing",
           phaseDeadline: challengeDeadline ?? null,
           platformOptions: [],
+          platformBonusPlayerId: null,
         },
         players: previewPlacement(
           current.players,
@@ -223,24 +271,33 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setIsSkippingTurn(false);
       setIsSubmittingPlacement(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setWinner(null);
-      setGame((current) => ({
-        ...current,
-        currentTurn: {
-          activePlayerId,
-          card: buildHiddenTurnCard(screenshotImageId),
-          phase: "placing",
-          phaseDeadline: deadline,
-          platformOptions: [],
-        },
-        status: "active",
-        turnNumber,
-      }));
+      setGame((current) => {
+        const isTeamworkMultiplayer =
+          current.settings.gameMode === "teamwork" && current.players.length > 1;
+        const nextPhase = isTeamworkMultiplayer ? ("team_voting" as const) : ("placing" as const);
+        return {
+          ...current,
+          currentTurn: {
+            activePlayerId,
+            card: buildHiddenTurnCard(screenshotImageId),
+            phase: nextPhase,
+            phaseDeadline: deadline,
+            platformOptions: [],
+            platformBonusPlayerId: null,
+            ...(isTeamworkMultiplayer ? { votes: {} } : {}),
+          },
+          status: "active",
+          turnNumber,
+        };
+      });
     },
     [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
   );
@@ -251,8 +308,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     clearProgressionTimeout();
     setChallengeNotice(null);
     setIsSubmittingChallenge(false);
+    setIsSubmittingExpertVerification(false);
     setIsSubmittingPlatformBonus(false);
     setPlacementFeedback(null);
+    setExpertVerificationResult(null);
     setPlatformBonusResult(null);
     setGame((current) => ({
       ...current,
@@ -261,6 +320,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         phase: "drawing",
         phaseDeadline: null,
         platformOptions: [],
+        platformBonusPlayerId: null,
       },
       players: current.players.map((player) =>
         player.userId === current.currentTurn.activePlayerId
@@ -280,7 +340,9 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(`${displayName} challenged this placement.`);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setGame((current) => ({
         ...current,
@@ -289,6 +351,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           phase: "revealing",
           phaseDeadline: null,
           platformOptions: [],
+          platformBonusPlayerId: null,
         },
       }));
     },
@@ -301,8 +364,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       clearDisconnectGrace();
       setActionError(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setIsSubmittingPlacement(false);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
 
       let activePlayerId = "";
@@ -332,10 +397,14 @@ export function GameScreen({ initialGame }: GameScreenProps) {
             title: payload.card.name,
           },
           phase:
-            payload.platformOptions === undefined
-              ? ("revealing" as const)
-              : ("platform_bonus" as const),
-          phaseDeadline: payload.platformBonusDeadline ?? null,
+            payload.expertVerificationDeadline !== undefined
+              ? ("expert_verification" as const)
+              : payload.platformOptions !== undefined
+                ? ("platform_bonus" as const)
+                : ("revealing" as const),
+          phaseDeadline:
+            payload.expertVerificationDeadline ?? payload.platformBonusDeadline ?? null,
+          platformBonusPlayerId: payload.platformBonusPlayerId ?? null,
           platformOptions: payload.platformOptions ?? current.currentTurn.platformOptions,
         };
 
@@ -402,8 +471,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(payload);
       setGame((current) => ({
         ...current,
@@ -411,14 +482,47 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           ...current.currentTurn,
           phase: "complete",
           phaseDeadline: null,
+          platformBonusPlayerId: null,
         },
-        players: current.players.map((player) =>
-          player.userId === current.currentTurn.activePlayerId
-            ? {
-                ...player,
-                tokens: player.tokens + payload.tokenChange,
-              }
-            : player,
+        players: reconcilePlayers(
+          current.players,
+          payload.timelines,
+          payload.scores,
+          payload.tokens,
+          null,
+        ),
+      }));
+    },
+    [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
+  );
+
+  const applyExpertVerificationResult = useCallback(
+    (payload: ExpertVerificationResultPayload) => {
+      clearFailedPlacementTimeout();
+      clearDisconnectGrace();
+      clearProgressionTimeout();
+      setActionError(null);
+      setChallengeNotice(null);
+      setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
+      setIsSubmittingPlatformBonus(false);
+      setPlacementFeedback(null);
+      setPlatformBonusResult(null);
+      setExpertVerificationResult(payload);
+      setGame((current) => ({
+        ...current,
+        currentTurn: {
+          ...current.currentTurn,
+          phase: "complete",
+          phaseDeadline: null,
+          platformBonusPlayerId: null,
+        },
+        players: reconcilePlayers(
+          current.players,
+          payload.timelines,
+          payload.scores,
+          payload.tokens,
+          null,
         ),
       }));
     },
@@ -433,10 +537,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setIsSkippingTurn(false);
       setIsSubmittingPlacement(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setWinner({ displayName: payload.displayName, userId: payload.winnerId });
       setGame((current) => ({
@@ -446,6 +552,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           phase: "complete",
           phaseDeadline: null,
           platformOptions: [],
+          platformBonusPlayerId: null,
         },
         players: reconcilePlayers(
           current.players,
@@ -454,6 +561,76 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           Object.fromEntries(current.players.map((player) => [player.userId, player.tokens])),
           null,
         ),
+        status: "finished",
+      }));
+    },
+    [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
+  );
+
+  const applyTeamVoteUpdated = useCallback(
+    (votes: Record<string, { position: number; locked: boolean }>) => {
+      setGame((current) => ({
+        ...current,
+        currentTurn: { ...current.currentTurn, votes },
+      }));
+    },
+    [],
+  );
+
+  const applyTeamVoteResolved = useCallback(
+    (payload: {
+      correct: boolean;
+      teamScore: number;
+      teamTimeline: readonly { gameId: number; name: string; releaseYear: number }[];
+      teamTokens: number;
+    }) => {
+      clearFailedPlacementTimeout();
+      clearDisconnectGrace();
+      clearProgressionTimeout();
+      setActionError(null);
+      setIsSubmittingTeamVote(false);
+      setGame((current) => ({
+        ...current,
+        currentTurn: {
+          ...current.currentTurn,
+          phase: "complete",
+          phaseDeadline: null,
+          votes: {},
+        },
+        teamScore: payload.teamScore,
+        teamTimeline: payload.teamTimeline.map((entry) => ({
+          coverImageId: null,
+          gameId: entry.gameId,
+          isRevealed: true,
+          platform: "",
+          releaseYear: entry.releaseYear,
+          screenshotImageId: null,
+          title: entry.name,
+        })),
+        teamTokens: payload.teamTokens,
+      }));
+    },
+    [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
+  );
+
+  const applyTeamGameOver = useCallback(
+    (payload: TeamGameOverPayload) => {
+      clearFailedPlacementTimeout();
+      clearDisconnectGrace();
+      clearProgressionTimeout();
+      setActionError(null);
+      setIsSubmittingTeamVote(false);
+      setIsSkippingTurn(false);
+      setIsSubmittingPlacement(false);
+      setTeamGameOver(payload);
+      setGame((current) => ({
+        ...current,
+        currentTurn: {
+          ...current.currentTurn,
+          phase: "complete",
+          phaseDeadline: null,
+          votes: {},
+        },
         status: "finished",
       }));
     },
@@ -479,6 +656,16 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           return;
         }
 
+        if (followUp.type === "team_game_over") {
+          applyTeamGameOver(followUp.gameOver);
+          void channelRef.current?.send({
+            type: "broadcast",
+            event: "team_game_over",
+            payload: followUp.gameOver,
+          });
+          return;
+        }
+
         applyGameOver(followUp.gameOver);
         void channelRef.current?.send({
           type: "broadcast",
@@ -487,7 +674,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         });
       }, TURN_FOLLOW_UP_DELAY_MS);
     },
-    [applyGameOver, applyTurnStarted, clearProgressionTimeout],
+    [applyGameOver, applyTeamGameOver, applyTurnStarted, clearProgressionTimeout],
   );
 
   useEffect(() => {
@@ -605,6 +792,16 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         return;
       }
 
+      if (result.data.followUp.type === "team_game_over") {
+        applyTeamGameOver(result.data.followUp.gameOver);
+        void channelRef.current?.send({
+          type: "broadcast",
+          event: "team_game_over",
+          payload: result.data.followUp.gameOver,
+        });
+        return;
+      }
+
       applyGameOver(result.data.followUp.gameOver);
       void channelRef.current?.send({
         type: "broadcast",
@@ -612,7 +809,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         payload: result.data.followUp.gameOver,
       });
     },
-    [applyGameOver, applyTurnSkipped, applyTurnStarted, game.sessionId, presence],
+    [applyGameOver, applyTeamGameOver, applyTurnSkipped, applyTurnStarted, game.sessionId, presence],
   );
 
   const handleProceedFromChallenge = useCallback(async () => {
@@ -708,7 +905,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     async (selectedPlatformIds: number[]) => {
       if (
         currentPlayer === undefined ||
-        currentPlayer.userId !== game.currentTurn.activePlayerId ||
+        currentPlayer.userId !== platformBonusPlayerId ||
         game.currentTurn.phase !== "platform_bonus"
       ) {
         return;
@@ -737,9 +934,9 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     [
       applyPlatformBonusResult,
       currentPlayer,
-      game.currentTurn.activePlayerId,
       game.currentTurn.phase,
       game.sessionId,
+      platformBonusPlayerId,
       scheduleFollowUp,
     ],
   );
@@ -808,6 +1005,139 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     secondsRemaining,
   ]);
 
+  const handleProceedFromExpertVerification = useCallback(async () => {
+    setActionError(null);
+
+    const result = await proceedFromExpertVerification(game.sessionId);
+    if (!result.success) {
+      if (result.error.code !== "CONFLICT") {
+        setActionError(result.error.message);
+      }
+      return;
+    }
+
+    applyExpertVerificationResult(result.data.verification);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "expert_verification_result",
+      payload: result.data.verification,
+    });
+    scheduleFollowUp(result.data.followUp);
+  }, [applyExpertVerificationResult, game.sessionId, scheduleFollowUp]);
+
+  const handleSubmitExpertVerification = useCallback(
+    async (yearGuess: number, selectedPlatformIds: number[]) => {
+      if (
+        currentPlayer === undefined ||
+        currentPlayer.userId !== platformBonusPlayerId ||
+        game.currentTurn.phase !== "expert_verification"
+      ) {
+        return;
+      }
+
+      setIsSubmittingExpertVerification(true);
+      setActionError(null);
+
+      const result = await submitExpertVerification(game.sessionId, yearGuess, selectedPlatformIds);
+      if (!result.success) {
+        setIsSubmittingExpertVerification(false);
+        if (result.error.code !== "CONFLICT") {
+          setActionError(result.error.message);
+        }
+        return;
+      }
+
+      applyExpertVerificationResult(result.data.verification);
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "expert_verification_result",
+        payload: result.data.verification,
+      });
+      scheduleFollowUp(result.data.followUp);
+    },
+    [
+      applyExpertVerificationResult,
+      currentPlayer,
+      game.currentTurn.phase,
+      game.sessionId,
+      platformBonusPlayerId,
+      scheduleFollowUp,
+    ],
+  );
+
+  useEffect(() => {
+    if (game.currentTurn.phase !== "expert_verification" || secondsRemaining !== 0) {
+      return;
+    }
+
+    const requestKey = `${String(game.turnNumber)}:${game.currentTurn.activePlayerId}:expert_verification`;
+    if (expertVerificationRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    expertVerificationRequestKeyRef.current = requestKey;
+    void handleProceedFromExpertVerification();
+  }, [
+    game.currentTurn.activePlayerId,
+    game.currentTurn.phase,
+    game.turnNumber,
+    handleProceedFromExpertVerification,
+    secondsRemaining,
+  ]);
+
+  const handleTeamVote = useCallback(
+    async (position: number, locked: boolean) => {
+      if (
+        currentPlayer === undefined ||
+        game.currentTurn.phase !== "team_voting" ||
+        game.status !== "active"
+      ) {
+        return;
+      }
+
+      setIsSubmittingTeamVote(true);
+      setActionError(null);
+
+      const result = await submitTeamVote(game.sessionId, position, locked, presence.map((p) => p.userId));
+      setIsSubmittingTeamVote(false);
+
+      if (!result.success) {
+        if (result.error.code !== "CONFLICT") {
+          setActionError(result.error.message);
+        }
+        return;
+      }
+
+      if (result.data.type === "vote_updated") {
+        applyTeamVoteUpdated(result.data.votePayload.votes);
+        void channelRef.current?.send({
+          type: "broadcast",
+          event: "team_vote_updated",
+          payload: { votes: result.data.votePayload.votes },
+        });
+        return;
+      }
+
+      applyTeamVoteResolved(result.data.resolvedPayload);
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "team_vote_resolved",
+        payload: result.data.resolvedPayload,
+      });
+      scheduleFollowUp(result.data.followUp);
+    },
+    [
+      applyTeamVoteResolved,
+      applyTeamVoteUpdated,
+      currentPlayer,
+      game.currentTurn.phase,
+      game.sessionId,
+      game.status,
+      presence,
+      scheduleFollowUp,
+    ],
+  );
+
   useEffect(() => {
     if (currentPlayer === undefined) {
       throw new Error("Current player was missing from the multiplayer game payload.");
@@ -853,6 +1183,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
             phase: "placing",
             phaseDeadline: null,
             platformOptions: [],
+            platformBonusPlayerId: null,
           },
           players: [...current.players]
             .map((player) => {
@@ -911,12 +1242,18 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           applyTurnRevealed({
             card: parsed.data.card,
             isCorrect: parsed.data.isCorrect,
+            ...(parsed.data.expertVerificationDeadline === undefined
+              ? {}
+              : { expertVerificationDeadline: parsed.data.expertVerificationDeadline }),
             ...(parsed.data.platformBonusDeadline === undefined
               ? {}
               : { platformBonusDeadline: parsed.data.platformBonusDeadline }),
             ...(parsed.data.platformOptions === undefined
               ? {}
               : { platformOptions: parsed.data.platformOptions }),
+            ...(parsed.data.platformBonusPlayerId === undefined
+              ? {}
+              : { platformBonusPlayerId: parsed.data.platformBonusPlayerId }),
             position: parsed.data.position,
             scores: parsed.data.scores,
             timelines: parsed.data.timelines,
@@ -936,6 +1273,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           applyPlatformBonusResult(parsed.data);
         }
       })
+      .on("broadcast", { event: "expert_verification_result" }, (message) => {
+        const parsed = ExpertVerificationResultPayloadSchema.safeParse(message.payload);
+        if (parsed.success) {
+          applyExpertVerificationResult(parsed.data);
+        }
+      })
       .on("broadcast", { event: "turn_skipped" }, (message) => {
         const parsed = TurnSkippedPayloadSchema.safeParse(message.payload);
         if (parsed.success) {
@@ -946,6 +1289,24 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         const parsed = GameOverPayloadSchema.safeParse(message.payload);
         if (parsed.success) {
           applyGameOver(parsed.data);
+        }
+      })
+      .on("broadcast", { event: "team_vote_updated" }, (message) => {
+        const parsed = TeamVoteUpdatedPayloadSchema.safeParse(message.payload);
+        if (parsed.success) {
+          applyTeamVoteUpdated(parsed.data.votes);
+        }
+      })
+      .on("broadcast", { event: "team_vote_resolved" }, (message) => {
+        const parsed = TeamVoteResolvedPayloadSchema.safeParse(message.payload);
+        if (parsed.success) {
+          applyTeamVoteResolved(parsed.data);
+        }
+      })
+      .on("broadcast", { event: "team_game_over" }, (message) => {
+        const parsed = TeamGameOverPayloadSchema.safeParse(message.payload);
+        if (parsed.success) {
+          applyTeamGameOver(parsed.data);
         }
       })
       .subscribe((status) => {
@@ -973,7 +1334,11 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     };
   }, [
     applyGameOver,
+    applyTeamGameOver,
+    applyTeamVoteResolved,
+    applyTeamVoteUpdated,
     applyChallengeMade,
+    applyExpertVerificationResult,
     applyPlatformBonusResult,
     applyPlacementMade,
     applyTurnRevealed,
@@ -1068,6 +1433,16 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     throw new Error("Current player was missing from the multiplayer game payload.");
   }
 
+  if (teamGameOver !== null && game.status === "finished") {
+    return (
+      <MultiplayerTeamworkGameOver
+        finalTeamScore={teamGameOver.finalTeamScore}
+        finalTeamTimeline={game.teamTimeline ?? []}
+        teamWin={teamGameOver.teamWin}
+      />
+    );
+  }
+
   if (winner !== null && game.status === "finished") {
     return (
       <MultiplayerGameOverView
@@ -1080,10 +1455,15 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     );
   }
 
+  const isTeamworkMode = game.settings.gameMode === "teamwork";
+  const isTeamVoting = game.currentTurn.phase === "team_voting";
   const isChallengeWindow = game.currentTurn.phase === "challenge_window";
+  const isExpertVerificationVisible =
+    game.currentTurn.phase === "expert_verification" || expertVerificationResult !== null;
   const isPlatformBonusVisible =
     game.currentTurn.phase === "platform_bonus" || platformBonusResult !== null;
   const canChallenge =
+    !isTeamworkMode &&
     isChallengeWindow &&
     currentPlayer.userId !== game.currentTurn.activePlayerId &&
     currentPlayer.tokens > 0 &&
@@ -1098,12 +1478,16 @@ export function GameScreen({ initialGame }: GameScreenProps) {
               <div className="space-y-2">
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <Trophy className="text-primary-400 h-5 w-5" />
-                  Multiplayer Game
+                  {isTeamworkMode ? "Co-op Game" : "Multiplayer Game"}
                 </CardTitle>
                 <CardDescription>
-                  {activePlayer !== null
-                    ? `${activePlayer.displayName}'s turn — ${formatPhaseLabel(game.currentTurn.phase)}`
-                    : `Phase: ${formatPhaseLabel(game.currentTurn.phase)}`}
+                  {isTeamworkMode
+                    ? isTeamVoting
+                      ? "Vote together on where this game belongs in the shared timeline"
+                      : `Phase: ${formatPhaseLabel(game.currentTurn.phase)}`
+                    : activePlayer !== null
+                      ? `${(phasePlayer ?? activePlayer).displayName}'s turn — ${formatPhaseLabel(game.currentTurn.phase)}`
+                      : `Phase: ${formatPhaseLabel(game.currentTurn.phase)}`}
                 </CardDescription>
               </div>
 
@@ -1111,9 +1495,20 @@ export function GameScreen({ initialGame }: GameScreenProps) {
                 <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
                   Turn {game.turnNumber}
                 </span>
-                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
-                  First to {game.settings.winCondition}
-                </span>
+                {isTeamworkMode ? (
+                  <>
+                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+                      Score: {game.teamScore ?? 0} / {game.settings.winCondition}
+                    </span>
+                    <span className="rounded-full border border-rose-400/30 bg-rose-500/10 px-3 py-1 text-rose-200">
+                      {"❤️".repeat(Math.max(0, game.teamTokens ?? 5))} {game.teamTokens ?? 5} lives
+                    </span>
+                  </>
+                ) : (
+                  <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+                    First to {game.settings.winCondition}
+                  </span>
+                )}
                 {secondsRemaining !== null ? (
                   <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
                     <Clock3 className="mr-1 inline h-3.5 w-3.5" />
@@ -1155,23 +1550,49 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           </CardHeader>
         </Card>
 
-        <MultiplayerChallengePanel
-          activePlayerName={activePlayer?.displayName ?? null}
-          canChallenge={canChallenge}
-          challengeNotice={challengeNotice}
-          isCurrentUserActive={currentPlayer.userId === game.currentTurn.activePlayerId}
-          isSubmittingChallenge={isSubmittingChallenge}
-          isVisible={isChallengeWindow}
-          onChallenge={() => {
-            void handleChallenge();
-          }}
-          playerTokens={currentPlayer.tokens}
-          secondsRemaining={secondsRemaining}
-        />
+        {isTeamworkMode && isTeamVoting ? (
+          <Card className="border-border/60 bg-surface-800/70">
+            <CardHeader>
+              <CardTitle>Team Vote</CardTitle>
+            </CardHeader>
+            <div className="px-6 pb-6">
+              <TeamVotingPanel
+                currentUserId={game.currentUserId}
+                votes={game.currentTurn.votes ?? {}}
+                players={game.players}
+                teamTimeline={game.teamTimeline ?? []}
+                isSubmitting={isSubmittingTeamVote}
+                onPositionChange={(position) => {
+                  void handleTeamVote(position, false);
+                }}
+                onLockIn={(position) => {
+                  void handleTeamVote(position, true);
+                }}
+              />
+            </div>
+          </Card>
+        ) : null}
+
+        {!isTeamworkMode ? (
+          <MultiplayerChallengePanel
+            activePlayerName={activePlayer?.displayName ?? null}
+            canChallenge={canChallenge}
+            challengeNotice={challengeNotice}
+            isCurrentUserActive={currentPlayer.userId === game.currentTurn.activePlayerId}
+            isSubmittingChallenge={isSubmittingChallenge}
+            isVisible={isChallengeWindow}
+            onChallenge={() => {
+              void handleChallenge();
+            }}
+            playerTokens={currentPlayer.tokens}
+            secondsRemaining={secondsRemaining}
+          />
+        ) : null}
 
         <MultiplayerPlatformBonusPanel
-          activePlayerName={activePlayer?.displayName ?? null}
-          isCurrentUserActive={currentPlayer.userId === game.currentTurn.activePlayerId}
+          activePlayerName={platformBonusPlayer?.displayName ?? activePlayer?.displayName ?? null}
+          isCurrentUserActive={currentPlayer.userId === platformBonusPlayerId}
+          isPro={game.settings.variant === "pro"}
           isSubmittingPlatformBonus={isSubmittingPlatformBonus}
           isVisible={isPlatformBonusVisible}
           onSubmit={(selectedPlatformIds: number[]) => {
@@ -1182,12 +1603,29 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           secondsRemaining={game.currentTurn.phase === "platform_bonus" ? secondsRemaining : null}
         />
 
+        <MultiplayerExpertVerificationPanel
+          activePlayerName={platformBonusPlayer?.displayName ?? activePlayer?.displayName ?? null}
+          isCurrentUserActive={currentPlayer.userId === platformBonusPlayerId}
+          isSubmittingExpertVerification={isSubmittingExpertVerification}
+          isVisible={isExpertVerificationVisible}
+          onSubmit={(yearGuess: number, selectedPlatformIds: number[]) => {
+            void handleSubmitExpertVerification(yearGuess, selectedPlatformIds);
+          }}
+          options={game.currentTurn.platformOptions}
+          result={expertVerificationResult}
+          secondsRemaining={
+            game.currentTurn.phase === "expert_verification" ? secondsRemaining : null
+          }
+        />
+
         <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
           <Card className="border-border/60 bg-surface-800/70">
             <CardHeader>
               <CardTitle>Current Card</CardTitle>
               <CardDescription>
-                Everyone can inspect the current screenshot while the active player decides.
+                {isTeamworkMode
+                  ? "Everyone votes on where this game fits in the shared timeline."
+                  : "Everyone can inspect the current screenshot while the active player decides."}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
@@ -1215,64 +1653,101 @@ export function GameScreen({ initialGame }: GameScreenProps) {
                 <p className="text-xs text-inherit/80">
                   {game.currentTurn.card.isRevealed
                     ? game.currentTurn.card.platform || "Platform details pending"
-                    : `Waiting on ${activePlayer?.displayName ?? "the active player"} to finish this phase.`}
+                    : isTeamworkMode
+                      ? "Vote on where this game belongs."
+                      : `Waiting on ${activePlayer?.displayName ?? "the active player"} to finish this phase.`}
                 </p>
               </div>
             </CardContent>
           </Card>
 
           <div className="grid gap-4 md:grid-cols-2">
-            {game.players.map((player) => {
-              const playerIsConnected = isPlayerConnected(presence, player.userId);
-              const isDisconnectedActivePlayer =
-                disconnectGrace !== null &&
-                disconnectGrace.turnKey === placingTurnKey &&
-                player.userId === game.currentTurn.activePlayerId &&
-                !playerIsConnected;
-              const canPlaceCard =
-                player.userId === game.currentUserId &&
-                player.userId === game.currentTurn.activePlayerId &&
-                game.currentTurn.phase === "placing" &&
-                !isSubmittingPlacement &&
-                !isSkippingTurn;
+            {isTeamworkMode ? (
+              <div className="md:col-span-2">
+                <Card className="border-border/60 bg-surface-800/70">
+                  <CardHeader>
+                    <CardTitle>Shared Timeline</CardTitle>
+                  </CardHeader>
+                  <div className="px-6 pb-6">
+                    {(game.teamTimeline ?? []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No cards placed yet — the first card will be revealed soon.
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {(game.teamTimeline ?? []).map((card) => (
+                          <div
+                            key={card.gameId}
+                            className="flex justify-between items-center px-3 py-2 bg-muted/50 rounded text-sm"
+                          >
+                            <span>{card.title}</span>
+                            <span className="text-muted-foreground font-mono">
+                              {card.releaseYear}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            ) : (
+              game.players.map((player) => {
+                const playerIsConnected = isPlayerConnected(presence, player.userId);
+                const isDisconnectedActivePlayer =
+                  disconnectGrace !== null &&
+                  disconnectGrace.turnKey === placingTurnKey &&
+                  player.userId === game.currentTurn.activePlayerId &&
+                  !playerIsConnected;
+                const canPlaceCard =
+                  player.userId === game.currentUserId &&
+                  player.userId === game.currentTurn.activePlayerId &&
+                  game.currentTurn.phase === "placing" &&
+                  !isSubmittingPlacement &&
+                  !isSkippingTurn;
 
-              return (
-                <GamePlayerTimeline
-                  key={player.userId}
-                  highlightedCardId={
-                    placementFeedback?.playerId === player.userId ? placementFeedback.gameId : null
-                  }
-                  highlightedCardTone={
-                    placementFeedback?.playerId === player.userId ? placementFeedback.tone : null
-                  }
-                  activityBadgeLabel={
-                    isDisconnectedActivePlayer && disconnectCountdown !== null
-                      ? `Reconnecting ${String(disconnectCountdown)}s`
-                      : null
-                  }
-                  connectionLabel={
-                    isDisconnectedActivePlayer && disconnectCountdown !== null
-                      ? `Disconnected — waiting ${String(disconnectCountdown)}s`
-                      : playerIsConnected
-                        ? "Connected"
-                        : "Disconnected"
-                  }
-                  isActive={player.userId === game.currentTurn.activePlayerId}
-                  isConnected={playerIsConnected}
-                  isCurrentUser={player.userId === game.currentUserId}
-                  pendingTurnCard={canPlaceCard ? game.currentTurn.card : null}
-                  player={player}
-                  winCondition={game.settings.winCondition}
-                  {...(canPlaceCard
-                    ? {
-                        onPlaceCard: (position: number) => {
-                          void handlePlaceCard(position);
-                        },
-                      }
-                    : {})}
-                />
-              );
-            })}
+                return (
+                  <GamePlayerTimeline
+                    key={player.userId}
+                    highlightedCardId={
+                      placementFeedback?.playerId === player.userId
+                        ? placementFeedback.gameId
+                        : null
+                    }
+                    highlightedCardTone={
+                      placementFeedback?.playerId === player.userId
+                        ? placementFeedback.tone
+                        : null
+                    }
+                    activityBadgeLabel={
+                      isDisconnectedActivePlayer && disconnectCountdown !== null
+                        ? `Reconnecting ${String(disconnectCountdown)}s`
+                        : null
+                    }
+                    connectionLabel={
+                      isDisconnectedActivePlayer && disconnectCountdown !== null
+                        ? `Disconnected — waiting ${String(disconnectCountdown)}s`
+                        : playerIsConnected
+                          ? "Connected"
+                          : "Disconnected"
+                    }
+                    isActive={player.userId === game.currentTurn.activePlayerId}
+                    isConnected={playerIsConnected}
+                    isCurrentUser={player.userId === game.currentUserId}
+                    pendingTurnCard={canPlaceCard ? game.currentTurn.card : null}
+                    player={player}
+                    winCondition={game.settings.winCondition}
+                    {...(canPlaceCard
+                      ? {
+                          onPlaceCard: (position: number) => {
+                            void handlePlaceCard(position);
+                          },
+                        }
+                      : {})}
+                  />
+                );
+              })
+            )}
           </div>
         </div>
       </div>

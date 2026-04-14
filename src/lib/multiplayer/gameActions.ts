@@ -20,6 +20,7 @@ import { buildPlatformLabel } from "./platformLabel";
 import { sortPlayersByStanding } from "./rankings";
 import {
   buildChallengeDeadline,
+  buildExpertVerificationDeadline,
   buildPhaseDeadline,
   buildPlatformBonusDeadline,
   findTimelineInsertPosition,
@@ -28,10 +29,14 @@ import {
   isPlacementCorrect,
   type ChallengeMadePayload,
   type ChallengeResult,
+  type ExpertVerificationResultPayload,
   type GameOverPayload,
   type PlacementMadePayload,
   type PlatformBonusResultPayload,
   type RevealedTurnCard,
+  type TeamGameOverPayload,
+  type TeamVoteResolvedPayload,
+  type TeamVoteUpdatedPayload,
   type TurnRevealedPayload,
   type TurnSkippedPayload,
   type TurnSkippedReason,
@@ -58,6 +63,19 @@ const SubmitPlatformBonusSchema = z.object({
   sessionId: z.uuid(),
 });
 
+const SubmitExpertVerificationSchema = z.object({
+  selectedPlatformIds: z.array(z.number().int()),
+  sessionId: z.uuid(),
+  yearGuess: z.number().int(),
+});
+
+const SubmitTeamVoteSchema = z.object({
+  locked: z.boolean(),
+  position: z.number().int().min(0),
+  presenceUserIds: z.array(z.uuid()).default([]),
+  sessionId: z.uuid(),
+});
+
 const GameSessionRowSchema = z.object({
   active_player_id: z.uuid().nullable(),
   current_turn: z.unknown().nullable(),
@@ -66,6 +84,9 @@ const GameSessionRowSchema = z.object({
   room_id: z.uuid(),
   settings: z.unknown().nullable(),
   status: z.enum(["active", "finished", "abandoned"]),
+  team_score: z.number().int().nullable().default(null),
+  team_timeline: z.unknown().nullable().default(null),
+  team_tokens: z.number().int().nullable().default(null),
   turn_number: z.number().int(),
   turn_order: z.array(z.uuid()),
 });
@@ -117,6 +138,9 @@ type WritableGameSession = Readonly<{
   deckCursor: number;
   roomId: string;
   settings: LobbySettings;
+  teamScore: number | null;
+  teamTimeline: readonly TimelineEntry[] | null;
+  teamTokens: number | null;
   turnNumber: number;
   turnOrder: readonly string[];
 }>;
@@ -147,6 +171,7 @@ type PlatformBonusState = Readonly<{
  */
 export type TurnFollowUpResult =
   | Readonly<{ gameOver: GameOverPayload; type: "game_over" }>
+  | Readonly<{ gameOver: TeamGameOverPayload; type: "team_game_over" }>
   | Readonly<{ nextTurn: TurnStartedPayload; type: "next_turn" }>;
 
 /**
@@ -206,6 +231,22 @@ export type ProceedFromPlatformBonusResult = Readonly<{
 }>;
 
 /**
+ * Success payload returned by {@link submitExpertVerification}.
+ */
+export type SubmitExpertVerificationResult = Readonly<{
+  followUp: TurnFollowUpResult;
+  verification: ExpertVerificationResultPayload;
+}>;
+
+/**
+ * Success payload returned by {@link proceedFromExpertVerification}.
+ */
+export type ProceedFromExpertVerificationResult = Readonly<{
+  followUp: TurnFollowUpResult;
+  verification: ExpertVerificationResultPayload;
+}>;
+
+/**
  * Success payload returned by {@link skipTurn}.
  */
 export type SkipTurnResult = Readonly<{
@@ -213,8 +254,53 @@ export type SkipTurnResult = Readonly<{
   skipped: TurnSkippedPayload;
 }>;
 
+/**
+ * Success payload returned by {@link submitTeamVote}.
+ */
+export type SubmitTeamVoteResult =
+  | Readonly<{ type: "vote_updated"; votePayload: TeamVoteUpdatedPayload }>
+  | Readonly<{
+      followUp: TurnFollowUpResult;
+      resolvedPayload: TeamVoteResolvedPayload;
+      type: "vote_resolved";
+    }>;
+
 function revalidateGamePath(sessionId: string): void {
   revalidatePath(`/play/game/${sessionId}`);
+}
+
+async function restoreGamePlayerState(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  userId: string,
+  fields: Readonly<{
+    score?: number;
+    timeline?: readonly TimelineEntry[];
+    tokens?: number;
+  }>,
+): Promise<boolean> {
+  const payload: {
+    score?: number;
+    timeline?: Json;
+    tokens?: number;
+  } = {};
+  if (fields.score !== undefined) {
+    payload["score"] = fields.score;
+  }
+  if (fields.timeline !== undefined) {
+    payload["timeline"] = fields.timeline as unknown as Json;
+  }
+  if (fields.tokens !== undefined) {
+    payload["tokens"] = fields.tokens;
+  }
+
+  const { error } = await serviceClient
+    .from("game_players")
+    .update(payload)
+    .eq("game_session_id", sessionId)
+    .eq("user_id", userId);
+
+  return error === null;
 }
 
 async function restoreChallengeToken(
@@ -223,13 +309,7 @@ async function restoreChallengeToken(
   userId: string,
   tokens: number,
 ): Promise<boolean> {
-  const { error } = await serviceClient
-    .from("game_players")
-    .update({ tokens })
-    .eq("game_session_id", sessionId)
-    .eq("user_id", userId);
-
-  return error === null;
+  return restoreGamePlayerState(serviceClient, sessionId, userId, { tokens });
 }
 
 function buildCompletedTurn(turn: TurnState, extraFields: Partial<TurnState> = {}): TurnState {
@@ -270,7 +350,7 @@ async function loadWritableGameSession(
   const { data, error } = await serviceClient
     .from("game_sessions")
     .select(
-      "room_id, status, deck, deck_cursor, current_turn, turn_number, turn_order, active_player_id, settings",
+      "room_id, status, deck, deck_cursor, current_turn, turn_number, turn_order, active_player_id, settings, team_timeline, team_tokens, team_score",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -290,11 +370,16 @@ async function loadWritableGameSession(
 
   const settings = LobbySettingsSchema.safeParse(session.data.settings ?? {});
   const currentTurn = TurnStateSchema.safeParse(session.data.current_turn);
+  const teamTimeline =
+    session.data.team_timeline !== null
+      ? z.array(TimelineEntrySchema).safeParse(session.data.team_timeline)
+      : null;
   if (
     session.data.status !== "active" ||
     session.data.active_player_id === null ||
     !settings.success ||
-    !currentTurn.success
+    !currentTurn.success ||
+    (teamTimeline !== null && !teamTimeline.success)
   ) {
     return fail(appError("CONFLICT", "This multiplayer game is no longer active."));
   }
@@ -306,6 +391,9 @@ async function loadWritableGameSession(
     deckCursor: session.data.deck_cursor,
     roomId: session.data.room_id,
     settings: settings.data,
+    teamScore: session.data.team_score,
+    teamTimeline: teamTimeline !== null ? teamTimeline.data : null,
+    teamTokens: session.data.team_tokens,
     turnNumber: session.data.turn_number,
     turnOrder: session.data.turn_order,
   });
@@ -713,6 +801,56 @@ async function finishGame(
   return ok(payloadResult.data);
 }
 
+async function finishTeamworkGame(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  session: WritableGameSession,
+  teamWin: boolean,
+  teamScore: number,
+  teamTimeline: readonly TimelineEntry[],
+): Promise<Result<TeamGameOverPayload, AppError>> {
+  const winnerId = teamWin ? (session.turnOrder[0] ?? null) : null;
+
+  const completedTurn = buildCompletedTurn(session.currentTurn);
+  const { data: updatedSession, error: sessionError } = await serviceClient
+    .from("game_sessions")
+    .update({
+      current_turn: completedTurn as unknown as Json,
+      status: "finished",
+      winner_id: winnerId,
+    })
+    .eq("id", sessionId)
+    .eq("turn_number", session.turnNumber)
+    .eq("status", "active")
+    .select("id")
+    .maybeSingle();
+
+  if (sessionError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to finish the multiplayer game session."));
+  }
+
+  if (updatedSession === null) {
+    return fail(appError("CONFLICT", "This multiplayer game has already finished."));
+  }
+
+  const { data: updatedRoom, error: roomError } = await serviceClient
+    .from("rooms")
+    .update({ status: "finished" })
+    .eq("id", session.roomId)
+    .select("id")
+    .maybeSingle();
+
+  if (roomError !== null || updatedRoom === null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to finish the multiplayer room."));
+  }
+
+  return ok({
+    finalTeamScore: teamScore,
+    finalTeamTimeline: teamTimeline,
+    teamWin,
+  });
+}
+
 async function resolvePlatformBonusPhase(
   serviceClient: ServiceClient,
   sessionId: string,
@@ -727,32 +865,79 @@ async function resolvePlatformBonusPhase(
     return platformBonusStateResult;
   }
 
-  let previousTokens: number | null = null;
+  const isProVariant = session.settings.variant === "pro";
+  const platformBonusPlayerId = session.currentTurn.platformBonusPlayerId ?? session.activePlayerId;
   let tokenChange = 0;
-  if (correct) {
+  let rollbackState: Readonly<{
+    fields: Readonly<{
+      score?: number;
+      timeline?: readonly TimelineEntry[];
+      tokens?: number;
+    }>;
+    userId: string;
+  }> | null = null;
+
+  if (correct && !isProVariant) {
     const activePlayerResult = await loadWritableGamePlayer(
       serviceClient,
       sessionId,
-      session.activePlayerId,
+      platformBonusPlayerId,
     );
     if (!activePlayerResult.success) {
       return activePlayerResult;
     }
 
     const nextTokens = Math.min(5, activePlayerResult.data.tokens + 1);
-    previousTokens = activePlayerResult.data.tokens;
     tokenChange = nextTokens - activePlayerResult.data.tokens;
 
     if (tokenChange > 0) {
+      rollbackState = {
+        fields: { tokens: activePlayerResult.data.tokens },
+        userId: activePlayerResult.data.userId,
+      };
       const { error: updateTokenError } = await serviceClient
         .from("game_players")
         .update({ tokens: nextTokens })
         .eq("game_session_id", sessionId)
-        .eq("user_id", session.activePlayerId);
+        .eq("user_id", platformBonusPlayerId);
 
       if (updateTokenError !== null) {
         return fail(appError("INTERNAL_ERROR", "Failed to award the platform bonus token."));
       }
+    }
+  } else if (!correct && isProVariant) {
+    const platformBonusPlayerResult = await loadWritableGamePlayer(
+      serviceClient,
+      sessionId,
+      platformBonusPlayerId,
+    );
+    if (!platformBonusPlayerResult.success) {
+      return platformBonusPlayerResult;
+    }
+
+    const updatedTimeline = platformBonusPlayerResult.data.timeline.filter(
+      (entry) => entry.gameId !== session.currentTurn.gameId,
+    );
+    const updatedScore = Math.max(0, platformBonusPlayerResult.data.score - 1);
+    rollbackState = {
+      fields: {
+        score: platformBonusPlayerResult.data.score,
+        timeline: platformBonusPlayerResult.data.timeline,
+      },
+      userId: platformBonusPlayerResult.data.userId,
+    };
+
+    const { error: updatePlayerError } = await serviceClient
+      .from("game_players")
+      .update({
+        score: updatedScore,
+        timeline: updatedTimeline as unknown as Json,
+      })
+      .eq("game_session_id", sessionId)
+      .eq("user_id", platformBonusPlayerId);
+
+    if (updatePlayerError !== null) {
+      return fail(appError("INTERNAL_ERROR", "Failed to apply the PRO platform bonus penalty."));
     }
   }
 
@@ -771,15 +956,25 @@ async function resolvePlatformBonusPhase(
     .maybeSingle();
 
   if (updateTurnError !== null) {
-    if (previousTokens !== null && tokenChange > 0) {
-      await restoreChallengeToken(serviceClient, sessionId, session.activePlayerId, previousTokens);
+    if (rollbackState !== null) {
+      await restoreGamePlayerState(
+        serviceClient,
+        sessionId,
+        rollbackState.userId,
+        rollbackState.fields,
+      );
     }
     return fail(appError("INTERNAL_ERROR", "Failed to store the platform bonus result."));
   }
 
   if (updatedSession === null) {
-    if (previousTokens !== null && tokenChange > 0) {
-      await restoreChallengeToken(serviceClient, sessionId, session.activePlayerId, previousTokens);
+    if (rollbackState !== null) {
+      await restoreGamePlayerState(
+        serviceClient,
+        sessionId,
+        rollbackState.userId,
+        rollbackState.fields,
+      );
     }
     return fail(appError("CONFLICT", "Another player already advanced this platform bonus."));
   }
@@ -803,7 +998,112 @@ async function resolvePlatformBonusPhase(
     bonus: {
       correct,
       correctPlatforms: platformBonusStateResult.data.correctPlatforms,
+      scores: boardResult.data.scores,
+      timelines: boardResult.data.timelines,
       tokenChange,
+      tokens: boardResult.data.tokens,
+    },
+    followUp: followUpResult.data,
+  });
+}
+
+async function resolveExpertVerificationPhase(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  session: WritableGameSession,
+  yearCorrect: boolean,
+  platformsCorrect: boolean,
+  correctPlatforms: readonly PlatformOption[],
+): Promise<Result<SubmitExpertVerificationResult, AppError>> {
+  const correct = yearCorrect && platformsCorrect;
+  const expertPlayerId = session.currentTurn.platformBonusPlayerId ?? session.activePlayerId;
+  let rollbackState: Readonly<{
+    fields: Readonly<{ score?: number; timeline?: readonly TimelineEntry[] }>;
+    userId: string;
+  }> | null = null;
+
+  if (!correct) {
+    const expertPlayerResult = await loadWritableGamePlayer(serviceClient, sessionId, expertPlayerId);
+    if (!expertPlayerResult.success) {
+      return expertPlayerResult;
+    }
+
+    const updatedTimeline = expertPlayerResult.data.timeline.filter(
+      (entry) => entry.gameId !== session.currentTurn.gameId,
+    );
+    const updatedScore = Math.max(0, expertPlayerResult.data.score - 1);
+    rollbackState = {
+      fields: {
+        score: expertPlayerResult.data.score,
+        timeline: expertPlayerResult.data.timeline,
+      },
+      userId: expertPlayerResult.data.userId,
+    };
+
+    const { error: updatePlayerError } = await serviceClient
+      .from("game_players")
+      .update({
+        score: updatedScore,
+        timeline: updatedTimeline as unknown as Json,
+      })
+      .eq("game_session_id", sessionId)
+      .eq("user_id", expertPlayerId);
+
+    if (updatePlayerError !== null) {
+      return fail(appError("INTERNAL_ERROR", "Failed to apply the EXPERT verification penalty."));
+    }
+  }
+
+  const completedTurn = buildCompletedTurn(session.currentTurn);
+  const { data: updatedSession, error: updateTurnError } = await serviceClient
+    .from("game_sessions")
+    .update({
+      current_turn: completedTurn as unknown as Json,
+    })
+    .eq("id", sessionId)
+    .eq("turn_number", session.turnNumber)
+    .eq("current_turn->>phase", "expert_verification")
+    .select("id")
+    .maybeSingle();
+
+  if (updateTurnError !== null) {
+    if (rollbackState !== null) {
+      await restoreGamePlayerState(serviceClient, sessionId, rollbackState.userId, rollbackState.fields);
+    }
+    return fail(appError("INTERNAL_ERROR", "Failed to store the expert verification result."));
+  }
+
+  if (updatedSession === null) {
+    if (rollbackState !== null) {
+      await restoreGamePlayerState(serviceClient, sessionId, rollbackState.userId, rollbackState.fields);
+    }
+    return fail(appError("CONFLICT", "Another player already advanced this expert verification."));
+  }
+
+  const boardResult = await loadBoardState(serviceClient, sessionId);
+  if (!boardResult.success) {
+    return boardResult;
+  }
+
+  const followUpResult = await buildFollowUpAfterReveal(
+    serviceClient,
+    sessionId,
+    session,
+    boardResult.data.players,
+  );
+  if (!followUpResult.success) {
+    return followUpResult;
+  }
+
+  return ok({
+    verification: {
+      correct,
+      correctPlatforms,
+      platformsCorrect,
+      scores: boardResult.data.scores,
+      timelines: boardResult.data.timelines,
+      tokens: boardResult.data.tokens,
+      yearCorrect,
     },
     followUp: followUpResult.data,
   });
@@ -846,11 +1146,15 @@ async function startNextTurn(
   }
 
   const deadline = buildPhaseDeadline(session.settings.turnTimer);
+  const isTeamworkMultiplayer =
+    session.settings.gameMode === "teamwork" && session.turnOrder.length > 1;
+  const nextPhase: TurnState["phase"] = isTeamworkMultiplayer ? "team_voting" : "placing";
   const nextTurn: TurnState = {
     activePlayerId: nextActivePlayerId,
     gameId: nextGameId,
-    phase: "placing",
+    phase: nextPhase,
     screenshotImageId: screenshot.data.igdb_image_id,
+    ...(isTeamworkMultiplayer && { votes: {} }),
     ...(deadline !== null && { phaseDeadline: deadline }),
   };
 
@@ -882,6 +1186,183 @@ async function startNextTurn(
     screenshot: { screenshotImageId: screenshot.data.igdb_image_id },
     turnNumber: session.turnNumber + 1,
   });
+}
+
+async function buildFollowUpAfterTeamVote(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  session: WritableGameSession,
+  teamScore: number,
+  teamTimeline: readonly TimelineEntry[],
+  teamTokens: number,
+): Promise<Result<TurnFollowUpResult, AppError>> {
+  if (teamTokens <= 0) {
+    const gameOverResult = await finishTeamworkGame(
+      serviceClient,
+      sessionId,
+      session,
+      false,
+      teamScore,
+      teamTimeline,
+    );
+    if (!gameOverResult.success) {
+      return gameOverResult;
+    }
+
+    return ok({ gameOver: gameOverResult.data, type: "team_game_over" });
+  }
+
+  if (teamScore >= session.settings.winCondition) {
+    const gameOverResult = await finishTeamworkGame(
+      serviceClient,
+      sessionId,
+      session,
+      true,
+      teamScore,
+      teamTimeline,
+    );
+    if (!gameOverResult.success) {
+      return gameOverResult;
+    }
+
+    return ok({ gameOver: gameOverResult.data, type: "team_game_over" });
+  }
+
+  if (session.deckCursor >= session.deck.length) {
+    const gameOverResult = await finishTeamworkGame(
+      serviceClient,
+      sessionId,
+      session,
+      false,
+      teamScore,
+      teamTimeline,
+    );
+    if (!gameOverResult.success) {
+      return gameOverResult;
+    }
+
+    return ok({ gameOver: gameOverResult.data, type: "team_game_over" });
+  }
+
+  const nextTurnResult = await startNextTurn(serviceClient, sessionId, session, "complete");
+  if (!nextTurnResult.success) {
+    return nextTurnResult;
+  }
+
+  return ok({ nextTurn: nextTurnResult.data, type: "next_turn" });
+}
+
+async function resolveTeamVote(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  session: WritableGameSession,
+  votes: Readonly<Record<string, Readonly<{ position: number; locked: boolean }>>>,
+): Promise<Result<{ resolvedPayload: TeamVoteResolvedPayload; followUp: TurnFollowUpResult }, AppError>> {
+  const teamTimeline = session.teamTimeline;
+  const currentTokens = session.teamTokens;
+  const currentScore = session.teamScore;
+
+  if (teamTimeline === null || currentTokens === null || currentScore === null) {
+    return fail(appError("INTERNAL_ERROR", "Missing team state for TEAMWORK resolution."));
+  }
+
+  const cardResult = await loadResolvedTurnCard(serviceClient, session.currentTurn);
+  if (!cardResult.success) {
+    return cardResult;
+  }
+
+  // Tally votes: count votes per position.
+  const voteCounts: Record<number, number> = {};
+  const voterBreakdown: Record<string, number> = {};
+  for (const [playerId, vote] of Object.entries(votes)) {
+    const pos = vote.position;
+    voteCounts[pos] = (voteCounts[pos] ?? 0) + 1;
+    voterBreakdown[playerId] = pos;
+  }
+
+  // Find position with most votes; tie-break toward host (first in turn order).
+  let winningPosition = 0;
+  let maxVotes = -1;
+  for (const player of session.turnOrder) {
+    const pos = votes[player]?.position;
+    if (pos === undefined) {
+      continue;
+    }
+
+    const count = voteCounts[pos] ?? 0;
+    if (count > maxVotes) {
+      maxVotes = count;
+      winningPosition = pos;
+    }
+  }
+
+  const isCorrect = isPlacementCorrect(teamTimeline, cardResult.data.releaseYear, winningPosition);
+
+  let updatedTeamTimeline = teamTimeline;
+  let updatedTeamScore = currentScore;
+  let updatedTeamTokens = currentTokens;
+
+  if (isCorrect) {
+    updatedTeamTimeline = insertTimelineEntry(
+      teamTimeline,
+      {
+        gameId: cardResult.data.gameId,
+        name: cardResult.data.name,
+        releaseYear: cardResult.data.releaseYear,
+      },
+      winningPosition,
+    );
+    updatedTeamScore = currentScore + 1;
+  } else {
+    updatedTeamTokens = currentTokens - 1;
+  }
+
+  const completedTurn = buildCompletedTurn(session.currentTurn, { isCorrect });
+  const { data: updatedSession, error: updateError } = await serviceClient
+    .from("game_sessions")
+    .update({
+      current_turn: completedTurn as unknown as Json,
+      team_score: updatedTeamScore,
+      team_timeline: updatedTeamTimeline as unknown as Json,
+      team_tokens: updatedTeamTokens,
+    })
+    .eq("id", sessionId)
+    .eq("turn_number", session.turnNumber)
+    .eq("current_turn->>phase", "team_voting")
+    .select("id")
+    .maybeSingle();
+
+  if (updateError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to resolve the team vote."));
+  }
+
+  if (updatedSession === null) {
+    return fail(appError("CONFLICT", "This team vote has already been resolved."));
+  }
+
+  const resolvedPayload: TeamVoteResolvedPayload = {
+    card: cardResult.data,
+    correct: isCorrect,
+    position: winningPosition,
+    teamScore: updatedTeamScore,
+    teamTimeline: updatedTeamTimeline,
+    teamTokens: updatedTeamTokens,
+    voterBreakdown,
+  };
+
+  const followUpResult = await buildFollowUpAfterTeamVote(
+    serviceClient,
+    sessionId,
+    session,
+    updatedTeamScore,
+    updatedTeamTimeline,
+    updatedTeamTokens,
+  );
+  if (!followUpResult.success) {
+    return followUpResult;
+  }
+
+  return ok({ resolvedPayload, followUp: followUpResult.data });
 }
 
 async function buildFollowUpAfterReveal(
@@ -1060,7 +1541,10 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
   );
 
   const challengerId = sessionResult.data.currentTurn.challengerId;
+  const isProVariant = sessionResult.data.settings.variant === "pro";
+  const isExpertVariant = sessionResult.data.settings.variant === "expert";
   let challengeResult: ChallengeResult | undefined;
+  let platformBonusPlayerId: string | undefined;
 
   if (isCorrect) {
     const updatedTimeline = insertTimelineEntry(
@@ -1086,6 +1570,7 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
       return fail(appError("INTERNAL_ERROR", "Failed to save the resolved multiplayer turn."));
     }
 
+    platformBonusPlayerId = sessionResult.data.activePlayerId;
     if (challengerId !== undefined) {
       challengeResult = "challenger_loses";
     }
@@ -1127,9 +1612,14 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
     }
 
     challengeResult = "challenger_wins";
+    if (isProVariant || isExpertVariant) {
+      platformBonusPlayerId = challengerResult.data.userId;
+    }
   }
 
-  const platformBonusEligible = isCorrect && challengeResult !== "challenger_wins";
+  const platformBonusEligible =
+    platformBonusPlayerId !== undefined && !isExpertVariant && (isProVariant || isCorrect);
+  const expertVerificationEligible = platformBonusPlayerId !== undefined && isExpertVariant;
   if (platformBonusEligible) {
     const platformBonusStateResult = await loadPlatformBonusState(
       serviceClient,
@@ -1147,6 +1637,7 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
       isCorrect,
       phase: "platform_bonus",
       phaseDeadline: platformBonusDeadline,
+      ...(platformBonusPlayerId === undefined ? {} : { platformBonusPlayerId }),
       platformOptions: [...platformBonusStateResult.data.options],
     };
     const { error: updateTurnError } = await serviceClient
@@ -1176,6 +1667,63 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
         isCorrect,
         platformBonusDeadline,
         platformOptions: platformBonusStateResult.data.options,
+        ...(platformBonusPlayerId === undefined ? {} : { platformBonusPlayerId }),
+        position: sessionResult.data.currentTurn.placedPosition,
+        scores: boardResult.data.scores,
+        timelines: boardResult.data.timelines,
+        tokens: boardResult.data.tokens,
+      },
+    });
+  }
+
+  if (expertVerificationEligible) {
+    const platformBonusStateResult = await loadPlatformBonusState(
+      serviceClient,
+      cardResult.data.gameId,
+      cardResult.data.releaseYear,
+    );
+    if (!platformBonusStateResult.success) {
+      return platformBonusStateResult;
+    }
+
+    const expertVerificationDeadline = buildExpertVerificationDeadline();
+    const expertVerificationTurn: TurnState = {
+      ...sessionResult.data.currentTurn,
+      ...(challengerId !== undefined ? { challengeResult, challengerId } : {}),
+      isCorrect,
+      phase: "expert_verification",
+      phaseDeadline: expertVerificationDeadline,
+      ...(platformBonusPlayerId === undefined ? {} : { platformBonusPlayerId }),
+      platformOptions: [...platformBonusStateResult.data.options],
+    };
+    const { error: updateTurnError } = await serviceClient
+      .from("game_sessions")
+      .update({
+        current_turn: expertVerificationTurn as unknown as Json,
+      })
+      .eq("id", parsed.data.sessionId)
+      .eq("turn_number", sessionResult.data.turnNumber)
+      .eq("current_turn->>phase", "revealing");
+
+    if (updateTurnError !== null) {
+      return fail(appError("INTERNAL_ERROR", "Failed to start the multiplayer expert verification."));
+    }
+
+    const boardResult = await loadBoardState(serviceClient, parsed.data.sessionId);
+    if (!boardResult.success) {
+      return boardResult;
+    }
+
+    revalidateGamePath(parsed.data.sessionId);
+    return ok({
+      reveal: {
+        card: cardResult.data,
+        ...(challengeResult !== undefined ? { challengeResult } : {}),
+        ...(challengerId !== undefined ? { challengerId } : {}),
+        expertVerificationDeadline,
+        isCorrect,
+        platformOptions: platformBonusStateResult.data.options,
+        ...(platformBonusPlayerId === undefined ? {} : { platformBonusPlayerId }),
         position: sessionResult.data.currentTurn.placedPosition,
         scores: boardResult.data.scores,
         timelines: boardResult.data.timelines,
@@ -1620,8 +2168,12 @@ export async function submitPlatformBonus(
     return fail(appError("CONFLICT", "This multiplayer turn is not accepting platform guesses."));
   }
 
-  if (sessionResult.data.activePlayerId !== userIdResult.data) {
-    return fail(appError("UNAUTHORIZED", "Only the active player can answer the platform bonus."));
+  const platformBonusPlayerId =
+    sessionResult.data.currentTurn.platformBonusPlayerId ?? sessionResult.data.activePlayerId;
+  if (platformBonusPlayerId !== userIdResult.data) {
+    return fail(
+      appError("UNAUTHORIZED", "Only the designated player can answer the platform bonus."),
+    );
   }
 
   if (
@@ -1716,6 +2268,168 @@ export async function proceedFromPlatformBonus(
 }
 
 /**
+ * Submit a player's expert verification answer (year + platforms) for a multiplayer EXPERT variant turn.
+ */
+export async function submitExpertVerification(
+  sessionId: string,
+  yearGuess: number,
+  selectedPlatformIds: readonly number[],
+): Promise<Result<SubmitExpertVerificationResult, AppError>> {
+  const parsed = SubmitExpertVerificationSchema.safeParse({
+    selectedPlatformIds: [...selectedPlatformIds],
+    sessionId,
+    yearGuess,
+  });
+  if (!parsed.success) {
+    return fail(appError("VALIDATION_ERROR", "Please provide a valid expert verification answer."));
+  }
+
+  const supabase = await createClient();
+  const userIdResult = await getAuthenticatedUserId(supabase);
+  if (!userIdResult.success) {
+    return userIdResult;
+  }
+
+  const serviceClient = createServiceClient();
+  const sessionResult = await loadWritableGameSession(serviceClient, parsed.data.sessionId);
+  if (!sessionResult.success) {
+    return sessionResult;
+  }
+
+  if (sessionResult.data.currentTurn.phase !== "expert_verification") {
+    return fail(appError("CONFLICT", "This multiplayer turn is not waiting on expert verification."));
+  }
+
+  const expertPlayerId =
+    sessionResult.data.currentTurn.platformBonusPlayerId ?? sessionResult.data.activePlayerId;
+  if (userIdResult.data !== expertPlayerId) {
+    return fail(appError("UNAUTHORIZED", "Only the designated player may submit expert verification."));
+  }
+
+  const gameId = sessionResult.data.currentTurn.gameId;
+
+  const { data: gameRows, error: gameError } = await serviceClient
+    .from("games")
+    .select("release_year")
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (gameError !== null || gameRows === null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to load the game release year."));
+  }
+
+  const platformBonusStateResult = await loadPlatformBonusState(
+    serviceClient,
+    gameId,
+    gameRows.release_year,
+  );
+  if (!platformBonusStateResult.success) {
+    return platformBonusStateResult;
+  }
+
+  const yearCorrect = parsed.data.yearGuess === gameRows.release_year;
+  const correctPlatformIds = new Set(
+    platformBonusStateResult.data.correctPlatforms.map((p) => p.id),
+  );
+  const selectedSet = new Set(parsed.data.selectedPlatformIds);
+  const platformsCorrect =
+    correctPlatformIds.size === selectedSet.size &&
+    [...correctPlatformIds].every((id) => selectedSet.has(id));
+
+  const verifyResult = await resolveExpertVerificationPhase(
+    serviceClient,
+    parsed.data.sessionId,
+    sessionResult.data,
+    yearCorrect,
+    platformsCorrect,
+    platformBonusStateResult.data.correctPlatforms,
+  );
+  if (!verifyResult.success) {
+    return verifyResult;
+  }
+
+  revalidateGamePath(parsed.data.sessionId);
+  return ok(verifyResult.data);
+}
+
+/**
+ * Advance past an expired expert verification phase (timeout = incorrect).
+ */
+export async function proceedFromExpertVerification(
+  sessionId: string,
+): Promise<Result<ProceedFromExpertVerificationResult, AppError>> {
+  const parsed = SessionIdSchema.safeParse({ sessionId });
+  if (!parsed.success) {
+    return fail(appError("VALIDATION_ERROR", "Please provide a valid game session."));
+  }
+
+  const supabase = await createClient();
+  const userIdResult = await getAuthenticatedUserId(supabase);
+  if (!userIdResult.success) {
+    return userIdResult;
+  }
+
+  const membershipResult = await ensureSessionMember(
+    supabase,
+    parsed.data.sessionId,
+    userIdResult.data,
+  );
+  if (!membershipResult.success) {
+    return membershipResult;
+  }
+
+  const serviceClient = createServiceClient();
+  const sessionResult = await loadWritableGameSession(serviceClient, parsed.data.sessionId);
+  if (!sessionResult.success) {
+    return sessionResult;
+  }
+
+  if (sessionResult.data.currentTurn.phase !== "expert_verification") {
+    return fail(appError("CONFLICT", "This multiplayer turn is not waiting on expert verification."));
+  }
+
+  if (
+    sessionResult.data.currentTurn.phaseDeadline === undefined ||
+    new Date(sessionResult.data.currentTurn.phaseDeadline).getTime() > Date.now()
+  ) {
+    return fail(appError("CONFLICT", "The expert verification phase has not expired yet."));
+  }
+
+  const gameId = sessionResult.data.currentTurn.gameId;
+
+  const { data: gameRows, error: gameError } = await serviceClient
+    .from("games")
+    .select("release_year")
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (gameError !== null || gameRows === null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to load the game release year."));
+  }
+
+  const platformBonusStateResult = await loadPlatformBonusState(
+    serviceClient,
+    gameId,
+    gameRows.release_year,
+  );
+
+  const verifyResult = await resolveExpertVerificationPhase(
+    serviceClient,
+    parsed.data.sessionId,
+    sessionResult.data,
+    false,
+    false,
+    platformBonusStateResult.success ? platformBonusStateResult.data.correctPlatforms : [],
+  );
+  if (!verifyResult.success) {
+    return verifyResult;
+  }
+
+  revalidateGamePath(parsed.data.sessionId);
+  return ok(verifyResult.data);
+}
+
+/**
  * Skip an expired placing phase and advance to the next multiplayer turn.
  */
 export async function skipTurn(
@@ -1792,4 +2506,145 @@ export async function skipTurn(
       reason: parsed.data.reason,
     },
   });
+}
+
+/**
+ * Submit or update the calling player's team vote position and, if all connected
+ * players have locked in, automatically resolve the team vote.
+ */
+export async function submitTeamVote(
+  sessionId: string,
+  position: number,
+  locked: boolean,
+  presenceUserIds: string[],
+): Promise<Result<SubmitTeamVoteResult, AppError>> {
+  const parsed = SubmitTeamVoteSchema.safeParse({ sessionId, position, locked, presenceUserIds });
+  if (!parsed.success) {
+    return fail(
+      appError("VALIDATION_ERROR", "Please provide a valid vote position before submitting."),
+    );
+  }
+
+  const supabase = await createClient();
+  const userIdResult = await getAuthenticatedUserId(supabase);
+  if (!userIdResult.success) {
+    return userIdResult;
+  }
+
+  const membershipResult = await ensureSessionMember(
+    supabase,
+    parsed.data.sessionId,
+    userIdResult.data,
+  );
+  if (!membershipResult.success) {
+    return membershipResult;
+  }
+
+  const serviceClient = createServiceClient();
+
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const sessionResult = await loadWritableGameSession(serviceClient, parsed.data.sessionId);
+    if (!sessionResult.success) {
+      return sessionResult;
+    }
+
+    const session = sessionResult.data;
+
+    if (session.currentTurn.phase !== "team_voting") {
+      return fail(appError("CONFLICT", "This turn is no longer accepting team votes."));
+    }
+
+    if (
+      session.teamTimeline === null ||
+      session.teamTokens === null ||
+      session.teamScore === null
+    ) {
+      return fail(appError("CONFLICT", "This game session is not configured for TEAMWORK mode."));
+    }
+
+    const currentVotes = session.currentTurn.votes ?? {};
+    const updatedVotes: Record<string, { position: number; locked: boolean }> = {
+      ...currentVotes,
+      [userIdResult.data]: { position: parsed.data.position, locked: parsed.data.locked },
+    };
+
+    // Check if all connected players have locked in.
+    const connectedPlayers = parsed.data.presenceUserIds.filter((id) =>
+      session.turnOrder.includes(id),
+    );
+    const allLocked =
+      connectedPlayers.length > 0 &&
+      connectedPlayers.every((id) => updatedVotes[id]?.locked === true);
+
+    if (allLocked) {
+      // Try to resolve the vote; the DB update in resolveTeamVote uses an optimistic lock.
+      const updatedTurn: TurnState = { ...session.currentTurn, votes: updatedVotes };
+      const { error: voteUpdateError } = await serviceClient
+        .from("game_sessions")
+        .update({ current_turn: updatedTurn as unknown as Json })
+        .eq("id", parsed.data.sessionId)
+        .eq("turn_number", session.turnNumber)
+        .eq("current_turn->>phase", "team_voting");
+
+      if (voteUpdateError !== null && attempt < MAX_RETRIES - 1) {
+        await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+        continue;
+      }
+
+      const resolveResult = await resolveTeamVote(
+        serviceClient,
+        parsed.data.sessionId,
+        { ...session, currentTurn: updatedTurn },
+        updatedVotes,
+      );
+      if (!resolveResult.success) {
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+          continue;
+        }
+
+        return resolveResult;
+      }
+
+      revalidateGamePath(parsed.data.sessionId);
+      return ok({
+        type: "vote_resolved",
+        followUp: resolveResult.data.followUp,
+        resolvedPayload: resolveResult.data.resolvedPayload,
+      });
+    }
+
+    // Not all locked — just persist the vote update.
+    const updatedTurn: TurnState = { ...session.currentTurn, votes: updatedVotes };
+    const { data: updatedSession, error: updateError } = await serviceClient
+      .from("game_sessions")
+      .update({ current_turn: updatedTurn as unknown as Json })
+      .eq("id", parsed.data.sessionId)
+      .eq("turn_number", session.turnNumber)
+      .eq("current_turn->>phase", "team_voting")
+      .select("id")
+      .maybeSingle();
+
+    if (updateError !== null) {
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+        continue;
+      }
+
+      return fail(appError("INTERNAL_ERROR", "Failed to record your team vote."));
+    }
+
+    if (updatedSession === null) {
+      return fail(appError("CONFLICT", "This turn is no longer accepting team votes."));
+    }
+
+    revalidateGamePath(parsed.data.sessionId);
+    return ok({
+      type: "vote_updated",
+      votePayload: { votes: updatedVotes },
+    });
+  }
+
+  return fail(appError("INTERNAL_ERROR", "Failed to record your team vote after multiple retries."));
 }

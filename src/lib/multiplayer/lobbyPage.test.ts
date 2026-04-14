@@ -95,6 +95,12 @@ describe("getLobbyRoomPageData", () => {
       },
       {
         data: [
+          { id: 5, name: "Shooter" },
+          { id: 12, name: "RPG" },
+        ],
+      },
+      {
+        data: [
           {
             display_name: "Alex Host",
             joined_at: "2026-04-11T22:00:00.000Z",
@@ -115,6 +121,10 @@ describe("getLobbyRoomPageData", () => {
 
     expect(result).toEqual({
       currentUserId: "11111111-1111-4111-8111-111111111111",
+      genres: [
+        { id: 5, name: "Shooter" },
+        { id: 12, name: "RPG" },
+      ],
       hostId: "11111111-1111-4111-8111-111111111111",
       maxPlayers: 10,
       players: [
@@ -139,7 +149,12 @@ describe("getLobbyRoomPageData", () => {
         tokensEnabled: true,
         startingTokens: 2,
         winCondition: 10,
+        gameMode: "competitive",
         variant: "standard",
+        genreLockId: null,
+        consoleLockFamily: null,
+        decadeStart: null,
+        speedRound: false,
       },
     });
   });
@@ -165,6 +180,7 @@ describe("getLobbyRoomPageData", () => {
           status: "lobby",
         },
       },
+      { data: [] },
     );
 
     const result = await getLobbyRoomPageData("22222222-2222-4222-8222-222222222222");

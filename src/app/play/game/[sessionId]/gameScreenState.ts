@@ -66,9 +66,11 @@ export const TurnRevealedPayloadSchema = z.object({
   card: TurnRevealedCardSchema,
   challengeResult: z.enum(["challenger_wins", "challenger_loses"]).optional(),
   challengerId: z.uuid().optional(),
+  expertVerificationDeadline: z.iso.datetime({ offset: true }).optional(),
   isCorrect: z.boolean(),
   platformBonusDeadline: z.iso.datetime({ offset: true }).optional(),
   platformOptions: z.array(PlatformOptionSchema).optional(),
+  platformBonusPlayerId: z.uuid().optional(),
   position: z.number().int(),
   scores: z.record(z.string(), z.number().int()),
   timelines: z.record(z.string(), z.array(BroadcastTimelineEntrySchema)),
@@ -81,7 +83,23 @@ export const TurnRevealedPayloadSchema = z.object({
 export const PlatformBonusResultPayloadSchema = z.object({
   correct: z.boolean(),
   correctPlatforms: z.array(PlatformOptionSchema),
+  scores: z.record(z.string(), z.number().int()),
+  timelines: z.record(z.string(), z.array(BroadcastTimelineEntrySchema)),
   tokenChange: z.number().int(),
+  tokens: z.record(z.string(), z.number().int()),
+});
+
+/**
+ * Broadcast payload schema for the expert_verification_result event.
+ */
+export const ExpertVerificationResultPayloadSchema = z.object({
+  correct: z.boolean(),
+  correctPlatforms: z.array(PlatformOptionSchema),
+  platformsCorrect: z.boolean(),
+  scores: z.record(z.string(), z.number().int()),
+  timelines: z.record(z.string(), z.array(BroadcastTimelineEntrySchema)),
+  tokens: z.record(z.string(), z.number().int()),
+  yearCorrect: z.boolean(),
 });
 
 /**
@@ -102,6 +120,38 @@ export const GameOverPayloadSchema = z.object({
   winnerId: z.uuid(),
 });
 
+/**
+ * Broadcast payload schema for the team_vote_updated event.
+ */
+export const TeamVoteUpdatedPayloadSchema = z.object({
+  votes: z.record(
+    z.string(),
+    z.object({ position: z.number().int(), locked: z.boolean() }),
+  ),
+});
+
+/**
+ * Broadcast payload schema for the team_vote_resolved event.
+ */
+export const TeamVoteResolvedPayloadSchema = z.object({
+  card: TurnRevealedCardSchema,
+  correct: z.boolean(),
+  position: z.number().int(),
+  teamScore: z.number().int(),
+  teamTimeline: z.array(BroadcastTimelineEntrySchema),
+  teamTokens: z.number().int(),
+  voterBreakdown: z.record(z.string(), z.number().int()),
+});
+
+/**
+ * Broadcast payload schema for the team_game_over event.
+ */
+export const TeamGameOverPayloadSchema = z.object({
+  finalTeamScore: z.number().int(),
+  finalTeamTimeline: z.array(BroadcastTimelineEntrySchema),
+  teamWin: z.boolean(),
+});
+
 export type BroadcastTimelineEntry = z.infer<typeof BroadcastTimelineEntrySchema>;
 export type TurnRevealedCard = z.infer<typeof TurnRevealedCardSchema>;
 
@@ -112,6 +162,8 @@ export function formatPhaseLabel(phase: MultiplayerGamePageData["currentTurn"]["
   switch (phase) {
     case "challenge_window":
       return "Challenge Window";
+    case "expert_verification":
+      return "Expert Verification";
     case "platform_bonus":
       return "Platform Bonus";
     default:

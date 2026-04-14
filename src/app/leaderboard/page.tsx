@@ -92,7 +92,7 @@ export default async function LeaderboardPage() {
           </div>
         ) : (
           <div className="border-border/50 bg-surface-800 overflow-x-auto rounded-2xl border">
-            <table className="min-w-[400px] w-full text-sm">
+            <table className="w-full min-w-[400px] text-sm">
               <thead>
                 <tr className="border-border/50 border-b">
                   <th className="text-text-secondary px-4 py-3 text-left font-medium">Rank</th>
@@ -117,9 +117,7 @@ export default async function LeaderboardPage() {
                           : "hover:bg-surface-700/50 transition-colors"
                       }
                     >
-                      <td className="text-text-secondary px-4 py-3 font-mono">
-                        {rankLabel(rank)}
-                      </td>
+                      <td className="text-text-secondary px-4 py-3 font-mono">{rankLabel(rank)}</td>
                       <td className="px-4 py-3">
                         <span
                           className={

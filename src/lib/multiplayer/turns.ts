@@ -43,9 +43,11 @@ export type TurnRevealedPayload = Readonly<{
   card: RevealedTurnCard;
   challengeResult?: ChallengeResult;
   challengerId?: string;
+  expertVerificationDeadline?: string;
   isCorrect: boolean;
   platformBonusDeadline?: string;
   platformOptions?: readonly PlatformOption[];
+  platformBonusPlayerId?: string;
   position: number;
   scores: Readonly<Record<string, number>>;
   timelines: Readonly<Record<string, readonly TimelineEntry[]>>;
@@ -58,7 +60,53 @@ export type TurnRevealedPayload = Readonly<{
 export type PlatformBonusResultPayload = Readonly<{
   correct: boolean;
   correctPlatforms: readonly PlatformOption[];
+  scores: Readonly<Record<string, number>>;
+  timelines: Readonly<Record<string, readonly TimelineEntry[]>>;
   tokenChange: number;
+  tokens: Readonly<Record<string, number>>;
+}>;
+
+/**
+ * Broadcast payload emitted when the multiplayer expert verification resolves.
+ */
+export type ExpertVerificationResultPayload = Readonly<{
+  correct: boolean;
+  correctPlatforms: readonly PlatformOption[];
+  platformsCorrect: boolean;
+  scores: Readonly<Record<string, number>>;
+  timelines: Readonly<Record<string, readonly TimelineEntry[]>>;
+  tokens: Readonly<Record<string, number>>;
+  yearCorrect: boolean;
+}>;
+
+/**
+ * Broadcast payload emitted when a team member updates their vote position.
+ */
+export type TeamVoteUpdatedPayload = Readonly<{
+  votes: Readonly<Record<string, Readonly<{ position: number; locked: boolean }>>>;
+}>;
+
+/**
+ * Broadcast payload emitted when all connected players have locked their votes
+ * and the team placement has been resolved.
+ */
+export type TeamVoteResolvedPayload = Readonly<{
+  card: RevealedTurnCard;
+  correct: boolean;
+  position: number;
+  teamScore: number;
+  teamTimeline: readonly TimelineEntry[];
+  teamTokens: number;
+  voterBreakdown: Readonly<Record<string, number>>;
+}>;
+
+/**
+ * Broadcast payload emitted when a TEAMWORK game ends.
+ */
+export type TeamGameOverPayload = Readonly<{
+  finalTeamScore: number;
+  finalTeamTimeline: readonly TimelineEntry[];
+  teamWin: boolean;
 }>;
 
 /**
@@ -120,6 +168,13 @@ export function buildChallengeDeadline(now = Date.now()): string {
  */
 export function buildPlatformBonusDeadline(now = Date.now()): string {
   return new Date(now + 15_000).toISOString();
+}
+
+/**
+ * Return the fixed 20-second deadline for the multiplayer expert verification window.
+ */
+export function buildExpertVerificationDeadline(now = Date.now()): string {
+  return new Date(now + 20_000).toISOString();
 }
 
 /**

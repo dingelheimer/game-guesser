@@ -257,7 +257,9 @@ describe("createRoom", () => {
 
     await createRoom("Alex");
 
-    const rpcOp = mocks.operations.find((op) => op.action === "rpc" && op.fn === "abandon_stale_rooms");
+    const rpcOp = mocks.operations.find(
+      (op) => op.action === "rpc" && op.fn === "abandon_stale_rooms",
+    );
     expect(rpcOp).toBeDefined();
 
     const rpcIndex = rpcOp === undefined ? -1 : mocks.operations.indexOf(rpcOp);
@@ -445,7 +447,9 @@ describe("joinRoom", () => {
 
     await joinRoom("ab2cd3", "Sam");
 
-    const rpcOp = mocks.operations.find((op) => op.action === "rpc" && op.fn === "abandon_stale_rooms");
+    const rpcOp = mocks.operations.find(
+      (op) => op.action === "rpc" && op.fn === "abandon_stale_rooms",
+    );
     expect(rpcOp).toBeDefined();
 
     const rpcIndex = rpcOp === undefined ? -1 : mocks.operations.indexOf(rpcOp);

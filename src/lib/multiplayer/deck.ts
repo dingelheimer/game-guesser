@@ -5,6 +5,7 @@ import type { DifficultyTier } from "@/lib/difficulty";
 import { DIFFICULTY_THRESHOLDS } from "@/lib/difficulty";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { PlatformOptionSchema } from "@/lib/platformBonus";
+import type { HouseRuleParams } from "@/lib/multiplayer/lobby";
 
 /** Service role Supabase client type used in deck-building logic. */
 export type ServiceClient = ReturnType<typeof createServiceClient>;
@@ -16,6 +17,8 @@ export const TurnPhaseSchema = z.enum([
   "challenge_window",
   "revealing",
   "platform_bonus",
+  "team_voting",
+  "expert_verification",
   "complete",
 ]);
 
@@ -32,6 +35,11 @@ export const TimelineEntrySchema = z.object({
 /** A single entry in a player's revealed timeline. */
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
 
+const TeamVoteEntrySchema = z.object({
+  position: z.number().int(),
+  locked: z.boolean(),
+});
+
 /** Runtime schema for the persisted game_sessions.current_turn JSONB payload. */
 export const TurnStateSchema = z.object({
   phase: TurnPhaseSchema,
@@ -43,8 +51,11 @@ export const TurnStateSchema = z.object({
   challengerId: z.uuid().optional(),
   challengeResult: z.enum(["challenger_wins", "challenger_loses"]).optional(),
   platformOptions: z.array(PlatformOptionSchema).optional(),
+  platformBonusPlayerId: z.uuid().optional(),
   platformBonusCorrect: z.boolean().optional(),
   phaseDeadline: z.iso.datetime({ offset: true }).optional(),
+  /** Per-player vote state for the team_voting phase. */
+  votes: z.record(z.string(), TeamVoteEntrySchema).optional(),
 });
 
 /** Persistent turn state stored in game_sessions.current_turn JSONB. */
@@ -78,18 +89,28 @@ function isDeckResponse(value: unknown): value is number[] {
 }
 
 /**
- * Build a shuffled deck of up to 200 game IDs for the given difficulty.
+ * Build a shuffled deck of up to 200 game IDs for the given difficulty
+ * and optional house rule filters.
  * Requires games to have a cover and at least one non-rejected screenshot.
  * Uses the service role client to call the build_deck PostgreSQL RPC.
+ * Throws if the filtered pool has fewer than 30 games.
  */
 export async function buildDeck(
   serviceClient: ServiceClient,
   difficulty: DifficultyTier,
+  houseRules?: HouseRuleParams,
 ): Promise<number[]> {
   const maxRank = difficultyToMaxRank(difficulty);
 
-  const rpcArgs = maxRank !== null ? { p_max_rank: maxRank } : {};
-  const { data, error } = await serviceClient.rpc("build_deck", rpcArgs);
+  const rpcArgs: Record<string, unknown> = {};
+  if (maxRank !== null) rpcArgs["p_max_rank"] = maxRank;
+  if (houseRules?.genreLockId != null) rpcArgs["p_genre_id"] = houseRules.genreLockId;
+  if (houseRules?.consoleLockFamily != null)
+    rpcArgs["p_platform_family"] = houseRules.consoleLockFamily;
+  if (houseRules?.decadeStart != null) rpcArgs["p_decade_start"] = houseRules.decadeStart;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await serviceClient.rpc("build_deck", rpcArgs as any);
 
   if (error !== null) {
     throw new Error(`Failed to build deck: ${error.message}`);
