@@ -154,6 +154,8 @@ function createState(overrides: Partial<SoloGameState> = {}): SoloGameState {
     currentStreak: 2,
     bonusPointsEarned: 1,
     bonusOpportunities: 1,
+    shareOutcomes: ["correct", "correct"],
+    shareYearRange: { start: 1998, end: 2007 },
     lastPlacementCorrect: null,
     validPositions: null,
     availablePlatforms: [],

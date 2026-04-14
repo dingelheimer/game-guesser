@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Crown, Trophy } from "lucide-react";
+import { Crown, Share2, Trophy } from "lucide-react";
+import { toast } from "sonner";
+import type { DifficultyTier } from "@/lib/difficulty";
 import type { MultiplayerGamePagePlayer } from "@/lib/multiplayer/gamePage";
 import { sortPlayersByStanding } from "@/lib/multiplayer/rankings";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  buildMultiplayerShareText,
+  shareResult,
+  type ShareOutcome,
+  type ShareYearRange,
+} from "@/lib/share";
+import { buildShareResultUrl } from "@/lib/shareResult";
 import { GamePlayerTimeline } from "./GamePlayerTimeline";
 
 /**
@@ -14,7 +23,12 @@ import { GamePlayerTimeline } from "./GamePlayerTimeline";
 export type MultiplayerGameOverViewProps = Readonly<{
   connectedUserIds: readonly string[];
   currentUserId: string;
+  difficulty: DifficultyTier;
   players: readonly MultiplayerGamePagePlayer[];
+  shareOutcomes: readonly ShareOutcome[];
+  sharePlatformBonusEarned: number;
+  sharePlatformBonusOpportunities: number;
+  shareYearRange: ShareYearRange | null;
   winCondition: number;
   winner: Readonly<{
     displayName: string;
@@ -28,11 +42,46 @@ export type MultiplayerGameOverViewProps = Readonly<{
 export function MultiplayerGameOverView({
   connectedUserIds,
   currentUserId,
+  difficulty,
   players,
+  shareOutcomes,
+  sharePlatformBonusEarned,
+  sharePlatformBonusOpportunities,
+  shareYearRange,
   winCondition,
   winner,
 }: MultiplayerGameOverViewProps) {
   const rankedPlayers = sortPlayersByStanding(players);
+  const currentPlacement = rankedPlayers.findIndex((player) => player.userId === currentUserId) + 1;
+  const currentPlayer = rankedPlayers.find((player) => player.userId === currentUserId);
+  const shareUrl =
+    currentPlayer === undefined || shareYearRange === null
+      ? null
+      : buildShareResultUrl({
+          difficulty,
+          mode: "multiplayer",
+          outcomes: shareOutcomes,
+          platformBonusEarned: sharePlatformBonusEarned,
+          platformBonusOpportunities: sharePlatformBonusOpportunities,
+          placement: currentPlacement,
+          playerCount: rankedPlayers.length,
+          score: currentPlayer.score,
+          turnsPlayed: shareOutcomes.length,
+          yearRange: shareYearRange,
+        });
+  const shareSummary =
+    currentPlayer === undefined || shareUrl === null
+      ? ""
+      : buildMultiplayerShareText({
+          outcomes: shareOutcomes,
+          placement: currentPlacement,
+          playerCount: rankedPlayers.length,
+          platformBonusEarned: sharePlatformBonusEarned,
+          platformBonusOpportunities: sharePlatformBonusOpportunities,
+          score: currentPlayer.score,
+          turnsPlayed: shareOutcomes.length,
+          url: shareUrl,
+        });
 
   return (
     <div className="flex flex-1 items-start justify-center px-4 py-8 sm:px-6 sm:py-10">
@@ -64,6 +113,39 @@ export function MultiplayerGameOverView({
             </div>
           </CardHeader>
         </Card>
+
+        {currentPlayer !== undefined ? (
+          <Card className="border-border/60 bg-surface-800/70">
+            <CardHeader className="gap-4">
+              <div className="space-y-2">
+                <CardTitle className="text-xl">Share your result</CardTitle>
+                <CardDescription>
+                  Post your finish without revealing any game titles or screenshots.
+                </CardDescription>
+              </div>
+
+              <pre className="bg-surface-900/80 text-text-primary overflow-x-auto rounded-xl p-3 font-mono text-sm break-words whitespace-pre-wrap">
+                {shareSummary}
+              </pre>
+
+              <Button
+                onClick={() => {
+                  void shareResult({
+                    navigator,
+                    notify: toast,
+                    text: shareSummary,
+                    ...(shareUrl === null ? {} : { url: shareUrl }),
+                  });
+                }}
+                disabled={shareSummary.length === 0}
+                variant="secondary"
+              >
+                <Share2 className="size-4" aria-hidden="true" />
+                Share Result
+              </Button>
+            </CardHeader>
+          </Card>
+        ) : null}
 
         <div className="grid gap-4">
           {rankedPlayers.map((player, index) => {

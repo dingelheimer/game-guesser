@@ -97,6 +97,8 @@ describe("GameOverScreen", () => {
         bestStreak={4}
         bonusPointsEarned={2}
         bonusOpportunities={4}
+        shareOutcomes={["correct", "correct", "correct", "wrong", "correct"]}
+        shareYearRange={{ start: 1991, end: 2017 }}
         timelineItems={timelineItems}
         failedCard={failedCard}
         validPositions={[2]}
@@ -127,6 +129,8 @@ describe("GameOverScreen", () => {
         bestStreak={2}
         bonusPointsEarned={1}
         bonusOpportunities={2}
+        shareOutcomes={["correct", "correct", "wrong"]}
+        shareYearRange={{ start: 1998, end: 2007 }}
         timelineItems={timelineItems}
         failedCard={failedCard}
         validPositions={[1]}
@@ -140,9 +144,7 @@ describe("GameOverScreen", () => {
 
     expect(screen.getByText("Share preview")).toBeInTheDocument();
     expect(
-      screen.getByText((_, element) => {
-        return element?.textContent === "Game Guesser Solo (Easy)\n🟩🟩🟥 Score: 2";
-      }),
+      screen.getByText(/🎮 Game Guesser — Solo[\s\S]*Play → gameguesser\.com\/results\?d=/u),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share Result" })).toBeInTheDocument();
   });
@@ -156,6 +158,8 @@ describe("GameOverScreen", () => {
         bestStreak={6}
         bonusPointsEarned={0}
         bonusOpportunities={0}
+        shareOutcomes={["correct", "correct", "correct", "correct", "correct", "correct", "close"]}
+        shareYearRange={{ start: 2005, end: 2007 }}
         timelineItems={timelineItems}
         failedCard={failedCard}
         validPositions={[1, 2]}

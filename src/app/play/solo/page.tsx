@@ -40,8 +40,5 @@ export default async function PlaySoloPage({
     name: g.name,
   }));
 
-  return (
-    <SoloGamePage username={username} hasPendingScore={saved === "pending"} genres={genres} />
-  );
+  return <SoloGamePage username={username} hasPendingScore={saved === "pending"} genres={genres} />;
 }
-

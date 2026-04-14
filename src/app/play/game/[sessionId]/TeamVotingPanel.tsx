@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { MultiplayerGamePagePlayer, MultiplayerTimelineCard } from "@/lib/multiplayer/gamePage";
+import type {
+  MultiplayerGamePagePlayer,
+  MultiplayerTimelineCard,
+} from "@/lib/multiplayer/gamePage";
 
 interface TeamVotingPanelProps {
   /** Current player's user ID. */
@@ -88,10 +91,10 @@ export function TeamVotingPanel({
   return (
     <div className="flex flex-col gap-4">
       <div className="text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Vote on where this game belongs in the shared timeline
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-xs">
           {lockedCount}/{totalVoters} locked in
         </p>
       </div>
@@ -106,25 +109,27 @@ export function TeamVotingPanel({
           return (
             <div key={slotIndex}>
               {slotIndex > 0 && beforeCard !== undefined && (
-                <div className="px-2 py-1 bg-muted/50 rounded text-sm text-center">
+                <div className="bg-muted/50 rounded px-2 py-1 text-center text-sm">
                   {beforeCard.title} ({beforeCard.releaseYear})
                 </div>
               )}
               <button
                 type="button"
-                onClick={() => { handlePositionSelect(slotIndex); }}
+                onClick={() => {
+                  handlePositionSelect(slotIndex);
+                }}
                 disabled={isLocked || isSubmitting}
                 className={[
-                  "w-full py-2 px-3 border-2 rounded flex items-center justify-between transition-colors",
+                  "flex w-full items-center justify-between rounded border-2 px-3 py-2 transition-colors",
                   isSelected
                     ? "border-primary bg-primary/10"
-                    : "border-dashed border-muted-foreground/30 hover:border-muted-foreground/60",
+                    : "border-muted-foreground/30 hover:border-muted-foreground/60 border-dashed",
                   isLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer",
                 ]
                   .filter(Boolean)
                   .join(" ")}
               >
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {slotIndex === 0
                     ? "Before all"
                     : slotIndex === teamTimeline.length
@@ -148,7 +153,7 @@ export function TeamVotingPanel({
                 </span>
               </button>
               {slotIndex < teamTimeline.length && afterCard !== undefined && (
-                <div className="px-2 py-1 bg-muted/50 rounded text-sm text-center">
+                <div className="bg-muted/50 rounded px-2 py-1 text-center text-sm">
                   {afterCard.title} ({afterCard.releaseYear})
                 </div>
               )}
@@ -167,7 +172,7 @@ export function TeamVotingPanel({
       </Button>
 
       {Object.keys(votes).length > 0 && (
-        <div className="text-xs text-muted-foreground space-y-1">
+        <div className="text-muted-foreground space-y-1 text-xs">
           {players.map((player) => {
             const vote = votes[player.userId];
             return (
