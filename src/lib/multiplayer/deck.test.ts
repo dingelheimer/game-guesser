@@ -98,7 +98,11 @@ describe("buildDeck", () => {
   it("includes p_genre_id when genreLockId is set", async () => {
     mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
 
-    await buildDeck(mockServiceClient, "easy", { genreLockId: 42, consoleLockFamily: null, decadeStart: null });
+    await buildDeck(mockServiceClient, "easy", {
+      genreLockId: 42,
+      consoleLockFamily: null,
+      decadeStart: null,
+    });
 
     expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 10, p_genre_id: 42 });
   });
@@ -106,15 +110,26 @@ describe("buildDeck", () => {
   it("includes p_platform_family when consoleLockFamily is set", async () => {
     mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
 
-    await buildDeck(mockServiceClient, "medium", { genreLockId: null, consoleLockFamily: "nintendo", decadeStart: null });
+    await buildDeck(mockServiceClient, "medium", {
+      genreLockId: null,
+      consoleLockFamily: "nintendo",
+      decadeStart: null,
+    });
 
-    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 20, p_platform_family: "nintendo" });
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", {
+      p_max_rank: 20,
+      p_platform_family: "nintendo",
+    });
   });
 
   it("includes p_decade_start when decadeStart is set", async () => {
     mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
 
-    await buildDeck(mockServiceClient, "hard", { genreLockId: null, consoleLockFamily: null, decadeStart: 1990 });
+    await buildDeck(mockServiceClient, "hard", {
+      genreLockId: null,
+      consoleLockFamily: null,
+      decadeStart: 1990,
+    });
 
     expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 50, p_decade_start: 1990 });
   });
@@ -122,7 +137,11 @@ describe("buildDeck", () => {
   it("includes all house rule params when all are set", async () => {
     mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
 
-    await buildDeck(mockServiceClient, "easy", { genreLockId: 5, consoleLockFamily: "playstation", decadeStart: 2000 });
+    await buildDeck(mockServiceClient, "easy", {
+      genreLockId: 5,
+      consoleLockFamily: "playstation",
+      decadeStart: 2000,
+    });
 
     expect(mockRpc).toHaveBeenCalledWith("build_deck", {
       p_max_rank: 10,

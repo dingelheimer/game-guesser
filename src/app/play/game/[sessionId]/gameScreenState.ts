@@ -124,10 +124,7 @@ export const GameOverPayloadSchema = z.object({
  * Broadcast payload schema for the team_vote_updated event.
  */
 export const TeamVoteUpdatedPayloadSchema = z.object({
-  votes: z.record(
-    z.string(),
-    z.object({ position: z.number().int(), locked: z.boolean() }),
-  ),
+  votes: z.record(z.string(), z.object({ position: z.number().int(), locked: z.boolean() })),
 });
 
 /**

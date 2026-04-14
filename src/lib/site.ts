@@ -1,0 +1,11 @@
+export const siteConfig = {
+  name: "Game Guesser",
+  url: "https://gameguesser.com",
+  description:
+    "A video game timeline guessing party game where you place games by release year, chase streaks, and compete with friends.",
+  ogImage: "/og.png",
+} as const;
+
+export function getSiteUrl(path = "/") {
+  return new URL(path, siteConfig.url).toString();
+}
