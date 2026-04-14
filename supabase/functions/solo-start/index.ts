@@ -14,7 +14,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildInitialSession } from "./logic/session.ts";
-import { createSoloStartDbOperations } from "./logic/db.ts";
+import { createSoloStartDbOperations, type SoloHouseRules } from "./logic/db.ts";
 
 const VALID_DIFFICULTIES = new Set(["easy", "medium", "hard", "extreme"]);
 
@@ -37,6 +37,7 @@ Deno.serve(async (req: Request) => {
 
   // Parse and validate request body
   let difficulty: string;
+  let houseRules: SoloHouseRules;
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const d = body["difficulty"];
@@ -50,6 +51,16 @@ Deno.serve(async (req: Request) => {
       );
     }
     difficulty = d;
+
+    const genreId = body["genre_id"];
+    const platformFamily = body["platform_family"];
+    const decadeStart = body["decade_start"];
+
+    houseRules = {
+      ...(typeof genreId === "number" && { genreId }),
+      ...(typeof platformFamily === "string" && { platformFamily }),
+      ...(typeof decadeStart === "number" && { decadeStart }),
+    };
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
@@ -73,8 +84,8 @@ Deno.serve(async (req: Request) => {
   const db = createSoloStartDbOperations(supabase);
 
   try {
-    // 1. Fetch eligible games for the selected difficulty
-    const eligibleGames = await db.fetchEligibleGames(difficulty);
+    // 1. Fetch eligible games for the selected difficulty + house rules
+    const eligibleGames = await db.fetchEligibleGames(difficulty, houseRules);
 
     if (eligibleGames.length < 2) {
       return new Response(

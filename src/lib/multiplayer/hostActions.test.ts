@@ -261,10 +261,10 @@ describe("startGame", () => {
     mocks.mockBuildDeck.mockResolvedValue(deck);
   });
 
-  function queueFullSuccess() {
+  function queueFullSuccess(settings = defaultSettings) {
     queueResults(
       // 1. rooms select (getRoomState)
-      { data: { host_id: hostId, status: "lobby", settings: defaultSettings }, error: null },
+      { data: { host_id: hostId, status: "lobby", settings }, error: null },
       // 2. room_players count (getRoomPlayerCount)
       { count: 2, error: null },
       // 3. room_players select (fetch players)
@@ -366,6 +366,23 @@ describe("startGame", () => {
     expect(bobRow?.["turn_position"]).toBe(1);
   });
 
+  it("overrides PRO starting tokens to five for the session and players", async () => {
+    authenticate(hostId);
+    queueFullSuccess({ ...defaultSettings, startingTokens: 1, variant: "pro" });
+
+    await startGame(roomId);
+
+    const sessionInsert = insertOperation(mocks.serviceOperations, "game_sessions");
+    expect((sessionInsert.payload as Record<string, unknown>)["settings"]).toMatchObject({
+      startingTokens: 5,
+      variant: "pro",
+    });
+
+    const playersInsert = insertOperation(mocks.serviceOperations, "game_players");
+    const rows = playersInsert.payload as Array<Record<string, unknown>>;
+    expect(rows.every((row) => row["tokens"] === 5)).toBe(true);
+  });
+
   it("sets rooms.status to playing", async () => {
     authenticate(hostId);
     queueFullSuccess();
@@ -375,15 +392,24 @@ describe("startGame", () => {
     expect(updateOperation(mocks.operations, "rooms").payload).toEqual({ status: "playing" });
   });
 
-  it("calls buildDeck with the room difficulty", async () => {
+  it("calls buildDeck with the room difficulty and house rules", async () => {
     authenticate(hostId);
     queueFullSuccess();
 
     await startGame(roomId);
 
     expect(mocks.mockBuildDeck).toHaveBeenCalledOnce();
-    const [, difficulty] = mocks.mockBuildDeck.mock.calls[0] as [unknown, string];
+    const [, difficulty, houseRules] = mocks.mockBuildDeck.mock.calls[0] as [
+      unknown,
+      string,
+      unknown,
+    ];
     expect(difficulty).toBe("easy");
+    expect(houseRules).toEqual({
+      genreLockId: null,
+      consoleLockFamily: null,
+      decadeStart: null,
+    });
   });
 
   it("rejects game start when fewer than two players are present", async () => {

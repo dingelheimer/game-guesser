@@ -5,11 +5,17 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "./actionHelpers";
-import type { LobbySettings } from "./lobby";
+import type { LobbySettings, HouseRuleParams } from "./lobby";
 import { LobbySettingsSchema } from "./lobby";
 import { getAuthenticatedUserId, getRoomPlayerCount } from "./actionHelpers";
 import { appError, fail, getFieldErrors, ok, type AppError, type Result } from "./actionResult";
-import { buildDeck, fisherYatesShuffle, type TimelineEntry, type TurnState } from "./deck";
+import {
+  buildDeck,
+  difficultyToMaxRank,
+  fisherYatesShuffle,
+  type TimelineEntry,
+  type TurnState,
+} from "./deck";
 import type { Json } from "@/types/supabase";
 
 const updateSettingsSchema = z.object({
@@ -188,10 +194,28 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
 
   const serviceClient = createServiceClient();
 
-  // Build shuffled deck of game IDs based on room difficulty setting.
+  // Extract house rule filter params from room settings.
+  const houseRules: HouseRuleParams = {
+    genreLockId: roomResult.data.settings.genreLockId,
+    consoleLockFamily: roomResult.data.settings.consoleLockFamily,
+    decadeStart: roomResult.data.settings.decadeStart,
+  };
+
+  // If speed round is enabled, override the turn timer for this game session only.
+  // The live rooms.settings row is NOT modified.
+  const baseSettings: LobbySettings = roomResult.data.settings.speedRound
+    ? { ...roomResult.data.settings, turnTimer: "10" }
+    : roomResult.data.settings;
+  const startingTokens = baseSettings.variant === "pro" ? 5 : baseSettings.startingTokens;
+  const effectiveSettings: LobbySettings =
+    startingTokens === baseSettings.startingTokens
+      ? baseSettings
+      : { ...baseSettings, startingTokens };
+
+  // Build shuffled deck of game IDs based on room difficulty + house rules.
   let deck: number[];
   try {
-    deck = await buildDeck(serviceClient, roomResult.data.settings.difficulty);
+    deck = await buildDeck(serviceClient, effectiveSettings.difficulty, houseRules);
   } catch {
     return fail(appError("INTERNAL_ERROR", "Failed to build the game deck. Please try again."));
   }
@@ -270,8 +294,8 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
     };
   }
 
-  // Compute phase deadline from turn timer setting.
-  const { turnTimer } = roomResult.data.settings;
+  // Compute phase deadline from effective turn timer (speed round may override it).
+  const { turnTimer } = effectiveSettings;
   const phaseDeadline =
     turnTimer !== "unlimited"
       ? new Date(Date.now() + parseInt(turnTimer, 10) * 1000).toISOString()
@@ -301,7 +325,7 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
       turn_number: 1,
       turn_order: turnOrder,
       active_player_id: firstActivePlayerId,
-      settings: roomResult.data.settings as unknown as Json,
+      settings: effectiveSettings as unknown as Json,
     })
     .select("id")
     .single();
@@ -322,7 +346,7 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
       game_session_id: gameSessionId,
       user_id: userId,
       display_name: player?.display_name ?? userId,
-      tokens: roomResult.data.settings.startingTokens,
+      tokens: startingTokens,
       score: 0,
       turn_position: index,
       timeline: timeline as unknown as Json,
@@ -444,4 +468,32 @@ export async function claimHost(
     case "unauthorized":
       return fail(appError("UNAUTHORIZED", "You must be signed in to claim host."));
   }
+}
+
+/**
+ * Estimate the number of eligible games for the given difficulty and house rules.
+ * Returns null when the user is not authenticated or the RPC call fails.
+ */
+export async function getDeckSize(
+  difficulty: LobbySettings["difficulty"],
+  houseRules: HouseRuleParams,
+): Promise<number | null> {
+  const supabase = await createClient();
+
+  const maxRank = difficultyToMaxRank(difficulty);
+  const rpcArgs: Record<string, unknown> = {};
+  if (maxRank !== null) rpcArgs["p_max_rank"] = maxRank;
+  if (houseRules.genreLockId != null) rpcArgs["p_genre_id"] = houseRules.genreLockId;
+  if (houseRules.consoleLockFamily != null)
+    rpcArgs["p_platform_family"] = houseRules.consoleLockFamily;
+  if (houseRules.decadeStart != null) rpcArgs["p_decade_start"] = houseRules.decadeStart;
+
+  const { data, error } = await supabase.rpc(
+    // @ts-expect-error estimate_deck_size not yet in generated types
+    "estimate_deck_size",
+    rpcArgs,
+  );
+
+  if (error !== null || typeof data !== "number") return null;
+  return data;
 }

@@ -4,6 +4,7 @@ import { checkPlatformGuess, type PlatformOption } from "@/lib/platformBonus";
 import type { TimelineItem } from "@/components/game/Timeline";
 import * as api from "@/lib/solo/api";
 import type { HiddenCardData, RevealedCardData } from "@/lib/solo/api";
+import type { HouseRuleParams, LobbySettings } from "@/lib/multiplayer/lobby";
 
 // ── Phase type ────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,9 @@ export interface SoloGameState {
 
   sessionId: string | null;
   difficulty: DifficultyTier | null;
+  variant: LobbySettings["variant"] | null;
+  /** Active house rules for the current or last game. */
+  houseRules: HouseRuleParams | null;
 
   /** The card the player is currently placing (hidden — screenshot only). */
   currentCard: HiddenCardData | null;
@@ -99,7 +103,11 @@ export interface SoloGameState {
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
-  startGame: (difficulty: DifficultyTier) => Promise<void>;
+  startGame: (
+    difficulty: DifficultyTier,
+    houseRules?: HouseRuleParams,
+    variant?: LobbySettings["variant"],
+  ) => Promise<void>;
   placeCard: (position: number) => Promise<void>;
   moveCardToCorrectPosition: () => void;
   revealMovedCard: () => void;
@@ -116,6 +124,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
 
   sessionId: null,
   difficulty: null,
+  variant: null,
+  houseRules: null,
 
   currentCard: null,
   nextCard: null,
@@ -138,14 +148,20 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   correctPlatformIds: [],
   platformBonusResult: null,
 
-  async startGame(difficulty: DifficultyTier) {
+  async startGame(
+    difficulty: DifficultyTier,
+    houseRules?: HouseRuleParams,
+    variant: LobbySettings["variant"] = "standard",
+  ) {
     set({ phase: "starting", error: null });
     try {
-      const res = await api.startGame(difficulty);
+      const res = await api.startGame(difficulty, houseRules);
       set({
         phase: "placing",
         sessionId: res.session_id,
         difficulty,
+        variant,
+        houseRules: houseRules ?? null,
         currentCard: res.current_card,
         nextCard: null,
         revealedCard: null,
@@ -290,9 +306,23 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   },
 
   advanceTurn() {
-    const { lastPlacementCorrect, nextCard } = get();
+    const { availablePlatforms, lastPlacementCorrect, nextCard, platformBonusResult, variant } =
+      get();
 
-    if (lastPlacementCorrect === false || nextCard === null) {
+    if (
+      variant === "pro" &&
+      lastPlacementCorrect === true &&
+      availablePlatforms.length > 0 &&
+      platformBonusResult === null
+    ) {
+      return;
+    }
+
+    if (
+      lastPlacementCorrect === false ||
+      nextCard === null ||
+      (variant === "pro" && platformBonusResult === "incorrect")
+    ) {
       set({ phase: "game_over" });
       return;
     }
@@ -318,6 +348,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       error: null,
       sessionId: null,
       difficulty: null,
+      variant: null,
       currentCard: null,
       nextCard: null,
       revealedCard: null,

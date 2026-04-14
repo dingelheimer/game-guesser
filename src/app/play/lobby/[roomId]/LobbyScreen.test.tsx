@@ -79,6 +79,13 @@ vi.mock("@/lib/multiplayer/actions", () => ({
   leaveRoom: vi.fn(),
 }));
 
+vi.mock("@/lib/multiplayer/hostActions", () => ({
+  claimHost: vi.fn(),
+  getDeckSize: vi.fn(async () => null),
+  startGame: vi.fn(),
+  updateSettings: vi.fn(),
+}));
+
 import { leaveRoom } from "@/lib/multiplayer/actions";
 
 const initialRoom = {

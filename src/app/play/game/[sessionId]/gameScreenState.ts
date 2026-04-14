@@ -69,6 +69,7 @@ export const TurnRevealedPayloadSchema = z.object({
   isCorrect: z.boolean(),
   platformBonusDeadline: z.iso.datetime({ offset: true }).optional(),
   platformOptions: z.array(PlatformOptionSchema).optional(),
+  platformBonusPlayerId: z.uuid().optional(),
   position: z.number().int(),
   scores: z.record(z.string(), z.number().int()),
   timelines: z.record(z.string(), z.array(BroadcastTimelineEntrySchema)),
@@ -81,7 +82,10 @@ export const TurnRevealedPayloadSchema = z.object({
 export const PlatformBonusResultPayloadSchema = z.object({
   correct: z.boolean(),
   correctPlatforms: z.array(PlatformOptionSchema),
+  scores: z.record(z.string(), z.number().int()),
+  timelines: z.record(z.string(), z.array(BroadcastTimelineEntrySchema)),
   tokenChange: z.number().int(),
+  tokens: z.record(z.string(), z.number().int()),
 });
 
 /**

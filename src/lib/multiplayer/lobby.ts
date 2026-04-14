@@ -81,6 +81,16 @@ export type LobbyPlayerRole = z.infer<typeof LobbyPlayerRoleSchema>;
 /** Multiplayer lobby settings value derived from {@link LobbySettingsSchema}. */
 export type LobbySettings = z.infer<typeof LobbySettingsSchema>;
 
+/** Deck-filtering house rule parameters passed to the build_deck RPC. */
+export const HouseRuleParamsSchema = LobbySettingsSchema.pick({
+  genreLockId: true,
+  consoleLockFamily: true,
+  decadeStart: true,
+});
+
+/** Deck-filtering house rule parameters derived from {@link HouseRuleParamsSchema}. */
+export type HouseRuleParams = z.infer<typeof HouseRuleParamsSchema>;
+
 /** Multiplayer display name value derived from {@link DisplayNameSchema}. */
 export type DisplayName = z.infer<typeof DisplayNameSchema>;
 
