@@ -232,6 +232,9 @@ describe("getMultiplayerGamePageData", () => {
         speedRound: false,
       },
       status: "active",
+      teamScore: null,
+      teamTimeline: null,
+      teamTokens: null,
       turnNumber: 4,
       winner: null,
     });

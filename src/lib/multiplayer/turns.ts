@@ -80,6 +80,36 @@ export type ExpertVerificationResultPayload = Readonly<{
 }>;
 
 /**
+ * Broadcast payload emitted when a team member updates their vote position.
+ */
+export type TeamVoteUpdatedPayload = Readonly<{
+  votes: Readonly<Record<string, Readonly<{ position: number; locked: boolean }>>>;
+}>;
+
+/**
+ * Broadcast payload emitted when all connected players have locked their votes
+ * and the team placement has been resolved.
+ */
+export type TeamVoteResolvedPayload = Readonly<{
+  card: RevealedTurnCard;
+  correct: boolean;
+  position: number;
+  teamScore: number;
+  teamTimeline: readonly TimelineEntry[];
+  teamTokens: number;
+  voterBreakdown: Readonly<Record<string, number>>;
+}>;
+
+/**
+ * Broadcast payload emitted when a TEAMWORK game ends.
+ */
+export type TeamGameOverPayload = Readonly<{
+  finalTeamScore: number;
+  finalTeamTimeline: readonly TimelineEntry[];
+  teamWin: boolean;
+}>;
+
+/**
  * Reasons a multiplayer turn can be skipped.
  */
 export type TurnSkippedReason = "disconnect_timeout" | "turn_timer_expired";

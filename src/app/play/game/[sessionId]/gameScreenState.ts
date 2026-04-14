@@ -120,6 +120,38 @@ export const GameOverPayloadSchema = z.object({
   winnerId: z.uuid(),
 });
 
+/**
+ * Broadcast payload schema for the team_vote_updated event.
+ */
+export const TeamVoteUpdatedPayloadSchema = z.object({
+  votes: z.record(
+    z.string(),
+    z.object({ position: z.number().int(), locked: z.boolean() }),
+  ),
+});
+
+/**
+ * Broadcast payload schema for the team_vote_resolved event.
+ */
+export const TeamVoteResolvedPayloadSchema = z.object({
+  card: TurnRevealedCardSchema,
+  correct: z.boolean(),
+  position: z.number().int(),
+  teamScore: z.number().int(),
+  teamTimeline: z.array(BroadcastTimelineEntrySchema),
+  teamTokens: z.number().int(),
+  voterBreakdown: z.record(z.string(), z.number().int()),
+});
+
+/**
+ * Broadcast payload schema for the team_game_over event.
+ */
+export const TeamGameOverPayloadSchema = z.object({
+  finalTeamScore: z.number().int(),
+  finalTeamTimeline: z.array(BroadcastTimelineEntrySchema),
+  teamWin: z.boolean(),
+});
+
 export type BroadcastTimelineEntry = z.infer<typeof BroadcastTimelineEntrySchema>;
 export type TurnRevealedCard = z.infer<typeof TurnRevealedCardSchema>;
 

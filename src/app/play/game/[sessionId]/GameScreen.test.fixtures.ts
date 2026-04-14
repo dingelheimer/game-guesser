@@ -79,5 +79,8 @@ export const initialGameFixture: MultiplayerGamePageData = {
   },
   status: "active",
   turnNumber: 1,
+  teamScore: null,
+  teamTimeline: null,
+  teamTokens: null,
   winner: null,
 };
