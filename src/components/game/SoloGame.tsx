@@ -37,7 +37,9 @@ type IncorrectPlacementStage = "idle" | "indicator" | "sliding" | "revealing" | 
 export function SoloGame({ username }: { username: string | null }) {
   const phase = useSoloGameStore((s) => s.phase);
   const difficulty = useSoloGameStore((s) => s.difficulty);
+  const variant = useSoloGameStore((s) => s.variant);
   const sessionId = useSoloGameStore((s) => s.sessionId);
+  const houseRules = useSoloGameStore((s) => s.houseRules);
   const currentCard = useSoloGameStore((s) => s.currentCard);
   const revealedCard = useSoloGameStore((s) => s.revealedCard);
   const timelineItems = useSoloGameStore((s) => s.timelineItems);
@@ -52,6 +54,7 @@ export function SoloGame({ username }: { username: string | null }) {
   const availablePlatforms = useSoloGameStore((s) => s.availablePlatforms);
   const correctPlatformIds = useSoloGameStore((s) => s.correctPlatformIds);
   const platformBonusResult = useSoloGameStore((s) => s.platformBonusResult);
+  const expertVerificationResult = useSoloGameStore((s) => s.expertVerificationResult);
   const error = useSoloGameStore((s) => s.error);
 
   const placeCard = useSoloGameStore((s) => s.placeCard);
@@ -60,10 +63,14 @@ export function SoloGame({ username }: { username: string | null }) {
   const advanceTurn = useSoloGameStore((s) => s.advanceTurn);
   const resetGame = useSoloGameStore((s) => s.resetGame);
   const submitPlatformGuess = useSoloGameStore((s) => s.submitPlatformGuess);
+  const submitExpertVerification = useSoloGameStore((s) => s.submitExpertVerification);
+  const gameMode = useSoloGameStore((s) => s.gameMode);
+  const teamTokens = useSoloGameStore((s) => s.teamTokens);
 
   const reduceMotion = useReducedMotion();
   const [incorrectPlacementStage, setIncorrectPlacementStage] =
     useState<IncorrectPlacementStage>("idle");
+  const [expertYearInput, setExpertYearInput] = useState("");
 
   // Track which sessionId we've already submitted a score for (prevents double-submit)
   const submittedSessionRef = useRef<string | null>(null);
@@ -73,12 +80,22 @@ export function SoloGame({ username }: { username: string | null }) {
   const isSubmitting = phase === "submitting";
   const isPlacing = phase === "placing";
   const isRevealing = phase === "revealing";
+  const isProVariant = variant === "pro";
+  const isExpertVariant = variant === "expert";
+  const isTeamworkMode = gameMode === "teamwork";
   const isIncorrectReveal = isRevealing && lastPlacementCorrect === false;
   const isPlatformBonusPending =
     isRevealing &&
     lastPlacementCorrect === true &&
     availablePlatforms.length > 0 &&
-    platformBonusResult === null;
+    platformBonusResult === null &&
+    !isExpertVariant;
+  const isExpertVerificationPending =
+    isRevealing &&
+    lastPlacementCorrect === true &&
+    availablePlatforms.length > 0 &&
+    expertVerificationResult === null &&
+    isExpertVariant;
 
   const pendingTimelineItem =
     isPlacing && currentCard !== null ? hiddenToTimelineItem(currentCard) : null;
@@ -118,6 +135,13 @@ export function SoloGame({ username }: { username: string | null }) {
     if (phase === "starting") {
       setScoreStatus("idle");
       setScoreError(undefined);
+    }
+  }, [phase]);
+
+  // Reset expert year input when a new turn starts
+  useEffect(() => {
+    if (phase === "placing") {
+      setExpertYearInput("");
     }
   }, [phase]);
 
@@ -179,7 +203,9 @@ export function SoloGame({ username }: { username: string | null }) {
         scoreError={scoreError}
         onPlayAgain={() => {
           if (difficulty !== null) {
-            void useSoloGameStore.getState().startGame(difficulty);
+            void useSoloGameStore
+              .getState()
+              .startGame(difficulty, houseRules ?? undefined, variant ?? "standard");
           } else {
             resetGame();
           }
@@ -193,9 +219,10 @@ export function SoloGame({ username }: { username: string | null }) {
   const cardKey = isRevealing
     ? `revealed-${gameIdOrNone(revealedCard?.game_id)}`
     : `hidden-${gameIdOrNone(currentCard?.game_id)}`;
-  const revealedPlatform = isPlatformBonusPending
-    ? ""
-    : (revealedCard?.platform_names[0] ?? "Unknown");
+  const revealedPlatform =
+    isPlatformBonusPending || isExpertVerificationPending
+      ? ""
+      : (revealedCard?.platform_names[0] ?? "Unknown");
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col">
@@ -208,6 +235,18 @@ export function SoloGame({ username }: { username: string | null }) {
           difficulty={difficulty}
           bonusPointsEarned={bonusPointsEarned}
         />
+      )}
+
+      {/* TEAMWORK lives counter */}
+      {isTeamworkMode && teamTokens !== null && (
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-500/10 border-b border-rose-400/20 text-sm text-rose-200">
+          <span className="font-semibold">Lives:</span>
+          <span className="tracking-wide">
+            {"❤️".repeat(Math.max(0, teamTokens))}
+            {"🖤".repeat(Math.max(0, 5 - teamTokens))}
+          </span>
+          <span className="text-rose-300/70 ml-1">({teamTokens} remaining)</span>
+        </div>
       )}
 
       {/* Error banner */}
@@ -277,20 +316,93 @@ export function SoloGame({ username }: { username: string | null }) {
               <PlacementResult correct={lastPlacementCorrect} />
 
               {lastPlacementCorrect && availablePlatforms.length > 0 && (
-                <PlatformBonusInput
-                  platforms={availablePlatforms}
-                  correctPlatformIds={correctPlatformIds}
-                  result={platformBonusResult}
-                  onSubmit={submitPlatformGuess}
-                />
+                <div className="w-full space-y-2">
+                  {isProVariant ? (
+                    <div className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-100">
+                      <strong>PRO Required:</strong> answer the platform bonus correctly to keep
+                      this card.
+                    </div>
+                  ) : null}
+                  {isExpertVariant ? (
+                    <div className="space-y-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-amber-300">Expert Verification</p>
+                        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-amber-100 uppercase">
+                          EXPERT Required
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-200">
+                        Enter the exact release year and all platforms to keep this card.
+                      </p>
+                      {expertVerificationResult !== null ? (
+                        <p
+                          className={cn(
+                            "text-sm font-medium",
+                            expertVerificationResult === "correct"
+                              ? "text-emerald-300"
+                              : "text-rose-300",
+                          )}
+                        >
+                          {expertVerificationResult === "correct"
+                            ? "✓ Verified — card kept!"
+                            : "✗ Failed — card lost."}
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          <div>
+                            <label
+                              htmlFor="solo-expert-year"
+                              className="mb-1 block text-xs font-medium text-slate-300"
+                            >
+                              Release year
+                            </label>
+                            <input
+                              id="solo-expert-year"
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="e.g. 2001"
+                              value={expertYearInput}
+                              onChange={(e) => { setExpertYearInput(e.target.value); }}
+                              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400/60"
+                            />
+                          </div>
+                          <PlatformBonusInput
+                            platforms={availablePlatforms}
+                            correctPlatformIds={correctPlatformIds}
+                            result={null}
+                            onSubmit={(selectedPlatformIds) => {
+                              const year = parseInt(expertYearInput, 10);
+                              if (!isNaN(year)) {
+                                submitExpertVerification(year, selectedPlatformIds);
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <PlatformBonusInput
+                      platforms={availablePlatforms}
+                      correctPlatformIds={correctPlatformIds}
+                      result={platformBonusResult}
+                      onSubmit={submitPlatformGuess}
+                    />
+                  )}
+                </div>
               )}
 
               <Button
                 onClick={advanceTurn}
                 className="w-full max-w-sm"
-                aria-label={!lastPlacementCorrect ? "See game over screen" : "Next turn"}
+                aria-label={
+                  !lastPlacementCorrect && !isTeamworkMode ? "See game over screen" : "Next turn"
+                }
+                disabled={
+                  (isProVariant && isPlatformBonusPending) ||
+                  (isExpertVariant && isExpertVerificationPending)
+                }
               >
-                {!lastPlacementCorrect ? "See Result" : "Next Turn →"}
+                {!lastPlacementCorrect && !isTeamworkMode ? "See Result" : "Next Turn →"}
               </Button>
             </motion.div>
           )}

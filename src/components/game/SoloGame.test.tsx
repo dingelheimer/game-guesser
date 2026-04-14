@@ -139,6 +139,9 @@ function createState(overrides: Partial<SoloGameState> = {}): SoloGameState {
     error: null,
     sessionId: "session-1",
     difficulty: "easy",
+    variant: "standard",
+    gameMode: "competitive",
+    houseRules: null,
     currentCard: mockCurrentCard,
     nextCard: null,
     revealedCard: mockRevealedCard,
@@ -156,11 +159,15 @@ function createState(overrides: Partial<SoloGameState> = {}): SoloGameState {
     availablePlatforms: [],
     correctPlatformIds: [],
     platformBonusResult: null,
+    expertVerificationResult: null,
+    teamTokens: null,
+    teamWinCondition: null,
     startGame: vi.fn(async () => {}),
     placeCard: vi.fn(async () => {}),
     moveCardToCorrectPosition: vi.fn(),
     revealMovedCard: vi.fn(),
     submitPlatformGuess: vi.fn(),
+    submitExpertVerification: vi.fn(),
     advanceTurn: vi.fn(),
     resetGame: vi.fn(),
     ...overrides,
@@ -266,6 +273,26 @@ describe("SoloGame", () => {
     expect(screen.getByText("✓ Correct!")).toBeInTheDocument();
     expect(screen.getByTestId("platform-bonus-input")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next turn" })).toBeInTheDocument();
+  });
+
+  it("marks the platform bonus as required in PRO and disables next turn while pending", () => {
+    mockState = createState({
+      phase: "revealing",
+      variant: "pro",
+      lastPlacementCorrect: true,
+      currentCard: null,
+      availablePlatforms: [
+        { id: 1, name: "PC" },
+        { id: 2, name: "Xbox 360" },
+      ],
+      correctPlatformIds: [1],
+      platformBonusResult: null,
+    });
+
+    render(<SoloGame username={null} />);
+
+    expect(screen.getByText(/PRO Required:/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next turn" })).toBeDisabled();
   });
 
   it("hides the revealed platform while the platform bonus is pending", () => {

@@ -79,10 +79,18 @@ vi.mock("@/lib/multiplayer/actions", () => ({
   leaveRoom: vi.fn(),
 }));
 
+vi.mock("@/lib/multiplayer/hostActions", () => ({
+  claimHost: vi.fn(),
+  getDeckSize: vi.fn(async () => null),
+  startGame: vi.fn(),
+  updateSettings: vi.fn(),
+}));
+
 import { leaveRoom } from "@/lib/multiplayer/actions";
 
 const initialRoom = {
   currentUserId: "11111111-1111-4111-8111-111111111111",
+  genres: [],
   hostId: "11111111-1111-4111-8111-111111111111",
   maxPlayers: 10,
   players: [
@@ -107,7 +115,12 @@ const initialRoom = {
     tokensEnabled: true,
     startingTokens: 2,
     winCondition: 10,
+    gameMode: "competitive",
     variant: "standard",
+    genreLockId: null,
+    consoleLockFamily: null,
+    decadeStart: null,
+    speedRound: false,
   },
 } as const;
 

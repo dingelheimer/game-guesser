@@ -674,7 +674,24 @@ describe("GameScreen", () => {
         bonus: {
           correct: true,
           correctPlatforms: [{ id: 1, name: "PC" }],
+          scores: {
+            "11111111-1111-4111-8111-111111111111": 1,
+            "22222222-2222-4222-8222-222222222222": 0,
+          },
+          timelines: {
+            "11111111-1111-4111-8111-111111111111": [
+              { gameId: 10, name: "Half-Life", releaseYear: 1998 },
+              { gameId: 30, name: "Chrono Trigger", releaseYear: 1995 },
+            ],
+            "22222222-2222-4222-8222-222222222222": [
+              { gameId: 20, name: "Portal", releaseYear: 2007 },
+            ],
+          },
           tokenChange: 1,
+          tokens: {
+            "11111111-1111-4111-8111-111111111111": 3,
+            "22222222-2222-4222-8222-222222222222": 2,
+          },
         },
         followUp: {
           type: "next_turn",
@@ -737,8 +754,121 @@ describe("GameScreen", () => {
       payload: {
         correct: true,
         correctPlatforms: [{ id: 1, name: "PC" }],
+        scores: {
+          "11111111-1111-4111-8111-111111111111": 1,
+          "22222222-2222-4222-8222-222222222222": 0,
+        },
+        timelines: {
+          "11111111-1111-4111-8111-111111111111": [
+            { gameId: 10, name: "Half-Life", releaseYear: 1998 },
+            { gameId: 30, name: "Chrono Trigger", releaseYear: 1995 },
+          ],
+          "22222222-2222-4222-8222-222222222222": [
+            { gameId: 20, name: "Portal", releaseYear: 2007 },
+          ],
+        },
         tokenChange: 1,
+        tokens: {
+          "11111111-1111-4111-8111-111111111111": 3,
+          "22222222-2222-4222-8222-222222222222": 2,
+        },
       },
     });
+  });
+
+  it("lets the PRO challenger answer the platform bonus after stealing the card", async () => {
+    const user = userEvent.setup();
+    mocks.submitPlatformBonusMock.mockResolvedValue({
+      success: true,
+      data: {
+        bonus: {
+          correct: true,
+          correctPlatforms: [{ id: 1, name: "PC" }],
+          scores: {
+            "11111111-1111-4111-8111-111111111111": 0,
+            "22222222-2222-4222-8222-222222222222": 1,
+          },
+          timelines: {
+            "11111111-1111-4111-8111-111111111111": [
+              { gameId: 10, name: "Half-Life", releaseYear: 1998 },
+            ],
+            "22222222-2222-4222-8222-222222222222": [
+              { gameId: 30, name: "Chrono Trigger", releaseYear: 1995 },
+              { gameId: 20, name: "Portal", releaseYear: 2007 },
+            ],
+          },
+          tokenChange: 0,
+          tokens: {
+            "11111111-1111-4111-8111-111111111111": 2,
+            "22222222-2222-4222-8222-222222222222": 1,
+          },
+        },
+        followUp: {
+          type: "next_turn",
+          nextTurn: {
+            activePlayerId: "22222222-2222-4222-8222-222222222222",
+            deadline: "2099-04-12T13:00:00.000Z",
+            screenshot: { screenshotImageId: "shot-931" },
+            turnNumber: 2,
+          },
+        },
+      },
+    });
+
+    render(
+      <GameScreen
+        initialGame={{
+          ...initialGame,
+          currentUserId: "22222222-2222-4222-8222-222222222222",
+          settings: { ...initialGame.settings, variant: "pro" },
+        }}
+      />,
+    );
+
+    mocks.channelHandlers.turn_revealed?.({
+      payload: {
+        card: {
+          gameId: 30,
+          name: "Chrono Trigger",
+          releaseYear: 1995,
+          platform: "SNES",
+          coverImageId: "cover-30",
+          screenshotImageId: "shot-930",
+        },
+        challengerId: "22222222-2222-4222-8222-222222222222",
+        challengeResult: "challenger_wins",
+        isCorrect: false,
+        platformBonusDeadline: "2099-04-12T12:00:15.000Z",
+        platformBonusPlayerId: "22222222-2222-4222-8222-222222222222",
+        platformOptions: [
+          { id: 1, name: "PC" },
+          { id: 2, name: "PS4" },
+        ],
+        position: 1,
+        scores: {
+          "11111111-1111-4111-8111-111111111111": 0,
+          "22222222-2222-4222-8222-222222222222": 1,
+        },
+        tokens: {
+          "11111111-1111-4111-8111-111111111111": 2,
+          "22222222-2222-4222-8222-222222222222": 1,
+        },
+        timelines: {
+          "11111111-1111-4111-8111-111111111111": [
+            { gameId: 10, name: "Half-Life", releaseYear: 1998 },
+          ],
+          "22222222-2222-4222-8222-222222222222": [
+            { gameId: 30, name: "Chrono Trigger", releaseYear: 1995 },
+            { gameId: 20, name: "Portal", releaseYear: 2007 },
+          ],
+        },
+      },
+    });
+
+    expect(await screen.findByText("PRO Required")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "PC" }));
+    await user.click(screen.getByRole("button", { name: /confirm platform selection/i }));
+
+    expect(mocks.submitPlatformBonusMock).toHaveBeenCalledWith(initialGame.sessionId, [1]);
   });
 });

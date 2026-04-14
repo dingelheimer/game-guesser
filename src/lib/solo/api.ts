@@ -5,6 +5,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { DifficultyTier } from "@/lib/difficulty";
+import type { HouseRuleParams } from "@/lib/multiplayer/lobby";
 
 // ── Response types (mirrors Edge Function output shapes) ─────────────────────
 
@@ -64,8 +65,12 @@ async function invokeFunction<T>(name: string, body: Record<string, unknown>): P
 
 // ── API functions ─────────────────────────────────────────────────────────────
 
-export function startGame(difficulty: DifficultyTier): Promise<StartGameResponse> {
-  return invokeFunction<StartGameResponse>("solo-start", { difficulty });
+export function startGame(difficulty: DifficultyTier, houseRules?: HouseRuleParams): Promise<StartGameResponse> {
+  const body: Record<string, unknown> = { difficulty };
+  if (houseRules?.genreLockId != null) body["genre_id"] = houseRules.genreLockId;
+  if (houseRules?.consoleLockFamily != null) body["platform_family"] = houseRules.consoleLockFamily;
+  if (houseRules?.decadeStart != null) body["decade_start"] = houseRules.decadeStart;
+  return invokeFunction<StartGameResponse>("solo-start", body);
 }
 
 export function submitTurn(sessionId: string, position: number): Promise<TurnResponse> {
