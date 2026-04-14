@@ -5,9 +5,11 @@ import { REALTIME_SUBSCRIBE_STATES, type RealtimeChannel } from "@supabase/realt
 import { Clock3, Signal, Trophy } from "lucide-react";
 import {
   proceedFromChallenge,
+  proceedFromExpertVerification,
   proceedFromPlatformBonus,
   skipTurn,
   submitChallenge,
+  submitExpertVerification,
   submitPlacement,
   submitPlatformBonus,
   type TurnFollowUpResult,
@@ -16,6 +18,7 @@ import { LobbyPresenceSchema, type LobbyPresence } from "@/lib/multiplayer/lobby
 import type { MultiplayerGamePageData } from "@/lib/multiplayer/gamePage";
 import { buildConnectedPresence, buildSeedPresence } from "@/lib/multiplayer/presence";
 import type {
+  ExpertVerificationResultPayload,
   GameOverPayload,
   PlatformBonusResultPayload,
   TurnRevealedPayload,
@@ -30,6 +33,7 @@ import {
   buildTimelineCardFromEntry,
   buildHiddenTurnCard,
   ChallengeMadePayloadSchema,
+  ExpertVerificationResultPayloadSchema,
   formatCountdown,
   formatPhaseLabel,
   GameOverPayloadSchema,
@@ -47,6 +51,7 @@ import {
 } from "./gameScreenState";
 import { MultiplayerGameOverView } from "./MultiplayerGameOverView";
 import { MultiplayerChallengePanel } from "./MultiplayerChallengePanel";
+import { MultiplayerExpertVerificationPanel } from "./MultiplayerExpertVerificationPanel";
 import { MultiplayerPlatformBonusPanel } from "./MultiplayerPlatformBonusPanel";
 
 const FAILED_PLACEMENT_PREVIEW_MS = 900;
@@ -60,6 +65,8 @@ type PlacementFeedback = Readonly<{
 }> | null;
 
 type PlatformBonusState = PlatformBonusResultPayload | null;
+
+type ExpertVerificationState = ExpertVerificationResultPayload | null;
 
 type DisconnectGraceState = Readonly<{
   deadline: string;
@@ -85,6 +92,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const progressionTimeoutRef = useRef<number | null>(null);
   const challengeRequestKeyRef = useRef<string | null>(null);
   const platformBonusRequestKeyRef = useRef<string | null>(null);
+  const expertVerificationRequestKeyRef = useRef<string | null>(null);
   const skipRequestKeyRef = useRef<string | null>(null);
   const [game, setGame] = useState(initialGame);
   const [presence, setPresence] = useState<LobbyPresence[]>(() =>
@@ -99,11 +107,14 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const [disconnectCountdown, setDisconnectCountdown] = useState<number | null>(null);
   const [disconnectGrace, setDisconnectGrace] = useState<DisconnectGraceState>(null);
   const [isSubmittingChallenge, setIsSubmittingChallenge] = useState(false);
+  const [isSubmittingExpertVerification, setIsSubmittingExpertVerification] = useState(false);
   const [isSubmittingPlatformBonus, setIsSubmittingPlatformBonus] = useState(false);
   const [isSubmittingPlacement, setIsSubmittingPlacement] = useState(false);
   const [isSkippingTurn, setIsSkippingTurn] = useState(false);
   const [placementFeedback, setPlacementFeedback] = useState<PlacementFeedback>(null);
   const [platformBonusResult, setPlatformBonusResult] = useState<PlatformBonusState>(null);
+  const [expertVerificationResult, setExpertVerificationResult] =
+    useState<ExpertVerificationState>(null);
 
   playersRef.current = game.players;
 
@@ -122,7 +133,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     [game.players, platformBonusPlayerId],
   );
   const phasePlayer =
-    game.currentTurn.phase === "platform_bonus"
+    game.currentTurn.phase === "platform_bonus" || game.currentTurn.phase === "expert_verification"
       ? (platformBonusPlayer ?? activePlayer)
       : activePlayer;
   const placingTurnKey =
@@ -197,8 +208,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setGame((current) => ({
         ...current,
@@ -234,10 +247,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setIsSkippingTurn(false);
       setIsSubmittingPlacement(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setWinner(null);
       setGame((current) => ({
@@ -263,8 +278,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     clearProgressionTimeout();
     setChallengeNotice(null);
     setIsSubmittingChallenge(false);
+    setIsSubmittingExpertVerification(false);
     setIsSubmittingPlatformBonus(false);
     setPlacementFeedback(null);
+    setExpertVerificationResult(null);
     setPlatformBonusResult(null);
     setGame((current) => ({
       ...current,
@@ -293,7 +310,9 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(`${displayName} challenged this placement.`);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setGame((current) => ({
         ...current,
@@ -315,8 +334,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       clearDisconnectGrace();
       setActionError(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setIsSubmittingPlacement(false);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
 
       let activePlayerId = "";
@@ -346,10 +367,13 @@ export function GameScreen({ initialGame }: GameScreenProps) {
             title: payload.card.name,
           },
           phase:
-            payload.platformOptions === undefined
-              ? ("revealing" as const)
-              : ("platform_bonus" as const),
-          phaseDeadline: payload.platformBonusDeadline ?? null,
+            payload.expertVerificationDeadline !== undefined
+              ? ("expert_verification" as const)
+              : payload.platformOptions !== undefined
+                ? ("platform_bonus" as const)
+                : ("revealing" as const),
+          phaseDeadline:
+            payload.expertVerificationDeadline ?? payload.platformBonusDeadline ?? null,
           platformBonusPlayerId: payload.platformBonusPlayerId ?? null,
           platformOptions: payload.platformOptions ?? current.currentTurn.platformOptions,
         };
@@ -417,9 +441,44 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(payload);
+      setGame((current) => ({
+        ...current,
+        currentTurn: {
+          ...current.currentTurn,
+          phase: "complete",
+          phaseDeadline: null,
+          platformBonusPlayerId: null,
+        },
+        players: reconcilePlayers(
+          current.players,
+          payload.timelines,
+          payload.scores,
+          payload.tokens,
+          null,
+        ),
+      }));
+    },
+    [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
+  );
+
+  const applyExpertVerificationResult = useCallback(
+    (payload: ExpertVerificationResultPayload) => {
+      clearFailedPlacementTimeout();
+      clearDisconnectGrace();
+      clearProgressionTimeout();
+      setActionError(null);
+      setChallengeNotice(null);
+      setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
+      setIsSubmittingPlatformBonus(false);
+      setPlacementFeedback(null);
+      setPlatformBonusResult(null);
+      setExpertVerificationResult(payload);
       setGame((current) => ({
         ...current,
         currentTurn: {
@@ -448,10 +507,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setActionError(null);
       setChallengeNotice(null);
       setIsSubmittingChallenge(false);
+      setIsSubmittingExpertVerification(false);
       setIsSubmittingPlatformBonus(false);
       setIsSkippingTurn(false);
       setIsSubmittingPlacement(false);
       setPlacementFeedback(null);
+      setExpertVerificationResult(null);
       setPlatformBonusResult(null);
       setWinner({ displayName: payload.displayName, userId: payload.winnerId });
       setGame((current) => ({
@@ -824,6 +885,86 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     secondsRemaining,
   ]);
 
+  const handleProceedFromExpertVerification = useCallback(async () => {
+    setActionError(null);
+
+    const result = await proceedFromExpertVerification(game.sessionId);
+    if (!result.success) {
+      if (result.error.code !== "CONFLICT") {
+        setActionError(result.error.message);
+      }
+      return;
+    }
+
+    applyExpertVerificationResult(result.data.verification);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "expert_verification_result",
+      payload: result.data.verification,
+    });
+    scheduleFollowUp(result.data.followUp);
+  }, [applyExpertVerificationResult, game.sessionId, scheduleFollowUp]);
+
+  const handleSubmitExpertVerification = useCallback(
+    async (yearGuess: number, selectedPlatformIds: number[]) => {
+      if (
+        currentPlayer === undefined ||
+        currentPlayer.userId !== platformBonusPlayerId ||
+        game.currentTurn.phase !== "expert_verification"
+      ) {
+        return;
+      }
+
+      setIsSubmittingExpertVerification(true);
+      setActionError(null);
+
+      const result = await submitExpertVerification(game.sessionId, yearGuess, selectedPlatformIds);
+      if (!result.success) {
+        setIsSubmittingExpertVerification(false);
+        if (result.error.code !== "CONFLICT") {
+          setActionError(result.error.message);
+        }
+        return;
+      }
+
+      applyExpertVerificationResult(result.data.verification);
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "expert_verification_result",
+        payload: result.data.verification,
+      });
+      scheduleFollowUp(result.data.followUp);
+    },
+    [
+      applyExpertVerificationResult,
+      currentPlayer,
+      game.currentTurn.phase,
+      game.sessionId,
+      platformBonusPlayerId,
+      scheduleFollowUp,
+    ],
+  );
+
+  useEffect(() => {
+    if (game.currentTurn.phase !== "expert_verification" || secondsRemaining !== 0) {
+      return;
+    }
+
+    const requestKey = `${String(game.turnNumber)}:${game.currentTurn.activePlayerId}:expert_verification`;
+    if (expertVerificationRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    expertVerificationRequestKeyRef.current = requestKey;
+    void handleProceedFromExpertVerification();
+  }, [
+    game.currentTurn.activePlayerId,
+    game.currentTurn.phase,
+    game.turnNumber,
+    handleProceedFromExpertVerification,
+    secondsRemaining,
+  ]);
+
   useEffect(() => {
     if (currentPlayer === undefined) {
       throw new Error("Current player was missing from the multiplayer game payload.");
@@ -928,6 +1069,9 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           applyTurnRevealed({
             card: parsed.data.card,
             isCorrect: parsed.data.isCorrect,
+            ...(parsed.data.expertVerificationDeadline === undefined
+              ? {}
+              : { expertVerificationDeadline: parsed.data.expertVerificationDeadline }),
             ...(parsed.data.platformBonusDeadline === undefined
               ? {}
               : { platformBonusDeadline: parsed.data.platformBonusDeadline }),
@@ -954,6 +1098,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         const parsed = PlatformBonusResultPayloadSchema.safeParse(message.payload);
         if (parsed.success) {
           applyPlatformBonusResult(parsed.data);
+        }
+      })
+      .on("broadcast", { event: "expert_verification_result" }, (message) => {
+        const parsed = ExpertVerificationResultPayloadSchema.safeParse(message.payload);
+        if (parsed.success) {
+          applyExpertVerificationResult(parsed.data);
         }
       })
       .on("broadcast", { event: "turn_skipped" }, (message) => {
@@ -994,6 +1144,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   }, [
     applyGameOver,
     applyChallengeMade,
+    applyExpertVerificationResult,
     applyPlatformBonusResult,
     applyPlacementMade,
     applyTurnRevealed,
@@ -1101,6 +1252,8 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   }
 
   const isChallengeWindow = game.currentTurn.phase === "challenge_window";
+  const isExpertVerificationVisible =
+    game.currentTurn.phase === "expert_verification" || expertVerificationResult !== null;
   const isPlatformBonusVisible =
     game.currentTurn.phase === "platform_bonus" || platformBonusResult !== null;
   const canChallenge =
@@ -1201,6 +1354,21 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           options={game.currentTurn.platformOptions}
           result={platformBonusResult}
           secondsRemaining={game.currentTurn.phase === "platform_bonus" ? secondsRemaining : null}
+        />
+
+        <MultiplayerExpertVerificationPanel
+          activePlayerName={platformBonusPlayer?.displayName ?? activePlayer?.displayName ?? null}
+          isCurrentUserActive={currentPlayer.userId === platformBonusPlayerId}
+          isSubmittingExpertVerification={isSubmittingExpertVerification}
+          isVisible={isExpertVerificationVisible}
+          onSubmit={(yearGuess: number, selectedPlatformIds: number[]) => {
+            void handleSubmitExpertVerification(yearGuess, selectedPlatformIds);
+          }}
+          options={game.currentTurn.platformOptions}
+          result={expertVerificationResult}
+          secondsRemaining={
+            game.currentTurn.phase === "expert_verification" ? secondsRemaining : null
+          }
         />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">

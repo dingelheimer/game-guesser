@@ -100,6 +100,8 @@ export interface SoloGameState {
   correctPlatformIds: number[];
   /** Result of the platform bonus round. null until submitted. */
   platformBonusResult: "correct" | "incorrect" | null;
+  /** Result of the expert verification round. null until submitted. */
+  expertVerificationResult: "correct" | "incorrect" | null;
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -112,6 +114,7 @@ export interface SoloGameState {
   moveCardToCorrectPosition: () => void;
   revealMovedCard: () => void;
   submitPlatformGuess: (selectedPlatformIds: number[]) => void;
+  submitExpertVerification: (yearGuess: number, selectedPlatformIds: number[]) => void;
   advanceTurn: () => void;
   resetGame: () => void;
 }
@@ -147,6 +150,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   availablePlatforms: [],
   correctPlatformIds: [],
   platformBonusResult: null,
+  expertVerificationResult: null,
 
   async startGame(
     difficulty: DifficultyTier,
@@ -179,6 +183,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         availablePlatforms: [],
         correctPlatformIds: [],
         platformBonusResult: null,
+        expertVerificationResult: null,
       });
     } catch (err) {
       set({
@@ -236,6 +241,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         availablePlatforms: result.platform_options ?? [],
         correctPlatformIds: result.correct_platform_ids ?? [],
         platformBonusResult: null,
+        expertVerificationResult: null,
       }));
     } catch (err) {
       set({
@@ -305,9 +311,33 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
     }
   },
 
+  submitExpertVerification(yearGuess: number, selectedPlatformIds: number[]) {
+    const { correctPlatformIds, expertVerificationResult, revealedCard } = get();
+    if (expertVerificationResult !== null || revealedCard === null) return;
+
+    const yearCorrect = yearGuess === revealedCard.release_year;
+    const result = checkPlatformGuess(selectedPlatformIds, correctPlatformIds);
+    const allCorrect = yearCorrect && result === "correct";
+    if (allCorrect) {
+      set((state) => ({
+        score: state.score + 1,
+        bonusPointsEarned: state.bonusPointsEarned + 1,
+        expertVerificationResult: "correct",
+      }));
+    } else {
+      set({ expertVerificationResult: "incorrect" });
+    }
+  },
+
   advanceTurn() {
-    const { availablePlatforms, lastPlacementCorrect, nextCard, platformBonusResult, variant } =
-      get();
+    const {
+      availablePlatforms,
+      expertVerificationResult,
+      lastPlacementCorrect,
+      nextCard,
+      platformBonusResult,
+      variant,
+    } = get();
 
     if (
       variant === "pro" &&
@@ -319,9 +349,19 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
     }
 
     if (
+      variant === "expert" &&
+      lastPlacementCorrect === true &&
+      availablePlatforms.length > 0 &&
+      expertVerificationResult === null
+    ) {
+      return;
+    }
+
+    if (
       lastPlacementCorrect === false ||
       nextCard === null ||
-      (variant === "pro" && platformBonusResult === "incorrect")
+      (variant === "pro" && platformBonusResult === "incorrect") ||
+      (variant === "expert" && expertVerificationResult === "incorrect")
     ) {
       set({ phase: "game_over" });
       return;
@@ -339,6 +379,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       availablePlatforms: [],
       correctPlatformIds: [],
       platformBonusResult: null,
+      expertVerificationResult: null,
     });
   },
 
@@ -366,6 +407,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       availablePlatforms: [],
       correctPlatformIds: [],
       platformBonusResult: null,
+      expertVerificationResult: null,
     });
   },
 }));

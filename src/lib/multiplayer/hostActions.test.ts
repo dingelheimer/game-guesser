@@ -383,6 +383,23 @@ describe("startGame", () => {
     expect(rows.every((row) => row["tokens"] === 5)).toBe(true);
   });
 
+  it("overrides EXPERT starting tokens to three for the session and players", async () => {
+    authenticate(hostId);
+    queueFullSuccess({ ...defaultSettings, startingTokens: 1, variant: "expert" });
+
+    await startGame(roomId);
+
+    const sessionInsert = insertOperation(mocks.serviceOperations, "game_sessions");
+    expect((sessionInsert.payload as Record<string, unknown>)["settings"]).toMatchObject({
+      startingTokens: 3,
+      variant: "expert",
+    });
+
+    const playersInsert = insertOperation(mocks.serviceOperations, "game_players");
+    const rows = playersInsert.payload as Array<Record<string, unknown>>;
+    expect(rows.every((row) => row["tokens"] === 3)).toBe(true);
+  });
+
   it("sets rooms.status to playing", async () => {
     authenticate(hostId);
     queueFullSuccess();
