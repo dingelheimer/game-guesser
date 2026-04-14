@@ -35,6 +35,9 @@ const GameSessionRowSchema = z.object({
   room_id: z.uuid().nullable(),
   settings: z.unknown().nullable(),
   status: SessionStatusSchema.nullable(),
+  team_score: z.number().int().nullable().default(null),
+  team_timeline: z.unknown().nullable().default(null),
+  team_tokens: z.number().int().nullable().default(null),
   turn_number: z.number().int().nullable(),
   winner_id: z.uuid().nullable(),
 });
@@ -106,6 +109,8 @@ export type MultiplayerGamePageData = Readonly<{
     phase: TurnPhase;
     phaseDeadline: string | null;
     platformOptions: readonly PlatformOption[];
+    platformBonusPlayerId?: string | null;
+    votes?: Readonly<Record<string, Readonly<{ position: number; locked: boolean }>>>;
   }>;
   currentUserId: string;
   players: readonly MultiplayerGamePagePlayer[];
@@ -113,6 +118,9 @@ export type MultiplayerGamePageData = Readonly<{
   sessionId: string;
   settings: LobbySettings;
   status: "active" | "finished";
+  teamScore: number | null;
+  teamTimeline: readonly MultiplayerTimelineCard[] | null;
+  teamTokens: number | null;
   turnNumber: number;
   winner: Readonly<{
     displayName: z.infer<typeof DisplayNameSchema>;
@@ -178,7 +186,7 @@ export async function getMultiplayerGamePageData(
       supabase
         .from("game_sessions_safe")
         .select(
-          "id, room_id, status, current_turn, turn_number, active_player_id, winner_id, settings",
+          "id, room_id, status, current_turn, turn_number, active_player_id, winner_id, settings, team_timeline, team_tokens, team_score",
         )
         .eq("id", parsedSessionId.data)
         .maybeSingle(),
@@ -227,6 +235,15 @@ export async function getMultiplayerGamePageData(
   const currentTurn = TurnStateSchema.safeParse(session.data.current_turn);
   if (!currentTurn.success) {
     throw new Error("Encountered an invalid multiplayer turn payload.");
+  }
+
+  const parsedTeamTimeline =
+    session.data.team_timeline !== null
+      ? z.array(TimelineEntrySchema).safeParse(session.data.team_timeline)
+      : null;
+
+  if (parsedTeamTimeline !== null && !parsedTeamTimeline.success) {
+    throw new Error("Encountered an invalid multiplayer team timeline payload.");
   }
 
   const parsedPlayers = playerRows.map((playerRow) => {
@@ -284,12 +301,16 @@ export async function getMultiplayerGamePageData(
 
   const roomPlayerByUserId = new Map(roomPlayers.map((player) => [player.userId, player]));
   const timelineGameIds = [
-    ...new Set(parsedPlayers.flatMap((player) => player.timeline.map((entry) => entry.gameId))),
+    ...new Set([
+      ...parsedPlayers.flatMap((player) => player.timeline.map((entry) => entry.gameId)),
+      ...(parsedTeamTimeline?.data ?? []).map((entry) => entry.gameId),
+    ]),
   ];
   const shouldRevealCurrentTurnCard =
     session.data.status === "finished" ||
     currentTurn.data.phase === "revealing" ||
     currentTurn.data.phase === "platform_bonus" ||
+    currentTurn.data.phase === "expert_verification" ||
     currentTurn.data.phase === "complete";
   const coverImageIdsByGameId = new Map<number, string>();
   const platformNamesByGameId = new Map<number, string[]>();
@@ -443,6 +464,10 @@ export async function getMultiplayerGamePageData(
       phase: TurnPhaseSchema.parse(currentTurn.data.phase),
       phaseDeadline: currentTurn.data.phaseDeadline ?? null,
       platformOptions: currentTurn.data.platformOptions ?? [],
+      ...(currentTurn.data.platformBonusPlayerId === undefined
+        ? {}
+        : { platformBonusPlayerId: currentTurn.data.platformBonusPlayerId }),
+      ...(currentTurn.data.votes !== undefined ? { votes: currentTurn.data.votes } : {}),
     },
     currentUserId: user.id,
     players,
@@ -450,6 +475,18 @@ export async function getMultiplayerGamePageData(
     sessionId: session.data.id,
     settings: settings.data,
     status: session.data.status,
+    teamScore: session.data.team_score,
+    teamTimeline:
+      parsedTeamTimeline?.data.map((entry) => ({
+        gameId: entry.gameId,
+        coverImageId: coverImageIdsByGameId.get(entry.gameId) ?? null,
+        isRevealed: true as const,
+        platform: buildPlatformLabel(platformNamesByGameId.get(entry.gameId) ?? []),
+        releaseYear: entry.releaseYear,
+        screenshotImageId: null,
+        title: entry.name,
+      })) ?? null,
+    teamTokens: session.data.team_tokens,
     turnNumber: session.data.turn_number,
     winner,
   };

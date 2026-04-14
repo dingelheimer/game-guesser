@@ -300,52 +300,53 @@ export function LobbyEntryDialog({
             void handleSubmit();
           }}
         >
-          {state.conflictRoomId !== null ? (
-            (() => {
-              const activeRoomId = state.conflictRoomId;
-              return (
-                <div
-                  className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm space-y-3"
+          {state.conflictRoomId !== null
+            ? (() => {
+                const activeRoomId = state.conflictRoomId;
+                return (
+                  <div
+                    className="space-y-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm"
+                    role="alert"
+                  >
+                    <p>You have an active room. Would you like to rejoin it or leave it?</p>
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isPending}
+                        onClick={() => {
+                          handleOpenChange(false);
+                          router.push(`/play/lobby/${activeRoomId}`);
+                        }}
+                      >
+                        Rejoin
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => void handleLeaveAndRetry()}
+                      >
+                        {isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Leaving…
+                          </>
+                        ) : (
+                          "Leave & Continue"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()
+            : state.formError !== null && (
+                <p
+                  className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm"
                   role="alert"
                 >
-                  <p>You have an active room. Would you like to rejoin it or leave it?</p>
-                  <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={isPending}
-                      onClick={() => {
-                        handleOpenChange(false);
-                        router.push(`/play/lobby/${activeRoomId}`);
-                      }}
-                    >
-                      Rejoin
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => void handleLeaveAndRetry()}
-                    >
-                      {isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Leaving…
-                        </>
-                      ) : (
-                        "Leave & Continue"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })()
-          ) : (
-            state.formError !== null && (
-              <p className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm" role="alert">
-                {state.formError}
-              </p>
-            )
-          )}
+                  {state.formError}
+                </p>
+              )}
 
           {mode === "join" && (
             <div className="space-y-1.5">

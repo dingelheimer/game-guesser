@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { DifficultySelection } from "@/components/game/DifficultySelection";
 import { SoloGame } from "@/components/game/SoloGame";
 import { submitScoreAction } from "@/lib/auth/actions";
 import { useSoloGameStore } from "@/stores/soloGameStore";
+import type { LobbyGenre } from "@/lib/multiplayer/lobby";
+import { SoloStartScreen } from "./SoloStartScreen";
 
 interface PendingScore {
   score: number;
@@ -21,9 +22,11 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 export function SoloGamePage({
   username,
   hasPendingScore,
+  genres,
 }: {
   username: string | null;
   hasPendingScore: boolean;
+  genres: readonly LobbyGenre[];
 }) {
   const phase = useSoloGameStore((s) => s.phase);
   const startGame = useSoloGameStore((s) => s.startGame);
@@ -71,7 +74,10 @@ export function SoloGamePage({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <DifficultySelection onSelect={(d) => void startGame(d)} />
+          <SoloStartScreen
+            genres={genres}
+            onSelect={(d, hr, variant) => void startGame(d, hr, variant)}
+          />
         </motion.div>
       )}
 

@@ -54,7 +54,12 @@ describe("LobbySettingsSchema", () => {
       tokensEnabled: true,
       startingTokens: 2,
       winCondition: 10,
+      gameMode: "competitive",
       variant: "standard",
+      genreLockId: null,
+      consoleLockFamily: null,
+      decadeStart: null,
+      speedRound: false,
     });
   });
 
@@ -65,7 +70,12 @@ describe("LobbySettingsSchema", () => {
       tokensEnabled: false,
       startingTokens: 0,
       winCondition: 20,
+      gameMode: "competitive",
       variant: "expert",
+      genreLockId: null,
+      consoleLockFamily: null,
+      decadeStart: null,
+      speedRound: false,
     });
 
     expect(parsed).toEqual({
@@ -74,8 +84,48 @@ describe("LobbySettingsSchema", () => {
       tokensEnabled: false,
       startingTokens: 0,
       winCondition: 20,
+      gameMode: "competitive",
       variant: "expert",
+      genreLockId: null,
+      consoleLockFamily: null,
+      decadeStart: null,
+      speedRound: false,
     });
+  });
+
+  it("accepts teamwork gameMode", () => {
+    const parsed = LobbySettingsSchema.safeParse({ gameMode: "teamwork" });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.gameMode).toBe("teamwork");
+    }
+  });
+
+  it("accepts turnTimer of 10 for speed round", () => {
+    const parsed = LobbySettingsSchema.safeParse({ turnTimer: "10" });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.turnTimer).toBe("10");
+    }
+  });
+
+  it("accepts house rule fields", () => {
+    const parsed = LobbySettingsSchema.safeParse({
+      genreLockId: 12,
+      consoleLockFamily: "nintendo",
+      decadeStart: 1990,
+      speedRound: true,
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.genreLockId).toBe(12);
+      expect(parsed.data.consoleLockFamily).toBe("nintendo");
+      expect(parsed.data.decadeStart).toBe(1990);
+      expect(parsed.data.speedRound).toBe(true);
+    }
   });
 
   it("rejects invalid settings values", () => {
@@ -86,6 +136,7 @@ describe("LobbySettingsSchema", () => {
       startingTokens: 11,
       winCondition: 21,
       variant: "chaos",
+      gameMode: "solo",
     });
 
     expect(parsed.success).toBe(false);

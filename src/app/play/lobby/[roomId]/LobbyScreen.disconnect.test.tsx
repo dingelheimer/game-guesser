@@ -75,6 +75,7 @@ vi.mock("@/lib/multiplayer/actions", () => ({
 
 vi.mock("@/lib/multiplayer/hostActions", () => ({
   claimHost: vi.fn(),
+  getDeckSize: vi.fn(async () => null),
   startGame: vi.fn(),
   updateSettings: vi.fn(),
 }));
@@ -84,6 +85,7 @@ import { claimHost } from "@/lib/multiplayer/hostActions";
 /** Two-player lobby where the current user is NOT the host. */
 const nonHostRoom = {
   currentUserId: "22222222-2222-4222-8222-222222222222",
+  genres: [],
   hostId: "11111111-1111-1111-8111-111111111111",
   maxPlayers: 10,
   players: [
@@ -108,7 +110,12 @@ const nonHostRoom = {
     tokensEnabled: true,
     startingTokens: 2,
     winCondition: 10,
+    gameMode: "competitive" as const,
     variant: "standard" as const,
+    genreLockId: null,
+    consoleLockFamily: null,
+    decadeStart: null,
+    speedRound: false,
   },
 } as const;
 

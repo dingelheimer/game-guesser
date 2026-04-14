@@ -76,6 +76,7 @@ export interface GameInsert {
 export interface PlatformInsert {
   igdb_id: number;
   name: string;
+  family: string;
 }
 
 export interface GenreInsert {
@@ -135,12 +136,77 @@ export function transformGame(game: IgdbGameInput): GameInsert | null {
 }
 
 /**
+ * Static mapping of IGDB platform IDs to platform family slugs.
+ * Kept in sync with the `add_platform_family` migration.
+ */
+export const PLATFORM_FAMILY_MAP: Readonly<Record<number, string>> = {
+  // Nintendo
+  18: "nintendo",
+  19: "nintendo",
+  4: "nintendo",
+  21: "nintendo",
+  5: "nintendo",
+  41: "nintendo",
+  130: "nintendo",
+  33: "nintendo",
+  22: "nintendo",
+  24: "nintendo",
+  20: "nintendo",
+  37: "nintendo",
+  87: "nintendo",
+  // PlayStation
+  7: "playstation",
+  8: "playstation",
+  9: "playstation",
+  48: "playstation",
+  167: "playstation",
+  38: "playstation",
+  46: "playstation",
+  129: "playstation",
+  // Xbox
+  11: "xbox",
+  12: "xbox",
+  49: "xbox",
+  169: "xbox",
+  // PC
+  6: "pc",
+  14: "pc",
+  3: "pc",
+  13: "pc",
+  82: "pc",
+  170: "pc",
+  // Sega
+  29: "sega",
+  64: "sega",
+  35: "sega",
+  32: "sega",
+  23: "sega",
+  30: "sega",
+  78: "sega",
+  // Atari
+  59: "atari",
+  63: "atari",
+  66: "atari",
+  60: "atari",
+  62: "atari",
+  61: "atari",
+  // Mobile
+  34: "mobile",
+  39: "mobile",
+  73: "mobile",
+};
+
+/**
  * Convert an IGDB platform to a database insert payload.
  * Returns null if name is missing.
  */
 export function transformPlatform(platform: IgdbPlatformInput): PlatformInsert | null {
   if (platform.name === undefined) return null;
-  return { igdb_id: platform.id, name: platform.name };
+  return {
+    igdb_id: platform.id,
+    name: platform.name,
+    family: PLATFORM_FAMILY_MAP[platform.id] ?? "other",
+  };
 }
 
 /**
