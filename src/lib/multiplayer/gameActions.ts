@@ -217,19 +217,47 @@ function revalidateGamePath(sessionId: string): void {
   revalidatePath(`/play/game/${sessionId}`);
 }
 
+async function restoreGamePlayerState(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  userId: string,
+  fields: Readonly<{
+    score?: number;
+    timeline?: readonly TimelineEntry[];
+    tokens?: number;
+  }>,
+): Promise<boolean> {
+  const payload: {
+    score?: number;
+    timeline?: Json;
+    tokens?: number;
+  } = {};
+  if (fields.score !== undefined) {
+    payload["score"] = fields.score;
+  }
+  if (fields.timeline !== undefined) {
+    payload["timeline"] = fields.timeline as unknown as Json;
+  }
+  if (fields.tokens !== undefined) {
+    payload["tokens"] = fields.tokens;
+  }
+
+  const { error } = await serviceClient
+    .from("game_players")
+    .update(payload)
+    .eq("game_session_id", sessionId)
+    .eq("user_id", userId);
+
+  return error === null;
+}
+
 async function restoreChallengeToken(
   serviceClient: ServiceClient,
   sessionId: string,
   userId: string,
   tokens: number,
 ): Promise<boolean> {
-  const { error } = await serviceClient
-    .from("game_players")
-    .update({ tokens })
-    .eq("game_session_id", sessionId)
-    .eq("user_id", userId);
-
-  return error === null;
+  return restoreGamePlayerState(serviceClient, sessionId, userId, { tokens });
 }
 
 function buildCompletedTurn(turn: TurnState, extraFields: Partial<TurnState> = {}): TurnState {
@@ -727,32 +755,79 @@ async function resolvePlatformBonusPhase(
     return platformBonusStateResult;
   }
 
-  let previousTokens: number | null = null;
+  const isProVariant = session.settings.variant === "pro";
+  const platformBonusPlayerId = session.currentTurn.platformBonusPlayerId ?? session.activePlayerId;
   let tokenChange = 0;
-  if (correct) {
+  let rollbackState: Readonly<{
+    fields: Readonly<{
+      score?: number;
+      timeline?: readonly TimelineEntry[];
+      tokens?: number;
+    }>;
+    userId: string;
+  }> | null = null;
+
+  if (correct && !isProVariant) {
     const activePlayerResult = await loadWritableGamePlayer(
       serviceClient,
       sessionId,
-      session.activePlayerId,
+      platformBonusPlayerId,
     );
     if (!activePlayerResult.success) {
       return activePlayerResult;
     }
 
     const nextTokens = Math.min(5, activePlayerResult.data.tokens + 1);
-    previousTokens = activePlayerResult.data.tokens;
     tokenChange = nextTokens - activePlayerResult.data.tokens;
 
     if (tokenChange > 0) {
+      rollbackState = {
+        fields: { tokens: activePlayerResult.data.tokens },
+        userId: activePlayerResult.data.userId,
+      };
       const { error: updateTokenError } = await serviceClient
         .from("game_players")
         .update({ tokens: nextTokens })
         .eq("game_session_id", sessionId)
-        .eq("user_id", session.activePlayerId);
+        .eq("user_id", platformBonusPlayerId);
 
       if (updateTokenError !== null) {
         return fail(appError("INTERNAL_ERROR", "Failed to award the platform bonus token."));
       }
+    }
+  } else if (!correct && isProVariant) {
+    const platformBonusPlayerResult = await loadWritableGamePlayer(
+      serviceClient,
+      sessionId,
+      platformBonusPlayerId,
+    );
+    if (!platformBonusPlayerResult.success) {
+      return platformBonusPlayerResult;
+    }
+
+    const updatedTimeline = platformBonusPlayerResult.data.timeline.filter(
+      (entry) => entry.gameId !== session.currentTurn.gameId,
+    );
+    const updatedScore = Math.max(0, platformBonusPlayerResult.data.score - 1);
+    rollbackState = {
+      fields: {
+        score: platformBonusPlayerResult.data.score,
+        timeline: platformBonusPlayerResult.data.timeline,
+      },
+      userId: platformBonusPlayerResult.data.userId,
+    };
+
+    const { error: updatePlayerError } = await serviceClient
+      .from("game_players")
+      .update({
+        score: updatedScore,
+        timeline: updatedTimeline as unknown as Json,
+      })
+      .eq("game_session_id", sessionId)
+      .eq("user_id", platformBonusPlayerId);
+
+    if (updatePlayerError !== null) {
+      return fail(appError("INTERNAL_ERROR", "Failed to apply the PRO platform bonus penalty."));
     }
   }
 
@@ -771,15 +846,25 @@ async function resolvePlatformBonusPhase(
     .maybeSingle();
 
   if (updateTurnError !== null) {
-    if (previousTokens !== null && tokenChange > 0) {
-      await restoreChallengeToken(serviceClient, sessionId, session.activePlayerId, previousTokens);
+    if (rollbackState !== null) {
+      await restoreGamePlayerState(
+        serviceClient,
+        sessionId,
+        rollbackState.userId,
+        rollbackState.fields,
+      );
     }
     return fail(appError("INTERNAL_ERROR", "Failed to store the platform bonus result."));
   }
 
   if (updatedSession === null) {
-    if (previousTokens !== null && tokenChange > 0) {
-      await restoreChallengeToken(serviceClient, sessionId, session.activePlayerId, previousTokens);
+    if (rollbackState !== null) {
+      await restoreGamePlayerState(
+        serviceClient,
+        sessionId,
+        rollbackState.userId,
+        rollbackState.fields,
+      );
     }
     return fail(appError("CONFLICT", "Another player already advanced this platform bonus."));
   }
@@ -803,7 +888,10 @@ async function resolvePlatformBonusPhase(
     bonus: {
       correct,
       correctPlatforms: platformBonusStateResult.data.correctPlatforms,
+      scores: boardResult.data.scores,
+      timelines: boardResult.data.timelines,
       tokenChange,
+      tokens: boardResult.data.tokens,
     },
     followUp: followUpResult.data,
   });
@@ -1060,7 +1148,9 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
   );
 
   const challengerId = sessionResult.data.currentTurn.challengerId;
+  const isProVariant = sessionResult.data.settings.variant === "pro";
   let challengeResult: ChallengeResult | undefined;
+  let platformBonusPlayerId: string | undefined;
 
   if (isCorrect) {
     const updatedTimeline = insertTimelineEntry(
@@ -1086,6 +1176,7 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
       return fail(appError("INTERNAL_ERROR", "Failed to save the resolved multiplayer turn."));
     }
 
+    platformBonusPlayerId = sessionResult.data.activePlayerId;
     if (challengerId !== undefined) {
       challengeResult = "challenger_loses";
     }
@@ -1127,9 +1218,12 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
     }
 
     challengeResult = "challenger_wins";
+    if (isProVariant) {
+      platformBonusPlayerId = challengerResult.data.userId;
+    }
   }
 
-  const platformBonusEligible = isCorrect && challengeResult !== "challenger_wins";
+  const platformBonusEligible = platformBonusPlayerId !== undefined && (isProVariant || isCorrect);
   if (platformBonusEligible) {
     const platformBonusStateResult = await loadPlatformBonusState(
       serviceClient,
@@ -1147,6 +1241,7 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
       isCorrect,
       phase: "platform_bonus",
       phaseDeadline: platformBonusDeadline,
+      ...(platformBonusPlayerId === undefined ? {} : { platformBonusPlayerId }),
       platformOptions: [...platformBonusStateResult.data.options],
     };
     const { error: updateTurnError } = await serviceClient
@@ -1176,6 +1271,7 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
         isCorrect,
         platformBonusDeadline,
         platformOptions: platformBonusStateResult.data.options,
+        ...(platformBonusPlayerId === undefined ? {} : { platformBonusPlayerId }),
         position: sessionResult.data.currentTurn.placedPosition,
         scores: boardResult.data.scores,
         timelines: boardResult.data.timelines,
@@ -1620,8 +1716,12 @@ export async function submitPlatformBonus(
     return fail(appError("CONFLICT", "This multiplayer turn is not accepting platform guesses."));
   }
 
-  if (sessionResult.data.activePlayerId !== userIdResult.data) {
-    return fail(appError("UNAUTHORIZED", "Only the active player can answer the platform bonus."));
+  const platformBonusPlayerId =
+    sessionResult.data.currentTurn.platformBonusPlayerId ?? sessionResult.data.activePlayerId;
+  if (platformBonusPlayerId !== userIdResult.data) {
+    return fail(
+      appError("UNAUTHORIZED", "Only the designated player can answer the platform bonus."),
+    );
   }
 
   if (

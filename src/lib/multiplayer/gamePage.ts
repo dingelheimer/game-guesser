@@ -106,6 +106,7 @@ export type MultiplayerGamePageData = Readonly<{
     phase: TurnPhase;
     phaseDeadline: string | null;
     platformOptions: readonly PlatformOption[];
+    platformBonusPlayerId?: string | null;
   }>;
   currentUserId: string;
   players: readonly MultiplayerGamePagePlayer[];
@@ -443,6 +444,9 @@ export async function getMultiplayerGamePageData(
       phase: TurnPhaseSchema.parse(currentTurn.data.phase),
       phaseDeadline: currentTurn.data.phaseDeadline ?? null,
       platformOptions: currentTurn.data.platformOptions ?? [],
+      ...(currentTurn.data.platformBonusPlayerId === undefined
+        ? {}
+        : { platformBonusPlayerId: currentTurn.data.platformBonusPlayerId }),
     },
     currentUserId: user.id,
     players,

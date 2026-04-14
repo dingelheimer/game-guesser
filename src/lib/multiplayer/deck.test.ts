@@ -95,6 +95,43 @@ describe("buildDeck", () => {
     expect(mockRpc).toHaveBeenCalledWith("build_deck", {});
   });
 
+  it("includes p_genre_id when genreLockId is set", async () => {
+    mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
+
+    await buildDeck(mockServiceClient, "easy", { genreLockId: 42, consoleLockFamily: null, decadeStart: null });
+
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 10, p_genre_id: 42 });
+  });
+
+  it("includes p_platform_family when consoleLockFamily is set", async () => {
+    mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
+
+    await buildDeck(mockServiceClient, "medium", { genreLockId: null, consoleLockFamily: "nintendo", decadeStart: null });
+
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 20, p_platform_family: "nintendo" });
+  });
+
+  it("includes p_decade_start when decadeStart is set", async () => {
+    mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
+
+    await buildDeck(mockServiceClient, "hard", { genreLockId: null, consoleLockFamily: null, decadeStart: 1990 });
+
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 50, p_decade_start: 1990 });
+  });
+
+  it("includes all house rule params when all are set", async () => {
+    mockRpc.mockResolvedValue({ data: [1, 2, 3], error: null });
+
+    await buildDeck(mockServiceClient, "easy", { genreLockId: 5, consoleLockFamily: "playstation", decadeStart: 2000 });
+
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", {
+      p_max_rank: 10,
+      p_genre_id: 5,
+      p_platform_family: "playstation",
+      p_decade_start: 2000,
+    });
+  });
+
   it("returns the array of game IDs from the RPC", async () => {
     const ids = Array.from({ length: 200 }, (_, i) => i + 1);
     mockRpc.mockResolvedValue({ data: ids, error: null });

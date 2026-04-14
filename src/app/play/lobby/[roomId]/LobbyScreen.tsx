@@ -7,13 +7,14 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { z } from "zod";
 import { kickPlayer, leaveRoom } from "@/lib/multiplayer/actions";
-import { claimHost, startGame, updateSettings } from "@/lib/multiplayer/hostActions";
+import { claimHost, getDeckSize, startGame, updateSettings } from "@/lib/multiplayer/hostActions";
 import { createClient } from "@/lib/supabase/client";
 import {
   LobbyPresenceSchema,
   LobbySettingsSchema,
   type LobbyPresence,
   type LobbySettings,
+  type HouseRuleParams,
 } from "@/lib/multiplayer/lobby";
 import { buildConnectedPresence, buildSeedPresence } from "@/lib/multiplayer/presence";
 import type { LobbyRoomPageData } from "@/lib/multiplayer/lobbyPage";
@@ -83,6 +84,7 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
   const [startError, setStartError] = useState<string | null>(null);
   const [disconnectCountdown, setDisconnectCountdown] = useState<number | null>(null);
   const [claimHostError, setClaimHostError] = useState<string | null>(null);
+  const [deckSize, setDeckSize] = useState<number | null>(null);
 
   /** Keep a ref to the current players list so interval callbacks can read it. */
   const playersRef = useRef<LobbyPresence[]>(players);
@@ -102,6 +104,19 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
 
   /** Whether the current host is present in the connected-player list. */
   const isHostOnline = players.some((p) => p.userId === hostId);
+
+  // Debounced deck size estimation — refreshes when difficulty or house rules change.
+  useEffect(() => {
+    const houseRules: HouseRuleParams = {
+      genreLockId: settings.genreLockId,
+      consoleLockFamily: settings.consoleLockFamily,
+      decadeStart: settings.decadeStart,
+    };
+    const timer = setTimeout(() => {
+      void getDeckSize(settings.difficulty, houseRules).then(setDeckSize);
+    }, 500);
+    return () => { clearTimeout(timer); };
+  }, [settings.difficulty, settings.genreLockId, settings.consoleLockFamily, settings.decadeStart]);
 
   useEffect(() => {
     const channel = supabase.channel(`room:${initialRoom.roomId}`, {
@@ -439,6 +454,7 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
           canStart={players.length >= 2}
           onStartGame={() => void handleStartGame()}
           startError={startError}
+          deckSize={deckSize}
         />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

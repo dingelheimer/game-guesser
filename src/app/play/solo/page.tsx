@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import type { LobbyGenre } from "@/lib/multiplayer/lobby";
 import { SoloGamePage } from "./SoloGamePage";
 
 export const metadata: Metadata = {
@@ -29,5 +30,18 @@ export default async function PlaySoloPage({
     username = profile?.username ?? null;
   }
 
-  return <SoloGamePage username={username} hasPendingScore={saved === "pending"} />;
+  const { data: genreRows } = await supabase
+    .from("genres")
+    .select("id, name")
+    .order("name", { ascending: true });
+
+  const genres: readonly LobbyGenre[] = (genreRows ?? []).map((g) => ({
+    id: g.id,
+    name: g.name,
+  }));
+
+  return (
+    <SoloGamePage username={username} hasPendingScore={saved === "pending"} genres={genres} />
+  );
 }
+

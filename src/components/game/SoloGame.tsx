@@ -37,7 +37,9 @@ type IncorrectPlacementStage = "idle" | "indicator" | "sliding" | "revealing" | 
 export function SoloGame({ username }: { username: string | null }) {
   const phase = useSoloGameStore((s) => s.phase);
   const difficulty = useSoloGameStore((s) => s.difficulty);
+  const variant = useSoloGameStore((s) => s.variant);
   const sessionId = useSoloGameStore((s) => s.sessionId);
+  const houseRules = useSoloGameStore((s) => s.houseRules);
   const currentCard = useSoloGameStore((s) => s.currentCard);
   const revealedCard = useSoloGameStore((s) => s.revealedCard);
   const timelineItems = useSoloGameStore((s) => s.timelineItems);
@@ -73,6 +75,7 @@ export function SoloGame({ username }: { username: string | null }) {
   const isSubmitting = phase === "submitting";
   const isPlacing = phase === "placing";
   const isRevealing = phase === "revealing";
+  const isProVariant = variant === "pro";
   const isIncorrectReveal = isRevealing && lastPlacementCorrect === false;
   const isPlatformBonusPending =
     isRevealing &&
@@ -179,7 +182,9 @@ export function SoloGame({ username }: { username: string | null }) {
         scoreError={scoreError}
         onPlayAgain={() => {
           if (difficulty !== null) {
-            void useSoloGameStore.getState().startGame(difficulty);
+            void useSoloGameStore
+              .getState()
+              .startGame(difficulty, houseRules ?? undefined, variant ?? "standard");
           } else {
             resetGame();
           }
@@ -277,18 +282,27 @@ export function SoloGame({ username }: { username: string | null }) {
               <PlacementResult correct={lastPlacementCorrect} />
 
               {lastPlacementCorrect && availablePlatforms.length > 0 && (
-                <PlatformBonusInput
-                  platforms={availablePlatforms}
-                  correctPlatformIds={correctPlatformIds}
-                  result={platformBonusResult}
-                  onSubmit={submitPlatformGuess}
-                />
+                <div className="w-full space-y-2">
+                  {isProVariant ? (
+                    <div className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-100">
+                      <strong>PRO Required:</strong> answer the platform bonus correctly to keep
+                      this card.
+                    </div>
+                  ) : null}
+                  <PlatformBonusInput
+                    platforms={availablePlatforms}
+                    correctPlatformIds={correctPlatformIds}
+                    result={platformBonusResult}
+                    onSubmit={submitPlatformGuess}
+                  />
+                </div>
               )}
 
               <Button
                 onClick={advanceTurn}
                 className="w-full max-w-sm"
                 aria-label={!lastPlacementCorrect ? "See game over screen" : "Next turn"}
+                disabled={isProVariant && isPlatformBonusPending}
               >
                 {!lastPlacementCorrect ? "See Result" : "Next Turn →"}
               </Button>

@@ -46,6 +46,7 @@ export type TurnRevealedPayload = Readonly<{
   isCorrect: boolean;
   platformBonusDeadline?: string;
   platformOptions?: readonly PlatformOption[];
+  platformBonusPlayerId?: string;
   position: number;
   scores: Readonly<Record<string, number>>;
   timelines: Readonly<Record<string, readonly TimelineEntry[]>>;
@@ -58,7 +59,10 @@ export type TurnRevealedPayload = Readonly<{
 export type PlatformBonusResultPayload = Readonly<{
   correct: boolean;
   correctPlatforms: readonly PlatformOption[];
+  scores: Readonly<Record<string, number>>;
+  timelines: Readonly<Record<string, readonly TimelineEntry[]>>;
   tokenChange: number;
+  tokens: Readonly<Record<string, number>>;
 }>;
 
 /**
