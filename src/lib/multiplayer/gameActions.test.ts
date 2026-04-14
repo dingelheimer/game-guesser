@@ -369,6 +369,120 @@ describe("resolveTurn", () => {
       }),
     });
   });
+
+  it("routes a PRO challenge win into the platform bonus for the challenger", async () => {
+    authenticate(activePlayerId);
+    queueRegular({ data: { user_id: activePlayerId }, error: null });
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "revealing",
+            activePlayerId,
+            challengerId: otherPlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            placedPosition: 1,
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "pro", winCondition: 5 },
+        },
+        error: null,
+      },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 4,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [{ gameId: 100, releaseYear: 1998, name: "Half-Life" }],
+        },
+        error: null,
+      },
+      { data: { id: 103, name: "Portal 2", release_year: 1995 }, error: null },
+      { data: { game_id: 103, igdb_image_id: "cover-103" }, error: null },
+      { data: [{ game_id: 103, platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      {
+        data: {
+          user_id: otherPlayerId,
+          display_name: "Sam Player",
+          score: 2,
+          tokens: 1,
+          turn_position: 1,
+          timeline: [{ gameId: 200, releaseYear: 2001, name: "Halo" }],
+        },
+        error: null,
+      },
+      { data: null, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: null, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 4,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [{ gameId: 100, releaseYear: 1998, name: "Half-Life" }],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 1,
+            turn_position: 1,
+            timeline: [
+              { gameId: 103, releaseYear: 1995, name: "Portal 2" },
+              { gameId: 200, releaseYear: 2001, name: "Halo" },
+            ],
+          },
+        ],
+        error: null,
+      },
+    );
+
+    const result = await resolveTurn(sessionId);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.followUp).toBeUndefined();
+    expect(result.data.reveal).toMatchObject({
+      challengerId: otherPlayerId,
+      challengeResult: "challenger_wins",
+      isCorrect: false,
+      platformBonusPlayerId: otherPlayerId,
+      platformOptions: [{ id: 10, name: "PC" }],
+      scores: {
+        [activePlayerId]: 4,
+        [otherPlayerId]: 3,
+      },
+    });
+    expect(updateOperations(mocks.serviceOperations, "game_sessions")).toContainEqual({
+      action: "update",
+      table: "game_sessions",
+      payload: expect.objectContaining({
+        current_turn: expect.objectContaining({
+          phase: "platform_bonus",
+          platformBonusPlayerId: otherPlayerId,
+        }),
+      }),
+    });
+  });
 });
 
 describe("submitChallenge", () => {
@@ -774,7 +888,19 @@ describe("submitPlatformBonus", () => {
     expect(result.data.bonus).toEqual({
       correct: true,
       correctPlatforms: [{ id: 10, name: "PC" }],
+      scores: {
+        [activePlayerId]: 5,
+        [otherPlayerId]: 3,
+      },
+      timelines: {
+        [activePlayerId]: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+        [otherPlayerId]: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+      },
       tokenChange: 1,
+      tokens: {
+        [activePlayerId]: 5,
+        [otherPlayerId]: 2,
+      },
     });
     expect(result.data.followUp).toEqual({
       type: "next_turn",
@@ -789,6 +915,120 @@ describe("submitPlatformBonus", () => {
       action: "update",
       table: "game_players",
       payload: { tokens: 5 },
+    });
+  });
+
+  it("lets the PRO challenger answer and removes the stolen card on a wrong bonus", async () => {
+    authenticate(otherPlayerId);
+    queueRegular({ data: { user_id: otherPlayerId }, error: null });
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103, 104],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "platform_bonus",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            phaseDeadline: "2099-04-12T12:00:00.000Z",
+            platformBonusPlayerId: otherPlayerId,
+            platformOptions: [{ id: 10, name: "PC" }],
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "pro" },
+        },
+        error: null,
+      },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      {
+        data: {
+          user_id: otherPlayerId,
+          display_name: "Sam Player",
+          score: 3,
+          tokens: 1,
+          turn_position: 1,
+          timeline: [
+            { gameId: 103, releaseYear: 1995, name: "Portal 2" },
+            { gameId: 200, releaseYear: 2001, name: "Halo" },
+          ],
+        },
+        error: null,
+      },
+      { data: null, error: null },
+      { data: { id: sessionId }, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 4,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [{ gameId: 100, releaseYear: 1998, name: "Half-Life" }],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 2,
+            tokens: 1,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2001, name: "Halo" }],
+          },
+        ],
+        error: null,
+      },
+      { data: [{ igdb_image_id: "shot-104" }], error: null },
+      { data: { room_id: roomId }, error: null },
+    );
+
+    const result = await submitPlatformBonus(sessionId, [99]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.bonus).toEqual({
+      correct: false,
+      correctPlatforms: [{ id: 10, name: "PC" }],
+      scores: {
+        [activePlayerId]: 4,
+        [otherPlayerId]: 2,
+      },
+      timelines: {
+        [activePlayerId]: [{ gameId: 100, releaseYear: 1998, name: "Half-Life" }],
+        [otherPlayerId]: [{ gameId: 200, releaseYear: 2001, name: "Halo" }],
+      },
+      tokenChange: 0,
+      tokens: {
+        [activePlayerId]: 2,
+        [otherPlayerId]: 1,
+      },
+    });
+    expect(result.data.followUp).toEqual({
+      type: "next_turn",
+      nextTurn: {
+        activePlayerId: otherPlayerId,
+        deadline: expect.any(String),
+        screenshot: { screenshotImageId: "shot-104" },
+        turnNumber: 5,
+      },
+    });
+    expect(updateOperations(mocks.serviceOperations, "game_players")).toContainEqual({
+      action: "update",
+      table: "game_players",
+      payload: {
+        score: 2,
+        timeline: [{ gameId: 200, releaseYear: 2001, name: "Halo" }],
+      },
     });
   });
 });
@@ -865,7 +1105,19 @@ describe("proceedFromPlatformBonus", () => {
     expect(result.data.bonus).toEqual({
       correct: false,
       correctPlatforms: [{ id: 10, name: "PC" }],
+      scores: {
+        [activePlayerId]: 5,
+        [otherPlayerId]: 3,
+      },
+      timelines: {
+        [activePlayerId]: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+        [otherPlayerId]: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+      },
       tokenChange: 0,
+      tokens: {
+        [activePlayerId]: 4,
+        [otherPlayerId]: 2,
+      },
     });
     expect(result.data.followUp).toEqual({
       type: "next_turn",

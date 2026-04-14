@@ -85,6 +85,7 @@ vi.mock("@/lib/multiplayer/actions", () => ({
 }));
 
 vi.mock("@/lib/multiplayer/hostActions", () => ({
+  getDeckSize: vi.fn(async () => null),
   startGame: vi.fn(),
   updateSettings: vi.fn(),
 }));

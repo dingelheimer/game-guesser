@@ -115,6 +115,16 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     () => game.players.find((player) => player.userId === game.currentTurn.activePlayerId) ?? null,
     [game.currentTurn.activePlayerId, game.players],
   );
+  const platformBonusPlayerId =
+    game.currentTurn.platformBonusPlayerId ?? game.currentTurn.activePlayerId;
+  const platformBonusPlayer = useMemo(
+    () => game.players.find((player) => player.userId === platformBonusPlayerId) ?? null,
+    [game.players, platformBonusPlayerId],
+  );
+  const phasePlayer =
+    game.currentTurn.phase === "platform_bonus"
+      ? (platformBonusPlayer ?? activePlayer)
+      : activePlayer;
   const placingTurnKey =
     game.currentTurn.phase === "placing"
       ? `${String(game.turnNumber)}:${game.currentTurn.activePlayerId}`
@@ -198,6 +208,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           phase: challengeDeadline !== undefined ? "challenge_window" : "revealing",
           phaseDeadline: challengeDeadline ?? null,
           platformOptions: [],
+          platformBonusPlayerId: null,
         },
         players: previewPlacement(
           current.players,
@@ -237,6 +248,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           phase: "placing",
           phaseDeadline: deadline,
           platformOptions: [],
+          platformBonusPlayerId: null,
         },
         status: "active",
         turnNumber,
@@ -261,6 +273,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         phase: "drawing",
         phaseDeadline: null,
         platformOptions: [],
+        platformBonusPlayerId: null,
       },
       players: current.players.map((player) =>
         player.userId === current.currentTurn.activePlayerId
@@ -289,6 +302,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           phase: "revealing",
           phaseDeadline: null,
           platformOptions: [],
+          platformBonusPlayerId: null,
         },
       }));
     },
@@ -336,6 +350,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
               ? ("revealing" as const)
               : ("platform_bonus" as const),
           phaseDeadline: payload.platformBonusDeadline ?? null,
+          platformBonusPlayerId: payload.platformBonusPlayerId ?? null,
           platformOptions: payload.platformOptions ?? current.currentTurn.platformOptions,
         };
 
@@ -411,14 +426,14 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           ...current.currentTurn,
           phase: "complete",
           phaseDeadline: null,
+          platformBonusPlayerId: null,
         },
-        players: current.players.map((player) =>
-          player.userId === current.currentTurn.activePlayerId
-            ? {
-                ...player,
-                tokens: player.tokens + payload.tokenChange,
-              }
-            : player,
+        players: reconcilePlayers(
+          current.players,
+          payload.timelines,
+          payload.scores,
+          payload.tokens,
+          null,
         ),
       }));
     },
@@ -446,6 +461,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
           phase: "complete",
           phaseDeadline: null,
           platformOptions: [],
+          platformBonusPlayerId: null,
         },
         players: reconcilePlayers(
           current.players,
@@ -708,7 +724,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     async (selectedPlatformIds: number[]) => {
       if (
         currentPlayer === undefined ||
-        currentPlayer.userId !== game.currentTurn.activePlayerId ||
+        currentPlayer.userId !== platformBonusPlayerId ||
         game.currentTurn.phase !== "platform_bonus"
       ) {
         return;
@@ -737,9 +753,9 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     [
       applyPlatformBonusResult,
       currentPlayer,
-      game.currentTurn.activePlayerId,
       game.currentTurn.phase,
       game.sessionId,
+      platformBonusPlayerId,
       scheduleFollowUp,
     ],
   );
@@ -853,6 +869,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
             phase: "placing",
             phaseDeadline: null,
             platformOptions: [],
+            platformBonusPlayerId: null,
           },
           players: [...current.players]
             .map((player) => {
@@ -917,6 +934,9 @@ export function GameScreen({ initialGame }: GameScreenProps) {
             ...(parsed.data.platformOptions === undefined
               ? {}
               : { platformOptions: parsed.data.platformOptions }),
+            ...(parsed.data.platformBonusPlayerId === undefined
+              ? {}
+              : { platformBonusPlayerId: parsed.data.platformBonusPlayerId }),
             position: parsed.data.position,
             scores: parsed.data.scores,
             timelines: parsed.data.timelines,
@@ -1102,7 +1122,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
                 </CardTitle>
                 <CardDescription>
                   {activePlayer !== null
-                    ? `${activePlayer.displayName}'s turn — ${formatPhaseLabel(game.currentTurn.phase)}`
+                    ? `${(phasePlayer ?? activePlayer).displayName}'s turn — ${formatPhaseLabel(game.currentTurn.phase)}`
                     : `Phase: ${formatPhaseLabel(game.currentTurn.phase)}`}
                 </CardDescription>
               </div>
@@ -1170,8 +1190,9 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         />
 
         <MultiplayerPlatformBonusPanel
-          activePlayerName={activePlayer?.displayName ?? null}
-          isCurrentUserActive={currentPlayer.userId === game.currentTurn.activePlayerId}
+          activePlayerName={platformBonusPlayer?.displayName ?? activePlayer?.displayName ?? null}
+          isCurrentUserActive={currentPlayer.userId === platformBonusPlayerId}
+          isPro={game.settings.variant === "pro"}
           isSubmittingPlatformBonus={isSubmittingPlatformBonus}
           isVisible={isPlatformBonusVisible}
           onSubmit={(selectedPlatformIds: number[]) => {
