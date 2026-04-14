@@ -669,7 +669,7 @@ describe("resolveTurn", () => {
         (op) =>
           (op.payload as Record<string, unknown>)["current_turn"] !== undefined &&
           ((op.payload as Record<string, { phase?: string }>)["current_turn"] as { phase?: string })
-            ?.phase === "platform_bonus",
+            .phase === "platform_bonus",
       ),
     ).toBe(false);
   });

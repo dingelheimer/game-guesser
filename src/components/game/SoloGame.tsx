@@ -347,7 +347,7 @@ export function SoloGame({ username }: { username: string | null }) {
                               inputMode="numeric"
                               placeholder="e.g. 2001"
                               value={expertYearInput}
-                              onChange={(e) => setExpertYearInput(e.target.value)}
+                              onChange={(e) => { setExpertYearInput(e.target.value); }}
                               className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400/60"
                             />
                           </div>
