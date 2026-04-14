@@ -1023,7 +1023,11 @@ async function resolveExpertVerificationPhase(
   }> | null = null;
 
   if (!correct) {
-    const expertPlayerResult = await loadWritableGamePlayer(serviceClient, sessionId, expertPlayerId);
+    const expertPlayerResult = await loadWritableGamePlayer(
+      serviceClient,
+      sessionId,
+      expertPlayerId,
+    );
     if (!expertPlayerResult.success) {
       return expertPlayerResult;
     }
@@ -1068,14 +1072,24 @@ async function resolveExpertVerificationPhase(
 
   if (updateTurnError !== null) {
     if (rollbackState !== null) {
-      await restoreGamePlayerState(serviceClient, sessionId, rollbackState.userId, rollbackState.fields);
+      await restoreGamePlayerState(
+        serviceClient,
+        sessionId,
+        rollbackState.userId,
+        rollbackState.fields,
+      );
     }
     return fail(appError("INTERNAL_ERROR", "Failed to store the expert verification result."));
   }
 
   if (updatedSession === null) {
     if (rollbackState !== null) {
-      await restoreGamePlayerState(serviceClient, sessionId, rollbackState.userId, rollbackState.fields);
+      await restoreGamePlayerState(
+        serviceClient,
+        sessionId,
+        rollbackState.userId,
+        rollbackState.fields,
+      );
     }
     return fail(appError("CONFLICT", "Another player already advanced this expert verification."));
   }
@@ -1257,7 +1271,9 @@ async function resolveTeamVote(
   sessionId: string,
   session: WritableGameSession,
   votes: Readonly<Record<string, Readonly<{ position: number; locked: boolean }>>>,
-): Promise<Result<{ resolvedPayload: TeamVoteResolvedPayload; followUp: TurnFollowUpResult }, AppError>> {
+): Promise<
+  Result<{ resolvedPayload: TeamVoteResolvedPayload; followUp: TurnFollowUpResult }, AppError>
+> {
   const teamTimeline = session.teamTimeline;
   const currentTokens = session.teamTokens;
   const currentScore = session.teamScore;
@@ -1706,7 +1722,9 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
       .eq("current_turn->>phase", "revealing");
 
     if (updateTurnError !== null) {
-      return fail(appError("INTERNAL_ERROR", "Failed to start the multiplayer expert verification."));
+      return fail(
+        appError("INTERNAL_ERROR", "Failed to start the multiplayer expert verification."),
+      );
     }
 
     const boardResult = await loadBoardState(serviceClient, parsed.data.sessionId);
@@ -2297,13 +2315,17 @@ export async function submitExpertVerification(
   }
 
   if (sessionResult.data.currentTurn.phase !== "expert_verification") {
-    return fail(appError("CONFLICT", "This multiplayer turn is not waiting on expert verification."));
+    return fail(
+      appError("CONFLICT", "This multiplayer turn is not waiting on expert verification."),
+    );
   }
 
   const expertPlayerId =
     sessionResult.data.currentTurn.platformBonusPlayerId ?? sessionResult.data.activePlayerId;
   if (userIdResult.data !== expertPlayerId) {
-    return fail(appError("UNAUTHORIZED", "Only the designated player may submit expert verification."));
+    return fail(
+      appError("UNAUTHORIZED", "Only the designated player may submit expert verification."),
+    );
   }
 
   const gameId = sessionResult.data.currentTurn.gameId;
@@ -2385,7 +2407,9 @@ export async function proceedFromExpertVerification(
   }
 
   if (sessionResult.data.currentTurn.phase !== "expert_verification") {
-    return fail(appError("CONFLICT", "This multiplayer turn is not waiting on expert verification."));
+    return fail(
+      appError("CONFLICT", "This multiplayer turn is not waiting on expert verification."),
+    );
   }
 
   if (
@@ -2588,7 +2612,9 @@ export async function submitTeamVote(
         .eq("current_turn->>phase", "team_voting");
 
       if (voteUpdateError !== null && attempt < MAX_RETRIES - 1) {
-        await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+        await new Promise((resolve) => {
+          setTimeout(resolve, 50 * (attempt + 1));
+        });
         continue;
       }
 
@@ -2600,7 +2626,9 @@ export async function submitTeamVote(
       );
       if (!resolveResult.success) {
         if (attempt < MAX_RETRIES - 1) {
-          await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50 * (attempt + 1));
+          });
           continue;
         }
 
@@ -2628,7 +2656,9 @@ export async function submitTeamVote(
 
     if (updateError !== null) {
       if (attempt < MAX_RETRIES - 1) {
-        await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+        await new Promise((resolve) => {
+          setTimeout(resolve, 50 * (attempt + 1));
+        });
         continue;
       }
 
@@ -2646,5 +2676,7 @@ export async function submitTeamVote(
     });
   }
 
-  return fail(appError("INTERNAL_ERROR", "Failed to record your team vote after multiple retries."));
+  return fail(
+    appError("INTERNAL_ERROR", "Failed to record your team vote after multiple retries."),
+  );
 }

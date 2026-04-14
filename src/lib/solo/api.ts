@@ -65,7 +65,10 @@ async function invokeFunction<T>(name: string, body: Record<string, unknown>): P
 
 // ── API functions ─────────────────────────────────────────────────────────────
 
-export function startGame(difficulty: DifficultyTier, houseRules?: HouseRuleParams): Promise<StartGameResponse> {
+export function startGame(
+  difficulty: DifficultyTier,
+  houseRules?: HouseRuleParams,
+): Promise<StartGameResponse> {
   const body: Record<string, unknown> = { difficulty };
   if (houseRules?.genreLockId != null) body["genre_id"] = houseRules.genreLockId;
   if (houseRules?.consoleLockFamily != null) body["platform_family"] = houseRules.consoleLockFamily;

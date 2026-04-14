@@ -64,7 +64,8 @@ export function createSoloStartDbOperations(supabase: SupabaseClient): SoloStart
       const rpcArgs: Record<string, unknown> = {};
       if (maxRank !== null) rpcArgs["p_max_rank"] = maxRank;
       if (houseRules?.genreId != null) rpcArgs["p_genre_id"] = houseRules.genreId;
-      if (houseRules?.platformFamily != null) rpcArgs["p_platform_family"] = houseRules.platformFamily;
+      if (houseRules?.platformFamily != null)
+        rpcArgs["p_platform_family"] = houseRules.platformFamily;
       if (houseRules?.decadeStart != null) rpcArgs["p_decade_start"] = houseRules.decadeStart;
 
       const { data: deckIds, error: deckError } = await supabase.rpc("build_deck", rpcArgs);
@@ -89,119 +90,6 @@ export function createSoloStartDbOperations(supabase: SupabaseClient): SoloStart
 
       return (games ?? []) as EligibleGame[];
     },
-
-    async fetchRevealedCardData(gameId: number): Promise<RevealedCardData> {
-      const { data: game, error: gameErr } = await supabase
-        .from("games")
-        .select("id, name, release_year")
-        .eq("id", gameId)
-        .single();
-
-      if (gameErr !== null || game === null) {
-        throw new Error(
-          `Failed to fetch game ${gameId.toString()}: ${gameErr?.message ?? "not found"}`,
-        );
-      }
-
-      const { data: cover, error: coverErr } = await supabase
-        .from("covers")
-        .select("igdb_image_id")
-        .eq("game_id", gameId)
-        .single();
-
-      if (coverErr !== null || cover === null) {
-        throw new Error(
-          `Failed to fetch cover for game ${gameId.toString()}: ${coverErr?.message ?? "not found"}`,
-        );
-      }
-
-      const { data: screenshots, error: screenshotErr } = await supabase
-        .from("screenshots")
-        .select("igdb_image_id")
-        .eq("game_id", gameId)
-        .neq("curation", "rejected")
-        .order("sort_order")
-        .limit(3);
-
-      if (screenshotErr !== null) {
-        throw new Error(
-          `Failed to fetch screenshots for game ${gameId.toString()}: ${screenshotErr.message}`,
-        );
-      }
-
-      const { data: platforms, error: platformErr } = await supabase
-        .from("game_platforms")
-        .select("platforms(name)")
-        .eq("game_id", gameId);
-
-      if (platformErr !== null) {
-        throw new Error(
-          `Failed to fetch platforms for game ${gameId.toString()}: ${platformErr.message}`,
-        );
-      }
-
-      const platformNames = (platforms ?? []).flatMap((row) => {
-        const p = row.platforms as { name: string } | null;
-        return p !== null ? [getDisplayName(p.name)] : [];
-      });
-
-      return {
-        game_id: game.id as number,
-        name: game.name as string,
-        release_year: game.release_year as number,
-        cover_image_id: cover.igdb_image_id as string,
-        screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
-        platform_names: platformNames,
-      };
-    },
-
-    async fetchHiddenCardData(gameId: number): Promise<HiddenCardData> {
-      const { data: screenshots, error } = await supabase
-        .from("screenshots")
-        .select("igdb_image_id")
-        .eq("game_id", gameId)
-        .neq("curation", "rejected")
-        .order("sort_order")
-        .limit(3);
-
-      if (error !== null) {
-        throw new Error(
-          `Failed to fetch screenshots for game ${gameId.toString()}: ${error.message}`,
-        );
-      }
-
-      return {
-        game_id: gameId,
-        screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
-      };
-    },
-
-    async createSession(
-      difficulty: string,
-      state: InitialSessionState,
-      anchorReleaseYear: number,
-    ): Promise<string> {
-      const timeline = [{ game_id: state.anchor.id, release_year: anchorReleaseYear }];
-
-      const { data, error } = await supabase
-        .from("solo_sessions")
-        .insert({
-          difficulty,
-          deck: state.deck,
-          timeline,
-        })
-        .select("id")
-        .single();
-
-      if (error !== null || data === null) {
-        throw new Error(`Failed to create solo session: ${error?.message ?? "no data"}`);
-      }
-
-      return (data as { id: string }).id;
-    },
-  };
-}
-
 
     async fetchRevealedCardData(gameId: number): Promise<RevealedCardData> {
       const { data: game, error: gameErr } = await supabase

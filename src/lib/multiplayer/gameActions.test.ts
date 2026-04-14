@@ -2210,12 +2210,7 @@ describe("submitTeamVote", () => {
     );
 
     // activePlayerId proposes position 0, not locked — otherPlayerId hasn't voted yet
-    const result = await submitTeamVote(
-      sessionId,
-      0,
-      false,
-      [activePlayerId, otherPlayerId],
-    );
+    const result = await submitTeamVote(sessionId, 0, false, [activePlayerId, otherPlayerId]);
 
     expect(result.success).toBe(true);
     if (!result.success) {
@@ -2230,9 +2225,7 @@ describe("submitTeamVote", () => {
     expect(result.data.votePayload.votes).toEqual({
       [activePlayerId]: { position: 0, locked: false },
     });
-    expect(
-      updateOperation(mocks.serviceOperations, "game_sessions").payload,
-    ).toMatchObject({
+    expect(updateOperation(mocks.serviceOperations, "game_sessions").payload).toMatchObject({
       current_turn: expect.objectContaining({
         phase: "team_voting",
         votes: { [activePlayerId]: { position: 0, locked: false } },
@@ -2283,12 +2276,7 @@ describe("submitTeamVote", () => {
     );
 
     // activePlayerId locks position 1 — both players now locked → triggers resolution
-    const result = await submitTeamVote(
-      sessionId,
-      1,
-      true,
-      [activePlayerId, otherPlayerId],
-    );
+    const result = await submitTeamVote(sessionId, 1, true, [activePlayerId, otherPlayerId]);
 
     expect(result.success).toBe(true);
     if (!result.success) {
@@ -2367,12 +2355,7 @@ describe("submitTeamVote", () => {
     );
 
     // activePlayerId also locks wrong position 0 (2000-release card placed before 1994 card)
-    const result = await submitTeamVote(
-      sessionId,
-      0,
-      true,
-      [activePlayerId, otherPlayerId],
-    );
+    const result = await submitTeamVote(sessionId, 0, true, [activePlayerId, otherPlayerId]);
 
     expect(result.success).toBe(true);
     if (!result.success) {

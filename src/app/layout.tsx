@@ -6,8 +6,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layouts/header";
 import { BottomNav } from "@/components/layouts/bottom-nav";
 import { Footer } from "@/components/layouts/footer";
+import { MobileAttributionBar } from "@/components/layouts/mobile-attribution-bar";
 import { NoiseOverlay } from "@/components/layouts/noise-overlay";
 import { AuthListener } from "@/components/auth/AuthListener";
+import { siteConfig } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -30,11 +32,32 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: "Game Guesser",
-    template: "%s | Game Guesser",
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
   },
-  description: "A video game timeline guessing party game — guess when games were released!",
+  description: siteConfig.description,
+  openGraph: {
+    type: "website",
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} social preview`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+  },
 };
 
 export const viewport: Viewport = {
@@ -79,8 +102,9 @@ export default async function RootLayout({
           <TooltipProvider>
             <NoiseOverlay />
             <Header username={username} />
-            <main className="flex flex-1 flex-col pb-16 md:pb-0">{children}</main>
+            <main className="flex flex-1 flex-col pb-28 md:pb-0">{children}</main>
             <Footer />
+            <MobileAttributionBar />
             <BottomNav username={username} />
             <Toaster />
             <AuthListener />
