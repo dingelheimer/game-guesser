@@ -119,7 +119,7 @@ export function MultiplayerExpertVerificationPanel({
               inputMode="numeric"
               placeholder="e.g. 2001"
               value={yearInput}
-              onChange={(e) => setYearInput(e.target.value)}
+              onChange={(e) => { setYearInput(e.target.value); }}
               disabled={result !== null}
               className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400/60 disabled:opacity-50"
             />
@@ -148,7 +148,7 @@ export function MultiplayerExpertVerificationPanel({
                     <button
                       key={platform.id}
                       type="button"
-                      onClick={() => handleTogglePlatform(platform.id)}
+                      onClick={() => { handleTogglePlatform(platform.id); }}
                       className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                         selected
                           ? "border-amber-400/60 bg-amber-500/30 text-amber-100"
