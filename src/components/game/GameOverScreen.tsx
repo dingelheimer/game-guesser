@@ -8,14 +8,30 @@ import { toast } from "sonner";
 import { GameCard } from "@/components/game/GameCard";
 import type { TimelineItem } from "@/components/game/Timeline";
 import { Button } from "@/components/ui/button";
+import {
+  buildSoloShareText,
+  extendShareYearRange,
+  shareResult,
+  type ShareOutcome,
+  type ShareYearRange,
+} from "@/lib/share";
+import { buildShareResultUrl } from "@/lib/shareResult";
 import { cn } from "@/lib/utils";
 import type { RevealedCardData } from "@/lib/solo/api";
-import {
-  buildSoloShareSummary,
-  copySoloShareSummary,
-  getSoloDifficultyLabel,
-} from "@/lib/solo/share";
+import { getSoloDifficultyLabel } from "@/lib/solo/share";
 import type { DifficultyTier } from "@/lib/difficulty";
+
+function revealedToTimelineItem(card: RevealedCardData): TimelineItem {
+  return {
+    coverImageId: card.cover_image_id,
+    id: String(card.game_id),
+    isRevealed: true,
+    platform: card.platform_names[0] ?? "Unknown",
+    releaseYear: card.release_year,
+    screenshotImageId: card.screenshot_image_ids[0] ?? null,
+    title: card.name,
+  };
+}
 
 export type ScoreStatus = "idle" | "submitting" | "saved" | "error";
 
@@ -26,6 +42,8 @@ interface GameOverScreenProps {
   bestStreak: number;
   bonusPointsEarned: number;
   bonusOpportunities: number;
+  shareOutcomes: ShareOutcome[];
+  shareYearRange: ShareYearRange | null;
   timelineItems: TimelineItem[];
   failedCard: RevealedCardData | null;
   validPositions: number[] | null;
@@ -114,6 +132,8 @@ export function GameOverScreen({
   bestStreak,
   bonusPointsEarned,
   bonusOpportunities,
+  shareOutcomes,
+  shareYearRange,
   timelineItems,
   failedCard,
   validPositions,
@@ -124,11 +144,41 @@ export function GameOverScreen({
   onPlayAgain,
   onChangeDifficulty,
 }: GameOverScreenProps) {
-  const shareSummary = buildSoloShareSummary({
-    difficulty,
-    score,
-    turnsPlayed,
-  });
+  const resolvedShareYearRange =
+    shareYearRange ??
+    [
+      ...timelineItems,
+      ...(failedCard === null ? [] : [revealedToTimelineItem(failedCard)]),
+    ].reduce<ShareYearRange | null>(
+      (range, item) =>
+        item.releaseYear > 0 ? extendShareYearRange(range, item.releaseYear) : range,
+      null,
+    );
+  const shareUrl =
+    difficulty !== null && resolvedShareYearRange !== null
+      ? buildShareResultUrl({
+          difficulty,
+          mode: "solo",
+          outcomes: shareOutcomes,
+          platformBonusEarned: bonusPointsEarned,
+          platformBonusOpportunities: bonusOpportunities,
+          score,
+          turnsPlayed,
+          yearRange: resolvedShareYearRange,
+        })
+      : null;
+  const shareSummary =
+    resolvedShareYearRange === null || shareUrl === null
+      ? ""
+      : buildSoloShareText({
+          outcomes: shareOutcomes,
+          platformBonusEarned: bonusPointsEarned,
+          platformBonusOpportunities: bonusOpportunities,
+          score,
+          turnsPlayed,
+          url: shareUrl,
+          yearRange: resolvedShareYearRange,
+        });
   const highlightedPositions = endedOnIncorrectPlacement ? (validPositions ?? []) : [];
   const positionDescriptions = highlightedPositions.map((position) =>
     describeTimelineSlot(timelineItems, position),
@@ -283,13 +333,14 @@ export function GameOverScreen({
               </Button>
               <Button
                 onClick={() => {
-                  void copySoloShareSummary({
-                    clipboard: navigator.clipboard,
-                    summary: shareSummary,
-                    score,
+                  void shareResult({
+                    navigator,
                     notify: toast,
+                    text: shareSummary,
+                    ...(shareUrl === null ? {} : { url: shareUrl }),
                   });
                 }}
+                disabled={shareSummary.length === 0}
                 variant="secondary"
                 className="sm:flex-1"
               >

@@ -115,7 +115,9 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
     const timer = setTimeout(() => {
       void getDeckSize(settings.difficulty, houseRules).then(setDeckSize);
     }, 500);
-    return () => { clearTimeout(timer); };
+    return () => {
+      clearTimeout(timer);
+    };
   }, [settings.difficulty, settings.genreLockId, settings.consoleLockFamily, settings.decadeStart]);
 
   useEffect(() => {

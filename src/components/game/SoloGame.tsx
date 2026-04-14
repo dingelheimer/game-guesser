@@ -49,6 +49,8 @@ export function SoloGame({ username }: { username: string | null }) {
   const currentStreak = useSoloGameStore((s) => s.currentStreak);
   const bonusPointsEarned = useSoloGameStore((s) => s.bonusPointsEarned);
   const bonusOpportunities = useSoloGameStore((s) => s.bonusOpportunities);
+  const shareOutcomes = useSoloGameStore((s) => s.shareOutcomes);
+  const shareYearRange = useSoloGameStore((s) => s.shareYearRange);
   const lastPlacementCorrect = useSoloGameStore((s) => s.lastPlacementCorrect);
   const validPositions = useSoloGameStore((s) => s.validPositions);
   const availablePlatforms = useSoloGameStore((s) => s.availablePlatforms);
@@ -194,6 +196,8 @@ export function SoloGame({ username }: { username: string | null }) {
         bestStreak={bestStreak}
         bonusPointsEarned={bonusPointsEarned}
         bonusOpportunities={bonusOpportunities}
+        shareOutcomes={shareOutcomes}
+        shareYearRange={shareYearRange}
         timelineItems={timelineItems}
         failedCard={revealedCard}
         validPositions={validPositions}
@@ -239,13 +243,13 @@ export function SoloGame({ username }: { username: string | null }) {
 
       {/* TEAMWORK lives counter */}
       {isTeamworkMode && teamTokens !== null && (
-        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-500/10 border-b border-rose-400/20 text-sm text-rose-200">
+        <div className="flex items-center justify-center gap-2 border-b border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">
           <span className="font-semibold">Lives:</span>
           <span className="tracking-wide">
             {"❤️".repeat(Math.max(0, teamTokens))}
             {"🖤".repeat(Math.max(0, 5 - teamTokens))}
           </span>
-          <span className="text-rose-300/70 ml-1">({teamTokens} remaining)</span>
+          <span className="ml-1 text-rose-300/70">({teamTokens} remaining)</span>
         </div>
       )}
 
@@ -362,8 +366,10 @@ export function SoloGame({ username }: { username: string | null }) {
                               inputMode="numeric"
                               placeholder="e.g. 2001"
                               value={expertYearInput}
-                              onChange={(e) => { setExpertYearInput(e.target.value); }}
-                              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400/60"
+                              onChange={(e) => {
+                                setExpertYearInput(e.target.value);
+                              }}
+                              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:ring-1 focus:ring-amber-400/60 focus:outline-none"
                             />
                           </div>
                           <PlatformBonusInput

@@ -26,6 +26,12 @@ import type {
   TurnRevealedPayload,
   TurnSkippedReason,
 } from "@/lib/multiplayer/turns";
+import {
+  classifyPlacementOutcome,
+  extendShareYearRange,
+  type ShareOutcome,
+  type ShareYearRange,
+} from "@/lib/share";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GameCard } from "@/components/game/GameCard";
@@ -122,6 +128,10 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const [platformBonusResult, setPlatformBonusResult] = useState<PlatformBonusState>(null);
   const [expertVerificationResult, setExpertVerificationResult] =
     useState<ExpertVerificationState>(null);
+  const [shareOutcomes, setShareOutcomes] = useState<ShareOutcome[]>([]);
+  const [sharePlatformBonusEarned, setSharePlatformBonusEarned] = useState(0);
+  const [sharePlatformBonusOpportunities, setSharePlatformBonusOpportunities] = useState(0);
+  const [shareYearRange, setShareYearRange] = useState<ShareYearRange | null>(null);
   const [teamGameOver, setTeamGameOver] = useState<TeamGameOverPayload | null>(
     initialGame.status === "finished" && initialGame.settings.gameMode === "teamwork"
       ? initialGame.winner === null
@@ -258,6 +268,32 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
   );
 
+  const trackCurrentUserPlacement = useCallback(
+    (payload: TurnRevealedPayload) => {
+      if (game.currentTurn.activePlayerId === game.currentUserId) {
+        const activePlayer = playersRef.current.find(
+          (player) => player.userId === game.currentTurn.activePlayerId,
+        );
+        if (activePlayer !== undefined) {
+          setShareOutcomes((previous) => [
+            ...previous,
+            classifyPlacementOutcome(
+              activePlayer.timeline.map((card) => card.releaseYear),
+              payload.position,
+              payload.card.releaseYear,
+            ),
+          ]);
+          setShareYearRange((previous) => extendShareYearRange(previous, payload.card.releaseYear));
+        }
+      }
+
+      if (payload.platformBonusPlayerId === game.currentUserId) {
+        setSharePlatformBonusOpportunities((previous) => previous + 1);
+      }
+    },
+    [game.currentTurn.activePlayerId, game.currentUserId],
+  );
+
   const applyTurnStarted = useCallback(
     (
       activePlayerId: string,
@@ -369,6 +405,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setIsSubmittingPlacement(false);
       setExpertVerificationResult(null);
       setPlatformBonusResult(null);
+      trackCurrentUserPlacement(payload);
 
       let activePlayerId = "";
       let challengeMessage: string | null = null;
@@ -460,7 +497,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       }, FAILED_PLACEMENT_PREVIEW_MS);
       setChallengeNotice(challengeMessage);
     },
-    [clearDisconnectGrace, clearFailedPlacementTimeout],
+    [clearDisconnectGrace, clearFailedPlacementTimeout, trackCurrentUserPlacement],
   );
 
   const applyPlatformBonusResult = useCallback(
@@ -476,24 +513,35 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setPlacementFeedback(null);
       setExpertVerificationResult(null);
       setPlatformBonusResult(payload);
-      setGame((current) => ({
-        ...current,
-        currentTurn: {
-          ...current.currentTurn,
-          phase: "complete",
-          phaseDeadline: null,
-          platformBonusPlayerId: null,
-        },
-        players: reconcilePlayers(
-          current.players,
-          payload.timelines,
-          payload.scores,
-          payload.tokens,
-          null,
-        ),
-      }));
+      if (game.currentTurn.platformBonusPlayerId === game.currentUserId && payload.correct) {
+        setSharePlatformBonusEarned((previous) => previous + 1);
+      }
+      setGame((current) => {
+        return {
+          ...current,
+          currentTurn: {
+            ...current.currentTurn,
+            phase: "complete",
+            phaseDeadline: null,
+            platformBonusPlayerId: null,
+          },
+          players: reconcilePlayers(
+            current.players,
+            payload.timelines,
+            payload.scores,
+            payload.tokens,
+            null,
+          ),
+        };
+      });
     },
-    [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
+    [
+      clearDisconnectGrace,
+      clearFailedPlacementTimeout,
+      clearProgressionTimeout,
+      game.currentTurn.platformBonusPlayerId,
+      game.currentUserId,
+    ],
   );
 
   const applyExpertVerificationResult = useCallback(
@@ -509,24 +557,35 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setPlacementFeedback(null);
       setPlatformBonusResult(null);
       setExpertVerificationResult(payload);
-      setGame((current) => ({
-        ...current,
-        currentTurn: {
-          ...current.currentTurn,
-          phase: "complete",
-          phaseDeadline: null,
-          platformBonusPlayerId: null,
-        },
-        players: reconcilePlayers(
-          current.players,
-          payload.timelines,
-          payload.scores,
-          payload.tokens,
-          null,
-        ),
-      }));
+      if (game.currentTurn.platformBonusPlayerId === game.currentUserId && payload.correct) {
+        setSharePlatformBonusEarned((previous) => previous + 1);
+      }
+      setGame((current) => {
+        return {
+          ...current,
+          currentTurn: {
+            ...current.currentTurn,
+            phase: "complete",
+            phaseDeadline: null,
+            platformBonusPlayerId: null,
+          },
+          players: reconcilePlayers(
+            current.players,
+            payload.timelines,
+            payload.scores,
+            payload.tokens,
+            null,
+          ),
+        };
+      });
     },
-    [clearDisconnectGrace, clearFailedPlacementTimeout, clearProgressionTimeout],
+    [
+      clearDisconnectGrace,
+      clearFailedPlacementTimeout,
+      clearProgressionTimeout,
+      game.currentTurn.platformBonusPlayerId,
+      game.currentUserId,
+    ],
   );
 
   const applyGameOver = useCallback(
@@ -809,7 +868,14 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         payload: result.data.followUp.gameOver,
       });
     },
-    [applyGameOver, applyTeamGameOver, applyTurnSkipped, applyTurnStarted, game.sessionId, presence],
+    [
+      applyGameOver,
+      applyTeamGameOver,
+      applyTurnSkipped,
+      applyTurnStarted,
+      game.sessionId,
+      presence,
+    ],
   );
 
   const handleProceedFromChallenge = useCallback(async () => {
@@ -1098,7 +1164,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       setIsSubmittingTeamVote(true);
       setActionError(null);
 
-      const result = await submitTeamVote(game.sessionId, position, locked, presence.map((p) => p.userId));
+      const result = await submitTeamVote(
+        game.sessionId,
+        position,
+        locked,
+        presence.map((p) => p.userId),
+      );
       setIsSubmittingTeamVote(false);
 
       if (!result.success) {
@@ -1448,7 +1519,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       <MultiplayerGameOverView
         connectedUserIds={presence.map((player) => player.userId)}
         currentUserId={game.currentUserId}
+        difficulty={game.settings.difficulty}
         players={game.players}
+        shareOutcomes={shareOutcomes}
+        sharePlatformBonusEarned={sharePlatformBonusEarned}
+        sharePlatformBonusOpportunities={sharePlatformBonusOpportunities}
+        shareYearRange={shareYearRange}
         winCondition={game.settings.winCondition}
         winner={winner}
       />
@@ -1670,7 +1746,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
                   </CardHeader>
                   <div className="px-6 pb-6">
                     {(game.teamTimeline ?? []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         No cards placed yet — the first card will be revealed soon.
                       </p>
                     ) : (
@@ -1678,7 +1754,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
                         {(game.teamTimeline ?? []).map((card) => (
                           <div
                             key={card.gameId}
-                            className="flex justify-between items-center px-3 py-2 bg-muted/50 rounded text-sm"
+                            className="bg-muted/50 flex items-center justify-between rounded px-3 py-2 text-sm"
                           >
                             <span>{card.title}</span>
                             <span className="text-muted-foreground font-mono">
@@ -1715,9 +1791,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
                         : null
                     }
                     highlightedCardTone={
-                      placementFeedback?.playerId === player.userId
-                        ? placementFeedback.tone
-                        : null
+                      placementFeedback?.playerId === player.userId ? placementFeedback.tone : null
                     }
                     activityBadgeLabel={
                       isDisconnectedActivePlayer && disconnectCountdown !== null
