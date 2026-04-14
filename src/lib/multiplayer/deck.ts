@@ -35,6 +35,11 @@ export const TimelineEntrySchema = z.object({
 /** A single entry in a player's revealed timeline. */
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
 
+const TeamVoteEntrySchema = z.object({
+  position: z.number().int(),
+  locked: z.boolean(),
+});
+
 /** Runtime schema for the persisted game_sessions.current_turn JSONB payload. */
 export const TurnStateSchema = z.object({
   phase: TurnPhaseSchema,
@@ -49,6 +54,8 @@ export const TurnStateSchema = z.object({
   platformBonusPlayerId: z.uuid().optional(),
   platformBonusCorrect: z.boolean().optional(),
   phaseDeadline: z.iso.datetime({ offset: true }).optional(),
+  /** Per-player vote state for the team_voting phase. */
+  votes: z.record(z.string(), TeamVoteEntrySchema).optional(),
 });
 
 /** Persistent turn state stored in game_sessions.current_turn JSONB. */

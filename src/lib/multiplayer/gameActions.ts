@@ -34,6 +34,9 @@ import {
   type PlacementMadePayload,
   type PlatformBonusResultPayload,
   type RevealedTurnCard,
+  type TeamGameOverPayload,
+  type TeamVoteResolvedPayload,
+  type TeamVoteUpdatedPayload,
   type TurnRevealedPayload,
   type TurnSkippedPayload,
   type TurnSkippedReason,
@@ -66,6 +69,13 @@ const SubmitExpertVerificationSchema = z.object({
   yearGuess: z.number().int(),
 });
 
+const SubmitTeamVoteSchema = z.object({
+  locked: z.boolean(),
+  position: z.number().int().min(0),
+  presenceUserIds: z.array(z.uuid()).default([]),
+  sessionId: z.uuid(),
+});
+
 const GameSessionRowSchema = z.object({
   active_player_id: z.uuid().nullable(),
   current_turn: z.unknown().nullable(),
@@ -74,6 +84,9 @@ const GameSessionRowSchema = z.object({
   room_id: z.uuid(),
   settings: z.unknown().nullable(),
   status: z.enum(["active", "finished", "abandoned"]),
+  team_score: z.number().int().nullable().default(null),
+  team_timeline: z.unknown().nullable().default(null),
+  team_tokens: z.number().int().nullable().default(null),
   turn_number: z.number().int(),
   turn_order: z.array(z.uuid()),
 });
@@ -125,6 +138,9 @@ type WritableGameSession = Readonly<{
   deckCursor: number;
   roomId: string;
   settings: LobbySettings;
+  teamScore: number | null;
+  teamTimeline: readonly TimelineEntry[] | null;
+  teamTokens: number | null;
   turnNumber: number;
   turnOrder: readonly string[];
 }>;
@@ -155,6 +171,7 @@ type PlatformBonusState = Readonly<{
  */
 export type TurnFollowUpResult =
   | Readonly<{ gameOver: GameOverPayload; type: "game_over" }>
+  | Readonly<{ gameOver: TeamGameOverPayload; type: "team_game_over" }>
   | Readonly<{ nextTurn: TurnStartedPayload; type: "next_turn" }>;
 
 /**
@@ -236,6 +253,17 @@ export type SkipTurnResult = Readonly<{
   followUp: TurnFollowUpResult;
   skipped: TurnSkippedPayload;
 }>;
+
+/**
+ * Success payload returned by {@link submitTeamVote}.
+ */
+export type SubmitTeamVoteResult =
+  | Readonly<{ type: "vote_updated"; votePayload: TeamVoteUpdatedPayload }>
+  | Readonly<{
+      followUp: TurnFollowUpResult;
+      resolvedPayload: TeamVoteResolvedPayload;
+      type: "vote_resolved";
+    }>;
 
 function revalidateGamePath(sessionId: string): void {
   revalidatePath(`/play/game/${sessionId}`);
@@ -322,7 +350,7 @@ async function loadWritableGameSession(
   const { data, error } = await serviceClient
     .from("game_sessions")
     .select(
-      "room_id, status, deck, deck_cursor, current_turn, turn_number, turn_order, active_player_id, settings",
+      "room_id, status, deck, deck_cursor, current_turn, turn_number, turn_order, active_player_id, settings, team_timeline, team_tokens, team_score",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -342,11 +370,16 @@ async function loadWritableGameSession(
 
   const settings = LobbySettingsSchema.safeParse(session.data.settings ?? {});
   const currentTurn = TurnStateSchema.safeParse(session.data.current_turn);
+  const teamTimeline =
+    session.data.team_timeline !== null
+      ? z.array(TimelineEntrySchema).safeParse(session.data.team_timeline)
+      : null;
   if (
     session.data.status !== "active" ||
     session.data.active_player_id === null ||
     !settings.success ||
-    !currentTurn.success
+    !currentTurn.success ||
+    (teamTimeline !== null && !teamTimeline.success)
   ) {
     return fail(appError("CONFLICT", "This multiplayer game is no longer active."));
   }
@@ -358,6 +391,9 @@ async function loadWritableGameSession(
     deckCursor: session.data.deck_cursor,
     roomId: session.data.room_id,
     settings: settings.data,
+    teamScore: session.data.team_score,
+    teamTimeline: teamTimeline !== null ? teamTimeline.data : null,
+    teamTokens: session.data.team_tokens,
     turnNumber: session.data.turn_number,
     turnOrder: session.data.turn_order,
   });
@@ -765,6 +801,56 @@ async function finishGame(
   return ok(payloadResult.data);
 }
 
+async function finishTeamworkGame(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  session: WritableGameSession,
+  teamWin: boolean,
+  teamScore: number,
+  teamTimeline: readonly TimelineEntry[],
+): Promise<Result<TeamGameOverPayload, AppError>> {
+  const winnerId = teamWin ? (session.turnOrder[0] ?? null) : null;
+
+  const completedTurn = buildCompletedTurn(session.currentTurn);
+  const { data: updatedSession, error: sessionError } = await serviceClient
+    .from("game_sessions")
+    .update({
+      current_turn: completedTurn as unknown as Json,
+      status: "finished",
+      winner_id: winnerId,
+    })
+    .eq("id", sessionId)
+    .eq("turn_number", session.turnNumber)
+    .eq("status", "active")
+    .select("id")
+    .maybeSingle();
+
+  if (sessionError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to finish the multiplayer game session."));
+  }
+
+  if (updatedSession === null) {
+    return fail(appError("CONFLICT", "This multiplayer game has already finished."));
+  }
+
+  const { data: updatedRoom, error: roomError } = await serviceClient
+    .from("rooms")
+    .update({ status: "finished" })
+    .eq("id", session.roomId)
+    .select("id")
+    .maybeSingle();
+
+  if (roomError !== null || updatedRoom === null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to finish the multiplayer room."));
+  }
+
+  return ok({
+    finalTeamScore: teamScore,
+    finalTeamTimeline: teamTimeline,
+    teamWin,
+  });
+}
+
 async function resolvePlatformBonusPhase(
   serviceClient: ServiceClient,
   sessionId: string,
@@ -1060,11 +1146,15 @@ async function startNextTurn(
   }
 
   const deadline = buildPhaseDeadline(session.settings.turnTimer);
+  const isTeamworkMultiplayer =
+    session.settings.gameMode === "teamwork" && session.turnOrder.length > 1;
+  const nextPhase: TurnState["phase"] = isTeamworkMultiplayer ? "team_voting" : "placing";
   const nextTurn: TurnState = {
     activePlayerId: nextActivePlayerId,
     gameId: nextGameId,
-    phase: "placing",
+    phase: nextPhase,
     screenshotImageId: screenshot.data.igdb_image_id,
+    ...(isTeamworkMultiplayer && { votes: {} }),
     ...(deadline !== null && { phaseDeadline: deadline }),
   };
 
@@ -1096,6 +1186,183 @@ async function startNextTurn(
     screenshot: { screenshotImageId: screenshot.data.igdb_image_id },
     turnNumber: session.turnNumber + 1,
   });
+}
+
+async function buildFollowUpAfterTeamVote(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  session: WritableGameSession,
+  teamScore: number,
+  teamTimeline: readonly TimelineEntry[],
+  teamTokens: number,
+): Promise<Result<TurnFollowUpResult, AppError>> {
+  if (teamTokens <= 0) {
+    const gameOverResult = await finishTeamworkGame(
+      serviceClient,
+      sessionId,
+      session,
+      false,
+      teamScore,
+      teamTimeline,
+    );
+    if (!gameOverResult.success) {
+      return gameOverResult;
+    }
+
+    return ok({ gameOver: gameOverResult.data, type: "team_game_over" });
+  }
+
+  if (teamScore >= session.settings.winCondition) {
+    const gameOverResult = await finishTeamworkGame(
+      serviceClient,
+      sessionId,
+      session,
+      true,
+      teamScore,
+      teamTimeline,
+    );
+    if (!gameOverResult.success) {
+      return gameOverResult;
+    }
+
+    return ok({ gameOver: gameOverResult.data, type: "team_game_over" });
+  }
+
+  if (session.deckCursor >= session.deck.length) {
+    const gameOverResult = await finishTeamworkGame(
+      serviceClient,
+      sessionId,
+      session,
+      false,
+      teamScore,
+      teamTimeline,
+    );
+    if (!gameOverResult.success) {
+      return gameOverResult;
+    }
+
+    return ok({ gameOver: gameOverResult.data, type: "team_game_over" });
+  }
+
+  const nextTurnResult = await startNextTurn(serviceClient, sessionId, session, "complete");
+  if (!nextTurnResult.success) {
+    return nextTurnResult;
+  }
+
+  return ok({ nextTurn: nextTurnResult.data, type: "next_turn" });
+}
+
+async function resolveTeamVote(
+  serviceClient: ServiceClient,
+  sessionId: string,
+  session: WritableGameSession,
+  votes: Readonly<Record<string, Readonly<{ position: number; locked: boolean }>>>,
+): Promise<Result<{ resolvedPayload: TeamVoteResolvedPayload; followUp: TurnFollowUpResult }, AppError>> {
+  const teamTimeline = session.teamTimeline;
+  const currentTokens = session.teamTokens;
+  const currentScore = session.teamScore;
+
+  if (teamTimeline === null || currentTokens === null || currentScore === null) {
+    return fail(appError("INTERNAL_ERROR", "Missing team state for TEAMWORK resolution."));
+  }
+
+  const cardResult = await loadResolvedTurnCard(serviceClient, session.currentTurn);
+  if (!cardResult.success) {
+    return cardResult;
+  }
+
+  // Tally votes: count votes per position.
+  const voteCounts: Record<number, number> = {};
+  const voterBreakdown: Record<string, number> = {};
+  for (const [playerId, vote] of Object.entries(votes)) {
+    const pos = vote.position;
+    voteCounts[pos] = (voteCounts[pos] ?? 0) + 1;
+    voterBreakdown[playerId] = pos;
+  }
+
+  // Find position with most votes; tie-break toward host (first in turn order).
+  let winningPosition = 0;
+  let maxVotes = -1;
+  for (const player of session.turnOrder) {
+    const pos = votes[player]?.position;
+    if (pos === undefined) {
+      continue;
+    }
+
+    const count = voteCounts[pos] ?? 0;
+    if (count > maxVotes) {
+      maxVotes = count;
+      winningPosition = pos;
+    }
+  }
+
+  const isCorrect = isPlacementCorrect(teamTimeline, cardResult.data.releaseYear, winningPosition);
+
+  let updatedTeamTimeline = teamTimeline;
+  let updatedTeamScore = currentScore;
+  let updatedTeamTokens = currentTokens;
+
+  if (isCorrect) {
+    updatedTeamTimeline = insertTimelineEntry(
+      teamTimeline,
+      {
+        gameId: cardResult.data.gameId,
+        name: cardResult.data.name,
+        releaseYear: cardResult.data.releaseYear,
+      },
+      winningPosition,
+    );
+    updatedTeamScore = currentScore + 1;
+  } else {
+    updatedTeamTokens = currentTokens - 1;
+  }
+
+  const completedTurn = buildCompletedTurn(session.currentTurn, { isCorrect });
+  const { data: updatedSession, error: updateError } = await serviceClient
+    .from("game_sessions")
+    .update({
+      current_turn: completedTurn as unknown as Json,
+      team_score: updatedTeamScore,
+      team_timeline: updatedTeamTimeline as unknown as Json,
+      team_tokens: updatedTeamTokens,
+    })
+    .eq("id", sessionId)
+    .eq("turn_number", session.turnNumber)
+    .eq("current_turn->>phase", "team_voting")
+    .select("id")
+    .maybeSingle();
+
+  if (updateError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to resolve the team vote."));
+  }
+
+  if (updatedSession === null) {
+    return fail(appError("CONFLICT", "This team vote has already been resolved."));
+  }
+
+  const resolvedPayload: TeamVoteResolvedPayload = {
+    card: cardResult.data,
+    correct: isCorrect,
+    position: winningPosition,
+    teamScore: updatedTeamScore,
+    teamTimeline: updatedTeamTimeline,
+    teamTokens: updatedTeamTokens,
+    voterBreakdown,
+  };
+
+  const followUpResult = await buildFollowUpAfterTeamVote(
+    serviceClient,
+    sessionId,
+    session,
+    updatedTeamScore,
+    updatedTeamTimeline,
+    updatedTeamTokens,
+  );
+  if (!followUpResult.success) {
+    return followUpResult;
+  }
+
+  return ok({ resolvedPayload, followUp: followUpResult.data });
 }
 
 async function buildFollowUpAfterReveal(
@@ -2239,4 +2506,145 @@ export async function skipTurn(
       reason: parsed.data.reason,
     },
   });
+}
+
+/**
+ * Submit or update the calling player's team vote position and, if all connected
+ * players have locked in, automatically resolve the team vote.
+ */
+export async function submitTeamVote(
+  sessionId: string,
+  position: number,
+  locked: boolean,
+  presenceUserIds: string[],
+): Promise<Result<SubmitTeamVoteResult, AppError>> {
+  const parsed = SubmitTeamVoteSchema.safeParse({ sessionId, position, locked, presenceUserIds });
+  if (!parsed.success) {
+    return fail(
+      appError("VALIDATION_ERROR", "Please provide a valid vote position before submitting."),
+    );
+  }
+
+  const supabase = await createClient();
+  const userIdResult = await getAuthenticatedUserId(supabase);
+  if (!userIdResult.success) {
+    return userIdResult;
+  }
+
+  const membershipResult = await ensureSessionMember(
+    supabase,
+    parsed.data.sessionId,
+    userIdResult.data,
+  );
+  if (!membershipResult.success) {
+    return membershipResult;
+  }
+
+  const serviceClient = createServiceClient();
+
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const sessionResult = await loadWritableGameSession(serviceClient, parsed.data.sessionId);
+    if (!sessionResult.success) {
+      return sessionResult;
+    }
+
+    const session = sessionResult.data;
+
+    if (session.currentTurn.phase !== "team_voting") {
+      return fail(appError("CONFLICT", "This turn is no longer accepting team votes."));
+    }
+
+    if (
+      session.teamTimeline === null ||
+      session.teamTokens === null ||
+      session.teamScore === null
+    ) {
+      return fail(appError("CONFLICT", "This game session is not configured for TEAMWORK mode."));
+    }
+
+    const currentVotes = session.currentTurn.votes ?? {};
+    const updatedVotes: Record<string, { position: number; locked: boolean }> = {
+      ...currentVotes,
+      [userIdResult.data]: { position: parsed.data.position, locked: parsed.data.locked },
+    };
+
+    // Check if all connected players have locked in.
+    const connectedPlayers = parsed.data.presenceUserIds.filter((id) =>
+      session.turnOrder.includes(id),
+    );
+    const allLocked =
+      connectedPlayers.length > 0 &&
+      connectedPlayers.every((id) => updatedVotes[id]?.locked === true);
+
+    if (allLocked) {
+      // Try to resolve the vote; the DB update in resolveTeamVote uses an optimistic lock.
+      const updatedTurn: TurnState = { ...session.currentTurn, votes: updatedVotes };
+      const { error: voteUpdateError } = await serviceClient
+        .from("game_sessions")
+        .update({ current_turn: updatedTurn as unknown as Json })
+        .eq("id", parsed.data.sessionId)
+        .eq("turn_number", session.turnNumber)
+        .eq("current_turn->>phase", "team_voting");
+
+      if (voteUpdateError !== null && attempt < MAX_RETRIES - 1) {
+        await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+        continue;
+      }
+
+      const resolveResult = await resolveTeamVote(
+        serviceClient,
+        parsed.data.sessionId,
+        { ...session, currentTurn: updatedTurn },
+        updatedVotes,
+      );
+      if (!resolveResult.success) {
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+          continue;
+        }
+
+        return resolveResult;
+      }
+
+      revalidateGamePath(parsed.data.sessionId);
+      return ok({
+        type: "vote_resolved",
+        followUp: resolveResult.data.followUp,
+        resolvedPayload: resolveResult.data.resolvedPayload,
+      });
+    }
+
+    // Not all locked — just persist the vote update.
+    const updatedTurn: TurnState = { ...session.currentTurn, votes: updatedVotes };
+    const { data: updatedSession, error: updateError } = await serviceClient
+      .from("game_sessions")
+      .update({ current_turn: updatedTurn as unknown as Json })
+      .eq("id", parsed.data.sessionId)
+      .eq("turn_number", session.turnNumber)
+      .eq("current_turn->>phase", "team_voting")
+      .select("id")
+      .maybeSingle();
+
+    if (updateError !== null) {
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise((resolve) => { setTimeout(resolve, 50 * (attempt + 1)); });
+        continue;
+      }
+
+      return fail(appError("INTERNAL_ERROR", "Failed to record your team vote."));
+    }
+
+    if (updatedSession === null) {
+      return fail(appError("CONFLICT", "This turn is no longer accepting team votes."));
+    }
+
+    revalidateGamePath(parsed.data.sessionId);
+    return ok({
+      type: "vote_updated",
+      votePayload: { votes: updatedVotes },
+    });
+  }
+
+  return fail(appError("INTERNAL_ERROR", "Failed to record your team vote after multiple retries."));
 }
