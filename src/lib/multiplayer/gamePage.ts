@@ -291,6 +291,7 @@ export async function getMultiplayerGamePageData(
     session.data.status === "finished" ||
     currentTurn.data.phase === "revealing" ||
     currentTurn.data.phase === "platform_bonus" ||
+    currentTurn.data.phase === "expert_verification" ||
     currentTurn.data.phase === "complete";
   const coverImageIdsByGameId = new Map<number, string>();
   const platformNamesByGameId = new Map<number, string[]>();

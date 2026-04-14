@@ -43,6 +43,7 @@ export type TurnRevealedPayload = Readonly<{
   card: RevealedTurnCard;
   challengeResult?: ChallengeResult;
   challengerId?: string;
+  expertVerificationDeadline?: string;
   isCorrect: boolean;
   platformBonusDeadline?: string;
   platformOptions?: readonly PlatformOption[];
@@ -63,6 +64,19 @@ export type PlatformBonusResultPayload = Readonly<{
   timelines: Readonly<Record<string, readonly TimelineEntry[]>>;
   tokenChange: number;
   tokens: Readonly<Record<string, number>>;
+}>;
+
+/**
+ * Broadcast payload emitted when the multiplayer expert verification resolves.
+ */
+export type ExpertVerificationResultPayload = Readonly<{
+  correct: boolean;
+  correctPlatforms: readonly PlatformOption[];
+  platformsCorrect: boolean;
+  scores: Readonly<Record<string, number>>;
+  timelines: Readonly<Record<string, readonly TimelineEntry[]>>;
+  tokens: Readonly<Record<string, number>>;
+  yearCorrect: boolean;
 }>;
 
 /**
@@ -124,6 +138,13 @@ export function buildChallengeDeadline(now = Date.now()): string {
  */
 export function buildPlatformBonusDeadline(now = Date.now()): string {
   return new Date(now + 15_000).toISOString();
+}
+
+/**
+ * Return the fixed 20-second deadline for the multiplayer expert verification window.
+ */
+export function buildExpertVerificationDeadline(now = Date.now()): string {
+  return new Date(now + 20_000).toISOString();
 }
 
 /**
