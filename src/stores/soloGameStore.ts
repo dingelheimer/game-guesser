@@ -66,6 +66,7 @@ export interface SoloGameState {
   sessionId: string | null;
   difficulty: DifficultyTier | null;
   variant: LobbySettings["variant"] | null;
+  gameMode: LobbySettings["gameMode"] | null;
   /** Active house rules for the current or last game. */
   houseRules: HouseRuleParams | null;
 
@@ -103,12 +104,19 @@ export interface SoloGameState {
   /** Result of the expert verification round. null until submitted. */
   expertVerificationResult: "correct" | "incorrect" | null;
 
+  /** Shared team lives for TEAMWORK mode. null when not in TEAMWORK mode. */
+  teamTokens: number | null;
+  /** Target score for TEAMWORK solo win condition. null when not in TEAMWORK mode. */
+  teamWinCondition: number | null;
+
   // ── Actions ──────────────────────────────────────────────────────────────
 
   startGame: (
     difficulty: DifficultyTier,
     houseRules?: HouseRuleParams,
     variant?: LobbySettings["variant"],
+    gameMode?: LobbySettings["gameMode"],
+    teamWinCondition?: number,
   ) => Promise<void>;
   placeCard: (position: number) => Promise<void>;
   moveCardToCorrectPosition: () => void;
@@ -128,6 +136,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   sessionId: null,
   difficulty: null,
   variant: null,
+  gameMode: null,
   houseRules: null,
 
   currentCard: null,
@@ -151,11 +160,15 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   correctPlatformIds: [],
   platformBonusResult: null,
   expertVerificationResult: null,
+  teamTokens: null,
+  teamWinCondition: null,
 
   async startGame(
     difficulty: DifficultyTier,
     houseRules?: HouseRuleParams,
     variant: LobbySettings["variant"] = "standard",
+    gameMode: LobbySettings["gameMode"] = "competitive",
+    teamWinCondition?: number,
   ) {
     set({ phase: "starting", error: null });
     try {
@@ -165,6 +178,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         sessionId: res.session_id,
         difficulty,
         variant,
+        gameMode,
         houseRules: houseRules ?? null,
         currentCard: res.current_card,
         nextCard: null,
@@ -184,6 +198,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         correctPlatformIds: [],
         platformBonusResult: null,
         expertVerificationResult: null,
+        teamTokens: gameMode === "teamwork" ? 5 : null,
+        teamWinCondition: gameMode === "teamwork" ? (teamWinCondition ?? 10) : null,
       });
     } catch (err) {
       set({
@@ -242,6 +258,10 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         correctPlatformIds: result.correct_platform_ids ?? [],
         platformBonusResult: null,
         expertVerificationResult: null,
+        teamTokens:
+          state.gameMode === "teamwork" && !result.correct && state.teamTokens !== null
+            ? Math.max(0, state.teamTokens - 1)
+            : state.teamTokens,
       }));
     } catch (err) {
       set({
@@ -333,9 +353,13 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
     const {
       availablePlatforms,
       expertVerificationResult,
+      gameMode,
       lastPlacementCorrect,
       nextCard,
       platformBonusResult,
+      score,
+      teamTokens,
+      teamWinCondition,
       variant,
     } = get();
 
@@ -354,6 +378,38 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       availablePlatforms.length > 0 &&
       expertVerificationResult === null
     ) {
+      return;
+    }
+
+    if (gameMode === "teamwork") {
+      const tokensLeft = teamTokens ?? 0;
+      if (tokensLeft <= 0) {
+        set({ phase: "game_over" });
+        return;
+      }
+      if (teamWinCondition !== null && score >= teamWinCondition) {
+        set({ phase: "game_over" });
+        return;
+      }
+      if (nextCard === null) {
+        set({ phase: "game_over" });
+        return;
+      }
+
+      set({
+        phase: "placing",
+        currentCard: nextCard,
+        nextCard: null,
+        revealedCard: null,
+        droppedPosition: null,
+        correctionTargetPosition: null,
+        lastPlacementCorrect: null,
+        validPositions: null,
+        availablePlatforms: [],
+        correctPlatformIds: [],
+        platformBonusResult: null,
+        expertVerificationResult: null,
+      });
       return;
     }
 
@@ -390,6 +446,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       sessionId: null,
       difficulty: null,
       variant: null,
+      gameMode: null,
       currentCard: null,
       nextCard: null,
       revealedCard: null,
@@ -408,6 +465,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       correctPlatformIds: [],
       platformBonusResult: null,
       expertVerificationResult: null,
+      teamTokens: null,
+      teamWinCondition: null,
     });
   },
 }));

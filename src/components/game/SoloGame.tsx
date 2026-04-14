@@ -64,6 +64,8 @@ export function SoloGame({ username }: { username: string | null }) {
   const resetGame = useSoloGameStore((s) => s.resetGame);
   const submitPlatformGuess = useSoloGameStore((s) => s.submitPlatformGuess);
   const submitExpertVerification = useSoloGameStore((s) => s.submitExpertVerification);
+  const gameMode = useSoloGameStore((s) => s.gameMode);
+  const teamTokens = useSoloGameStore((s) => s.teamTokens);
 
   const reduceMotion = useReducedMotion();
   const [incorrectPlacementStage, setIncorrectPlacementStage] =
@@ -80,6 +82,7 @@ export function SoloGame({ username }: { username: string | null }) {
   const isRevealing = phase === "revealing";
   const isProVariant = variant === "pro";
   const isExpertVariant = variant === "expert";
+  const isTeamworkMode = gameMode === "teamwork";
   const isIncorrectReveal = isRevealing && lastPlacementCorrect === false;
   const isPlatformBonusPending =
     isRevealing &&
@@ -234,6 +237,18 @@ export function SoloGame({ username }: { username: string | null }) {
         />
       )}
 
+      {/* TEAMWORK lives counter */}
+      {isTeamworkMode && teamTokens !== null && (
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-500/10 border-b border-rose-400/20 text-sm text-rose-200">
+          <span className="font-semibold">Lives:</span>
+          <span className="tracking-wide">
+            {"❤️".repeat(Math.max(0, teamTokens))}
+            {"🖤".repeat(Math.max(0, 5 - teamTokens))}
+          </span>
+          <span className="text-rose-300/70 ml-1">({teamTokens} remaining)</span>
+        </div>
+      )}
+
       {/* Error banner */}
       {error !== null && (
         <div className="bg-rose-500/15 px-4 py-2 text-sm text-rose-400" role="alert">
@@ -379,13 +394,15 @@ export function SoloGame({ username }: { username: string | null }) {
               <Button
                 onClick={advanceTurn}
                 className="w-full max-w-sm"
-                aria-label={!lastPlacementCorrect ? "See game over screen" : "Next turn"}
+                aria-label={
+                  !lastPlacementCorrect && !isTeamworkMode ? "See game over screen" : "Next turn"
+                }
                 disabled={
                   (isProVariant && isPlatformBonusPending) ||
                   (isExpertVariant && isExpertVerificationPending)
                 }
               >
-                {!lastPlacementCorrect ? "See Result" : "Next Turn →"}
+                {!lastPlacementCorrect && !isTeamworkMode ? "See Result" : "Next Turn →"}
               </Button>
             </motion.div>
           )}
