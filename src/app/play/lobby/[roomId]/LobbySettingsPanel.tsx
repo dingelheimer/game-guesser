@@ -261,7 +261,9 @@ export function LobbySettingsPanel({
               type="button"
               variant="ghost"
               className="text-text-secondary hover:text-text-primary -mx-2 flex w-full items-center justify-between px-2 text-sm font-medium"
-              onClick={() => { setHouseRulesOpen((prev) => !prev); }}
+              onClick={() => {
+                setHouseRulesOpen((prev) => !prev);
+              }}
             >
               House Rules
               {houseRulesOpen ? (

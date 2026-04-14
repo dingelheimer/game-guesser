@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import type { DifficultyTier } from "@/lib/difficulty";
 import { checkPlatformGuess, type PlatformOption } from "@/lib/platformBonus";
+import {
+  classifyPlacementOutcome,
+  extendShareYearRange,
+  type ShareOutcome,
+  type ShareYearRange,
+} from "@/lib/share";
 import type { TimelineItem } from "@/components/game/Timeline";
 import * as api from "@/lib/solo/api";
 import type { HiddenCardData, RevealedCardData } from "@/lib/solo/api";
@@ -89,6 +95,8 @@ export interface SoloGameState {
   currentStreak: number;
   bonusPointsEarned: number;
   bonusOpportunities: number;
+  shareOutcomes: ShareOutcome[];
+  shareYearRange: ShareYearRange | null;
 
   /** Result of the last placement. null during placing/submitting. */
   lastPlacementCorrect: boolean | null;
@@ -153,6 +161,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   currentStreak: 0,
   bonusPointsEarned: 0,
   bonusOpportunities: 0,
+  shareOutcomes: [],
+  shareYearRange: null,
 
   lastPlacementCorrect: null,
   validPositions: null,
@@ -192,6 +202,11 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         currentStreak: 0,
         bonusPointsEarned: 0,
         bonusOpportunities: 0,
+        shareOutcomes: [],
+        shareYearRange: res.timeline.reduce<ShareYearRange | null>(
+          (range, card) => extendShareYearRange(range, card.release_year),
+          null,
+        ),
         lastPlacementCorrect: null,
         validPositions: null,
         availablePlatforms: [],
@@ -225,8 +240,14 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       droppedPosition: position,
       timelineItems: tentativeTimelineItems,
     });
+
     try {
       const result = await api.submitTurn(sessionId, position);
+      const shareOutcome = classifyPlacementOutcome(
+        timelineItems.map((item) => item.releaseYear),
+        position,
+        result.revealed_card.release_year,
+      );
       const correctionTargetPosition = result.correct
         ? null
         : pickCorrectionTarget(result.valid_positions ?? [], position);
@@ -252,6 +273,11 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         bonusOpportunities: result.correct
           ? state.bonusOpportunities + 1
           : state.bonusOpportunities,
+        shareOutcomes: [...state.shareOutcomes, shareOutcome],
+        shareYearRange: extendShareYearRange(
+          state.shareYearRange,
+          result.revealed_card.release_year,
+        ),
         lastPlacementCorrect: result.correct,
         validPositions: result.valid_positions ?? null,
         availablePlatforms: result.platform_options ?? [],
@@ -459,6 +485,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       currentStreak: 0,
       bonusPointsEarned: 0,
       bonusOpportunities: 0,
+      shareOutcomes: [],
+      shareYearRange: null,
       lastPlacementCorrect: null,
       validPositions: null,
       availablePlatforms: [],
