@@ -206,7 +206,12 @@ export async function startGame(roomId: string): Promise<Result<StartGameResult,
   const baseSettings: LobbySettings = roomResult.data.settings.speedRound
     ? { ...roomResult.data.settings, turnTimer: "10" }
     : roomResult.data.settings;
-  const startingTokens = baseSettings.variant === "pro" ? 5 : baseSettings.startingTokens;
+  const startingTokens =
+    baseSettings.variant === "pro"
+      ? 5
+      : baseSettings.variant === "expert"
+        ? 3
+        : baseSettings.startingTokens;
   const effectiveSettings: LobbySettings =
     startingTokens === baseSettings.startingTokens
       ? baseSettings

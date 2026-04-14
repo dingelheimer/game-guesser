@@ -96,11 +96,13 @@ vi.mock("@/lib/supabase/service", () => ({
 }));
 
 import {
+  proceedFromExpertVerification,
   proceedFromPlatformBonus,
   proceedFromChallenge,
   resolveTurn,
   skipTurn,
   submitChallenge,
+  submitExpertVerification,
   submitPlacement,
   submitPlatformBonus,
 } from "./gameActions";
@@ -368,6 +370,308 @@ describe("resolveTurn", () => {
         }),
       }),
     });
+  });
+
+  it("enters the expert verification phase after a correct EXPERT placement", async () => {
+    authenticate(activePlayerId);
+    queueRegular(
+      { data: { user_id: activePlayerId }, error: null },
+      { data: { user_id: activePlayerId }, error: null },
+    );
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "revealing",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            placedPosition: 1,
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "expert", winCondition: 5 },
+        },
+        error: null,
+      },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 3,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+        },
+        error: null,
+      },
+      { data: { id: 103, name: "Portal 2", release_year: 2011 }, error: null },
+      { data: { game_id: 103, igdb_image_id: "cover-103" }, error: null },
+      { data: [{ game_id: 103, platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: null, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: null, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 4,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [
+              { gameId: 100, releaseYear: 1994, name: "Super Metroid" },
+              { gameId: 103, releaseYear: 2011, name: "Portal 2" },
+            ],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 2,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+          },
+        ],
+        error: null,
+      },
+    );
+
+    const result = await resolveTurn(sessionId);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.followUp).toBeUndefined();
+    expect(result.data.reveal).toMatchObject({
+      isCorrect: true,
+      platformBonusPlayerId: activePlayerId,
+      platformOptions: [{ id: 10, name: "PC" }],
+      expertVerificationDeadline: expect.any(String),
+    });
+    expect(updateOperations(mocks.serviceOperations, "game_sessions")).toContainEqual({
+      action: "update",
+      table: "game_sessions",
+      payload: expect.objectContaining({
+        current_turn: expect.objectContaining({
+          phase: "expert_verification",
+          platformBonusPlayerId: activePlayerId,
+        }),
+      }),
+    });
+  });
+
+  it("routes an EXPERT challenge win into expert verification for the challenger", async () => {
+    authenticate(activePlayerId);
+    queueRegular(
+      { data: { user_id: activePlayerId }, error: null },
+      { data: { user_id: activePlayerId }, error: null },
+    );
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "revealing",
+            activePlayerId,
+            challengerId: otherPlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            placedPosition: 1,
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "expert", winCondition: 5 },
+        },
+        error: null,
+      },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 4,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [{ gameId: 100, releaseYear: 1998, name: "Half-Life" }],
+        },
+        error: null,
+      },
+      { data: { id: 103, name: "Portal 2", release_year: 1995 }, error: null },
+      { data: { game_id: 103, igdb_image_id: "cover-103" }, error: null },
+      { data: [{ game_id: 103, platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      {
+        data: {
+          user_id: otherPlayerId,
+          display_name: "Sam Player",
+          score: 2,
+          tokens: 1,
+          turn_position: 1,
+          timeline: [{ gameId: 200, releaseYear: 2001, name: "Halo" }],
+        },
+        error: null,
+      },
+      { data: null, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: null, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 4,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [{ gameId: 100, releaseYear: 1998, name: "Half-Life" }],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 1,
+            turn_position: 1,
+            timeline: [
+              { gameId: 103, releaseYear: 1995, name: "Portal 2" },
+              { gameId: 200, releaseYear: 2001, name: "Halo" },
+            ],
+          },
+        ],
+        error: null,
+      },
+    );
+
+    const result = await resolveTurn(sessionId);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.followUp).toBeUndefined();
+    expect(result.data.reveal).toMatchObject({
+      challengerId: otherPlayerId,
+      challengeResult: "challenger_wins",
+      isCorrect: false,
+      platformBonusPlayerId: otherPlayerId,
+      platformOptions: [{ id: 10, name: "PC" }],
+      expertVerificationDeadline: expect.any(String),
+    });
+    expect(updateOperations(mocks.serviceOperations, "game_sessions")).toContainEqual({
+      action: "update",
+      table: "game_sessions",
+      payload: expect.objectContaining({
+        current_turn: expect.objectContaining({
+          phase: "expert_verification",
+          platformBonusPlayerId: otherPlayerId,
+        }),
+      }),
+    });
+  });
+
+  it("does not enter platform_bonus in an EXPERT game with a correct placement", async () => {
+    authenticate(activePlayerId);
+    queueRegular(
+      { data: { user_id: activePlayerId }, error: null },
+      { data: { user_id: activePlayerId }, error: null },
+    );
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "revealing",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            placedPosition: 1,
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "expert", winCondition: 5 },
+        },
+        error: null,
+      },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 3,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+        },
+        error: null,
+      },
+      { data: { id: 103, name: "Portal 2", release_year: 2011 }, error: null },
+      { data: { game_id: 103, igdb_image_id: "cover-103" }, error: null },
+      { data: [{ game_id: 103, platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: null, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: null, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 4,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [
+              { gameId: 100, releaseYear: 1994, name: "Super Metroid" },
+              { gameId: 103, releaseYear: 2011, name: "Portal 2" },
+            ],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 2,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+          },
+        ],
+        error: null,
+      },
+    );
+
+    const result = await resolveTurn(sessionId);
+
+    expect(result.success).toBe(true);
+    const allSessionUpdates = updateOperations(mocks.serviceOperations, "game_sessions");
+    expect(
+      allSessionUpdates.some(
+        (op) =>
+          (op.payload as Record<string, unknown>)["current_turn"] !== undefined &&
+          ((op.payload as Record<string, { phase?: string }>)["current_turn"] as { phase?: string })
+            ?.phase === "platform_bonus",
+      ),
+    ).toBe(false);
   });
 
   it("routes a PRO challenge win into the platform bonus for the challenger", async () => {
@@ -1128,6 +1432,504 @@ describe("proceedFromPlatformBonus", () => {
         turnNumber: 5,
       },
     });
+  });
+});
+
+describe("submitExpertVerification", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.regularOperations.length = 0;
+    mocks.regularResults.length = 0;
+    mocks.serviceOperations.length = 0;
+    mocks.serviceResults.length = 0;
+  });
+
+  it("keeps the card and advances to the next turn when both year and platforms are correct", async () => {
+    authenticate(activePlayerId);
+    queueRegular({ data: { user_id: activePlayerId }, error: null });
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103, 104],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "expert_verification",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            phaseDeadline: "2099-04-12T12:00:00.000Z",
+            platformBonusPlayerId: activePlayerId,
+            platformOptions: [{ id: 10, name: "PC" }],
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "expert", winCondition: 10 },
+        },
+        error: null,
+      },
+      { data: { release_year: 2011 }, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: { id: sessionId }, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 4,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [
+              { gameId: 100, releaseYear: 1994, name: "Super Metroid" },
+              { gameId: 103, releaseYear: 2011, name: "Portal 2" },
+            ],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 2,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+          },
+        ],
+        error: null,
+      },
+      { data: [{ igdb_image_id: "shot-104" }], error: null },
+      { data: { room_id: roomId }, error: null },
+    );
+
+    const result = await submitExpertVerification(sessionId, 2011, [10]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.verification).toEqual({
+      correct: true,
+      correctPlatforms: [{ id: 10, name: "PC" }],
+      platformsCorrect: true,
+      yearCorrect: true,
+      scores: {
+        [activePlayerId]: 4,
+        [otherPlayerId]: 3,
+      },
+      timelines: {
+        [activePlayerId]: [
+          { gameId: 100, releaseYear: 1994, name: "Super Metroid" },
+          { gameId: 103, releaseYear: 2011, name: "Portal 2" },
+        ],
+        [otherPlayerId]: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+      },
+      tokens: {
+        [activePlayerId]: 2,
+        [otherPlayerId]: 2,
+      },
+    });
+    expect(result.data.followUp).toEqual({
+      type: "next_turn",
+      nextTurn: {
+        activePlayerId: otherPlayerId,
+        deadline: expect.any(String),
+        screenshot: { screenshotImageId: "shot-104" },
+        turnNumber: 5,
+      },
+    });
+    expect(updateOperations(mocks.serviceOperations, "game_players")).toHaveLength(0);
+  });
+
+  it("removes the card and deducts a point when the year is wrong", async () => {
+    authenticate(activePlayerId);
+    queueRegular({ data: { user_id: activePlayerId }, error: null });
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103, 104],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "expert_verification",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            phaseDeadline: "2099-04-12T12:00:00.000Z",
+            platformBonusPlayerId: activePlayerId,
+            platformOptions: [{ id: 10, name: "PC" }],
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "expert", winCondition: 10 },
+        },
+        error: null,
+      },
+      { data: { release_year: 2011 }, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 4,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [
+            { gameId: 100, releaseYear: 1994, name: "Super Metroid" },
+            { gameId: 103, releaseYear: 2011, name: "Portal 2" },
+          ],
+        },
+        error: null,
+      },
+      { data: null, error: null },
+      { data: { id: sessionId }, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 3,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 2,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+          },
+        ],
+        error: null,
+      },
+      { data: [{ igdb_image_id: "shot-104" }], error: null },
+      { data: { room_id: roomId }, error: null },
+    );
+
+    const result = await submitExpertVerification(sessionId, 1999, [10]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.verification.correct).toBe(false);
+    expect(result.data.verification.yearCorrect).toBe(false);
+    expect(result.data.verification.platformsCorrect).toBe(true);
+    expect(updateOperations(mocks.serviceOperations, "game_players")).toContainEqual({
+      action: "update",
+      table: "game_players",
+      payload: {
+        score: 3,
+        timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+      },
+    });
+  });
+
+  it("removes the card and deducts a point when the platforms are wrong", async () => {
+    authenticate(activePlayerId);
+    queueRegular({ data: { user_id: activePlayerId }, error: null });
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103, 104],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "expert_verification",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            phaseDeadline: "2099-04-12T12:00:00.000Z",
+            platformBonusPlayerId: activePlayerId,
+            platformOptions: [{ id: 10, name: "PC" }],
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "expert", winCondition: 10 },
+        },
+        error: null,
+      },
+      { data: { release_year: 2011 }, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 4,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [
+            { gameId: 100, releaseYear: 1994, name: "Super Metroid" },
+            { gameId: 103, releaseYear: 2011, name: "Portal 2" },
+          ],
+        },
+        error: null,
+      },
+      { data: null, error: null },
+      { data: { id: sessionId }, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 3,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 2,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+          },
+        ],
+        error: null,
+      },
+      { data: [{ igdb_image_id: "shot-104" }], error: null },
+      { data: { room_id: roomId }, error: null },
+    );
+
+    const result = await submitExpertVerification(sessionId, 2011, [99]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.verification.correct).toBe(false);
+    expect(result.data.verification.yearCorrect).toBe(true);
+    expect(result.data.verification.platformsCorrect).toBe(false);
+    expect(updateOperations(mocks.serviceOperations, "game_players")).toContainEqual({
+      action: "update",
+      table: "game_players",
+      payload: {
+        score: 3,
+        timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+      },
+    });
+  });
+
+  it("rejects an expert verification attempt from a non-designated player", async () => {
+    authenticate(otherPlayerId);
+    queueRegular({ data: { user_id: otherPlayerId }, error: null });
+    queueService({
+      data: {
+        room_id: roomId,
+        status: "active",
+        deck: [101, 102, 103, 104],
+        deck_cursor: 3,
+        current_turn: {
+          phase: "expert_verification",
+          activePlayerId,
+          gameId: 103,
+          screenshotImageId: "shot-103",
+          phaseDeadline: "2099-04-12T12:00:00.000Z",
+          platformBonusPlayerId: activePlayerId,
+          platformOptions: [{ id: 10, name: "PC" }],
+        },
+        turn_number: 4,
+        turn_order: [activePlayerId, otherPlayerId],
+        active_player_id: activePlayerId,
+        settings: { ...defaultSettings, variant: "expert", winCondition: 10 },
+      },
+      error: null,
+    });
+
+    const result = await submitExpertVerification(sessionId, 2011, [10]);
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      return;
+    }
+
+    expect(result.error.code).toBe("UNAUTHORIZED");
+  });
+});
+
+describe("proceedFromExpertVerification", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.regularOperations.length = 0;
+    mocks.regularResults.length = 0;
+    mocks.serviceOperations.length = 0;
+    mocks.serviceResults.length = 0;
+  });
+
+  it("resolves an expired expert verification as incorrect, removes the card and advances", async () => {
+    authenticate(otherPlayerId);
+    queueRegular(
+      { data: { user_id: otherPlayerId }, error: null },
+      { data: { user_id: otherPlayerId }, error: null },
+    );
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103, 104],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "expert_verification",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            phaseDeadline: "2000-04-12T12:00:00.000Z",
+            platformBonusPlayerId: activePlayerId,
+            platformOptions: [{ id: 10, name: "PC" }],
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: { ...defaultSettings, variant: "expert", winCondition: 10 },
+        },
+        error: null,
+      },
+      { data: { release_year: 2011 }, error: null },
+      { data: [{ platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 4,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [
+            { gameId: 100, releaseYear: 1994, name: "Super Metroid" },
+            { gameId: 103, releaseYear: 2011, name: "Portal 2" },
+          ],
+        },
+        error: null,
+      },
+      { data: null, error: null },
+      { data: { id: sessionId }, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 3,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 2,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+          },
+        ],
+        error: null,
+      },
+      { data: [{ igdb_image_id: "shot-104" }], error: null },
+      { data: { room_id: roomId }, error: null },
+    );
+
+    const result = await proceedFromExpertVerification(sessionId);
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.verification).toEqual({
+      correct: false,
+      correctPlatforms: [{ id: 10, name: "PC" }],
+      platformsCorrect: false,
+      yearCorrect: false,
+      scores: {
+        [activePlayerId]: 3,
+        [otherPlayerId]: 3,
+      },
+      timelines: {
+        [activePlayerId]: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+        [otherPlayerId]: [{ gameId: 200, releaseYear: 2007, name: "Mass Effect" }],
+      },
+      tokens: {
+        [activePlayerId]: 2,
+        [otherPlayerId]: 2,
+      },
+    });
+    expect(result.data.followUp).toEqual({
+      type: "next_turn",
+      nextTurn: {
+        activePlayerId: otherPlayerId,
+        deadline: expect.any(String),
+        screenshot: { screenshotImageId: "shot-104" },
+        turnNumber: 5,
+      },
+    });
+    expect(updateOperations(mocks.serviceOperations, "game_players")).toContainEqual({
+      action: "update",
+      table: "game_players",
+      payload: {
+        score: 3,
+        timeline: [{ gameId: 100, releaseYear: 1994, name: "Super Metroid" }],
+      },
+    });
+  });
+
+  it("rejects a proceed call when the deadline has not yet expired", async () => {
+    authenticate(otherPlayerId);
+    queueRegular(
+      { data: { user_id: otherPlayerId }, error: null },
+      { data: { user_id: otherPlayerId }, error: null },
+    );
+    queueService({
+      data: {
+        room_id: roomId,
+        status: "active",
+        deck: [101, 102, 103, 104],
+        deck_cursor: 3,
+        current_turn: {
+          phase: "expert_verification",
+          activePlayerId,
+          gameId: 103,
+          screenshotImageId: "shot-103",
+          phaseDeadline: "2099-04-12T12:00:00.000Z",
+          platformBonusPlayerId: activePlayerId,
+          platformOptions: [{ id: 10, name: "PC" }],
+        },
+        turn_number: 4,
+        turn_order: [activePlayerId, otherPlayerId],
+        active_player_id: activePlayerId,
+        settings: { ...defaultSettings, variant: "expert", winCondition: 10 },
+      },
+      error: null,
+    });
+
+    const result = await proceedFromExpertVerification(sessionId);
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      return;
+    }
+
+    expect(result.error.code).toBe("CONFLICT");
   });
 });
 
