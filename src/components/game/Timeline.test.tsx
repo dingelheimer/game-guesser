@@ -231,11 +231,17 @@ describe("Timeline", () => {
         <Timeline placedCards={[card1, card2]} pendingCard={pendingCard} />,
       );
       const rail = screen.getByRole("group", { name: "Your timeline" });
+      const innerWrapper = rail.firstElementChild as HTMLElement;
       const timelineCard = Array.from(container.querySelectorAll("div")).find((element) =>
         element.className.includes("xl:w-[220px]"),
       );
 
-      expect(rail.className).toContain("md:justify-center");
+      // Scroll container: no justify-center (would clip edges); overflow-x-auto on desktop
+      expect(rail.className).not.toContain("md:justify-center");
+      expect(rail.className).toContain("md:overflow-x-auto");
+      // Inner centering wrapper: mx-auto centres content when narrower than container
+      expect(innerWrapper.className).toContain("mx-auto");
+      expect(innerWrapper.className).toContain("md:flex-row");
       expect(timelineCard?.className).toContain("w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]");
       expect(getDropZone(0)).toHaveClass("xl:h-[293px]");
     });

@@ -209,118 +209,129 @@ export function Timeline({
 
         <div
           className={cn(
-            // Mobile: vertical stack, full width
-            "flex flex-col items-stretch gap-2",
-            // Desktop: horizontal row with horizontal scroll; edge spacers prevent clipping
-            "md:flex-row md:items-end md:justify-center md:gap-3 md:overflow-x-auto md:pb-4",
+            // Desktop: scroll container — no justify-center to avoid clipping edges
+            "md:overflow-x-auto md:pb-4",
             // Always maintain a minimum height so the section doesn't collapse
             "min-h-[80px] md:min-h-[300px] xl:min-h-[326px]",
-            placedCards.length === 0 && "justify-center",
           )}
           role="group"
           aria-label="Your timeline"
         >
-          {/* Edge spacer — keeps content away from scroll container edges on desktop */}
-          <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
+          {/* Inner centering wrapper: mx-auto centres when content fits; resolves to 0 when overflowing */}
+          <div
+            className={cn(
+              // Mobile: vertical stack, full width
+              "flex flex-col items-stretch gap-2",
+              // Desktop: horizontal row; mx-auto centres when narrower than container
+              "mx-auto md:flex-row md:items-end md:gap-3",
+              placedCards.length === 0 && "justify-center",
+            )}
+          >
+            {/* Edge spacer — keeps content away from scroll container edges on desktop */}
+            <div className="hidden shrink-0 md:block md:w-6" aria-hidden="true" />
 
-          {/* Zone 0 — before all cards */}
-          {hasPending && (
-            <DropZone
-              index={0}
-              isFocused={focusedZone === 0}
-              onSelect={() => {
-                handlePlace(0);
-              }}
-              onNavigate={(dir) => {
-                handleNavigate(0, dir);
-              }}
-              onFocus={() => {
-                setFocusedZone(0);
-              }}
-              positionLabel={placedCards[0] ? `before ${placedCards[0].title}` : "first position"}
-              reduceMotion={reduceMotion}
-              isFirst={placedCards.length === 0}
-            />
-          )}
-
-          {placedCards.map((card, i) => (
-            <Fragment key={card.id}>
-              {/* Placed card with year marker */}
-              <motion.div
-                layout
-                animate={
-                  highlightedCardId === card.id && highlightedCardTone === "error" && !reduceMotion
-                    ? { x: [0, -10, 10, -8, 8, -4, 4, 0] }
-                    : { x: 0 }
-                }
-                transition={{
-                  x: {
-                    duration:
-                      highlightedCardId === card.id &&
-                      highlightedCardTone === "error" &&
-                      !reduceMotion
-                        ? 0.4
-                        : 0,
-                  },
-                  layout: cardLayoutTransition,
+            {/* Zone 0 — before all cards */}
+            {hasPending && (
+              <DropZone
+                index={0}
+                isFocused={focusedZone === 0}
+                onSelect={() => {
+                  handlePlace(0);
                 }}
-                className="flex shrink-0 flex-col items-center gap-1"
-                aria-label={`${card.title}, ${String(card.releaseYear)}`}
-              >
-                <div
-                  className={cn(
+                onNavigate={(dir) => {
+                  handleNavigate(0, dir);
+                }}
+                onFocus={() => {
+                  setFocusedZone(0);
+                }}
+                positionLabel={placedCards[0] ? `before ${placedCards[0].title}` : "first position"}
+                reduceMotion={reduceMotion}
+                isFirst={placedCards.length === 0}
+              />
+            )}
+
+            {placedCards.map((card, i) => (
+              <Fragment key={card.id}>
+                {/* Placed card with year marker */}
+                <motion.div
+                  layout
+                  animate={
                     highlightedCardId === card.id &&
-                      highlightedCardTone === "error" &&
-                      "rounded-2xl shadow-[0_0_20px_rgba(244,63,94,0.35)] ring-2 ring-rose-500",
-                  )}
+                    highlightedCardTone === "error" &&
+                    !reduceMotion
+                      ? { x: [0, -10, 10, -8, 8, -4, 4, 0] }
+                      : { x: 0 }
+                  }
+                  transition={{
+                    x: {
+                      duration:
+                        highlightedCardId === card.id &&
+                        highlightedCardTone === "error" &&
+                        !reduceMotion
+                          ? 0.4
+                          : 0,
+                    },
+                    layout: cardLayoutTransition,
+                  }}
+                  className="flex shrink-0 flex-col items-center gap-1"
+                  aria-label={`${card.title}, ${String(card.releaseYear)}`}
                 >
-                  <GameCard
-                    screenshotImageId={card.screenshotImageId}
-                    coverImageId={card.coverImageId}
-                    title={card.title}
-                    releaseYear={card.releaseYear}
-                    platform={card.platform}
-                    isRevealed={card.isRevealed}
-                    size="timeline"
-                    className="w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]"
+                  <div
+                    className={cn(
+                      highlightedCardId === card.id &&
+                        highlightedCardTone === "error" &&
+                        "rounded-2xl shadow-[0_0_20px_rgba(244,63,94,0.35)] ring-2 ring-rose-500",
+                    )}
+                  >
+                    <GameCard
+                      screenshotImageId={card.screenshotImageId}
+                      coverImageId={card.coverImageId}
+                      title={card.title}
+                      releaseYear={card.releaseYear}
+                      platform={card.platform}
+                      isRevealed={card.isRevealed}
+                      size="timeline"
+                      className="w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]"
+                    />
+                  </div>
+                  {card.isRevealed ? <YearMarker year={card.releaseYear} /> : null}
+                </motion.div>
+
+                {/* Zone after this card (zone i+1) */}
+                {hasPending && (
+                  <DropZone
+                    index={i + 1}
+                    isFocused={focusedZone === i + 1}
+                    onSelect={() => {
+                      handlePlace(i + 1);
+                    }}
+                    onNavigate={(dir) => {
+                      handleNavigate(i + 1, dir);
+                    }}
+                    onFocus={() => {
+                      setFocusedZone(i + 1);
+                    }}
+                    positionLabel={(() => {
+                      const nextCard = placedCards[i + 1];
+                      return nextCard
+                        ? `between ${card.title} and ${nextCard.title}`
+                        : `after ${card.title}`;
+                    })()}
+                    reduceMotion={reduceMotion}
                   />
-                </div>
-                {card.isRevealed ? <YearMarker year={card.releaseYear} /> : null}
-              </motion.div>
+                )}
+              </Fragment>
+            ))}
 
-              {/* Zone after this card (zone i+1) */}
-              {hasPending && (
-                <DropZone
-                  index={i + 1}
-                  isFocused={focusedZone === i + 1}
-                  onSelect={() => {
-                    handlePlace(i + 1);
-                  }}
-                  onNavigate={(dir) => {
-                    handleNavigate(i + 1, dir);
-                  }}
-                  onFocus={() => {
-                    setFocusedZone(i + 1);
-                  }}
-                  positionLabel={(() => {
-                    const nextCard = placedCards[i + 1];
-                    return nextCard
-                      ? `between ${card.title} and ${nextCard.title}`
-                      : `after ${card.title}`;
-                  })()}
-                  reduceMotion={reduceMotion}
-                />
-              )}
-            </Fragment>
-          ))}
+            {/* Empty state */}
+            {placedCards.length === 0 && !hasPending && (
+              <p className="text-text-secondary self-center text-sm">No cards placed yet</p>
+            )}
 
-          {/* Empty state */}
-          {placedCards.length === 0 && !hasPending && (
-            <p className="text-text-secondary self-center text-sm">No cards placed yet</p>
-          )}
-
-          {/* Edge spacer — mirrors the leading spacer to balance scroll padding */}
-          <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
+            {/* Edge spacer — mirrors the leading spacer to balance scroll padding */}
+            <div className="hidden shrink-0 md:block md:w-6" aria-hidden="true" />
+          </div>
+          {/* end inner centering wrapper */}
         </div>
       </div>
 
