@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { create } from "zustand";
 import type { DifficultyTier } from "@/lib/difficulty";
 import { checkPlatformGuess, type PlatformOption } from "@/lib/platformBonus";

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { ImageResponse } from "next/og";
 import { createElement, type CSSProperties, type ReactElement } from "react";
 import { getSoloDifficultyLabel } from "@/lib/solo/share";
