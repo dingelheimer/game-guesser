@@ -56,6 +56,8 @@ export function Timeline({
   const reduceMotion = useReducedMotion() ?? false;
   const [activeCard, setActiveCard] = useState<TimelineItem | null>(null);
   const [activeDropZoneId, setActiveDropZoneId] = useState<string | null>(null);
+  /** True from the moment the card is dropped until the next drag starts. */
+  const [isDropping, setIsDropping] = useState(false);
   /**
    * Roving tabindex: tracks which drop zone has tabIndex=0.
    * Keyboard users Tab into zone 0, then use arrow keys to navigate.
@@ -125,13 +127,17 @@ export function Timeline({
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    // Mark as dropping so the overlay sheds its drag transforms before dnd-kit
+    // runs the drop animation, preventing a visual size/rotation snap.
+    setIsDropping(true);
     setActiveDropZoneId(null);
     const overId = event.over?.id;
     if (typeof overId === "string") {
       const idx = parseZoneIndex(overId);
       if (idx !== null) handlePlace(idx);
     }
-    setActiveCard(null);
+    // Do NOT null activeCard here — keep overlay content alive for the drop
+    // animation. dnd-kit unmounts the overlay once the animation finishes.
   }
 
   return (
@@ -140,12 +146,14 @@ export function Timeline({
       onDragStart={() => {
         setActiveCard(pendingCard ?? null);
         setActiveDropZoneId(null);
+        setIsDropping(false);
       }}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
         setActiveCard(null);
         setActiveDropZoneId(null);
+        setIsDropping(false);
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
@@ -277,8 +285,13 @@ export function Timeline({
         {activeCard ? (
           <div
             className={cn(
-              "pointer-events-none scale-95 rotate-2 opacity-80 transition-shadow duration-150",
+              // Bug 1 fix: w-fit + rounded-xl ensure the ring hugs the card
+              "pointer-events-none w-fit rounded-xl transition-shadow duration-150",
+              // Bug 2 fix: remove transforms on drop so the ghost matches the
+              // placed card before dnd-kit swaps overlay → timeline card
+              !isDropping && "scale-95 rotate-2 opacity-80",
               isOverlayOverValidDropZone &&
+                !isDropping &&
                 "ring-primary-400 shadow-[0_0_24px_rgba(139,92,246,0.45)] ring-2",
             )}
             aria-hidden="true"
