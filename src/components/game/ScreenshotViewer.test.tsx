@@ -45,7 +45,7 @@ describe("ScreenshotViewer", () => {
     useReducedMotionMock.mockReturnValue(false);
   });
 
-  it("renders the magnifying-glass trigger button", () => {
+  it("renders the full-card click trigger button", () => {
     render(<ScreenshotViewer screenshotImageId="abc123" title="Half-Life 2" />);
 
     expect(screen.getByRole("button", { name: "View full-size screenshot" })).toBeInTheDocument();
