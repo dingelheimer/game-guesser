@@ -216,7 +216,7 @@ export function SoloGame({ username }: { username: string | null }) {
       : (revealedCard?.platform_names[0] ?? "Unknown");
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col">
+    <div className="flex w-full flex-1 flex-col">
       {/* Score bar */}
       {difficulty !== null && (
         <ScoreBar
@@ -250,7 +250,7 @@ export function SoloGame({ username }: { username: string | null }) {
       {/* Card area */}
       <div
         className={cn(
-          "flex flex-col items-center gap-6 px-4 pt-6 pb-4",
+          "mx-auto flex w-full max-w-7xl flex-col items-center gap-6 px-4 pt-6 pb-4",
           isPlacing && "md:gap-0 md:pt-0 md:pb-0",
         )}
       >
@@ -320,7 +320,7 @@ export function SoloGame({ username }: { username: string | null }) {
         tabIndex={-1}
         className="flex min-w-0 flex-1 flex-col justify-end focus:outline-none"
       >
-        <div className="flex items-center gap-3 px-4 pt-1 pb-2">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 pt-1 pb-2">
           <div className="bg-surface-700 h-px flex-1" />
           <span className="text-text-secondary/70 text-xs font-medium tracking-wider uppercase">
             {phase === "placing" ? "Timeline — tap a zone to place" : "Timeline"}

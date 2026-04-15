@@ -185,10 +185,19 @@ describe("SoloGame", () => {
     mockState = createState();
   });
 
-  it("uses the wider story 6.3 layout container", () => {
+  it("outer container spans full width without a max-width cap", () => {
     const { container } = render(<SoloGame username={null} />);
 
-    expect(container.firstElementChild).toHaveClass("max-w-7xl");
+    expect(container.firstElementChild).not.toHaveClass("max-w-7xl");
+    expect(container.firstElementChild).toHaveClass("w-full");
+  });
+
+  it("card area is centred with max-w-7xl", () => {
+    render(<SoloGame username={null} />);
+
+    const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
+
+    expect(cardArea).toHaveClass("max-w-7xl", "mx-auto", "w-full");
   });
 
   it("hides the hero card on desktop during placing", () => {
