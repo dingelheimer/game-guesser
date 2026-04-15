@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { revealedToTimelineItem, hiddenToTimelineItem, checkPlatformGuess } from "./soloGameStore";
 import type { useSoloGameStore as UseSoloGameStoreType } from "./soloGameStore";

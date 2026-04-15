@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { formatPlatformBonusSummary, formatShareOutcomeGrid } from "@/lib/shareResult";
 
 /** Placement outcome labels used by spoiler-free share summaries. */

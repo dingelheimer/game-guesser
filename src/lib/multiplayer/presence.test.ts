@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { RealtimePresenceState } from "@supabase/realtime-js";
 import { describe, expect, it } from "vitest";
 import { buildConnectedPresence, buildSeedPresence } from "./presence";
