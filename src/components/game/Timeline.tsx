@@ -17,6 +17,7 @@ import {
   type DragOverEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { MOTION } from "@/lib/motion";
 import { GameCard } from "./GameCard";
 import type { TimelineItem } from "./timelineTypes";
 import { ZONE_DATA_ATTR, parseZoneIndex } from "./timelineTypes";
@@ -69,7 +70,7 @@ export function Timeline({
   const isOverlayOverValidDropZone = activeDropZoneId !== null;
   const cardLayoutTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.3, ease: [0.25, 1, 0.5, 1] as const };
+    : { duration: MOTION.duration.normal, ease: MOTION.ease.snappy };
   const dropAnimation: DropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({
       styles: {
@@ -78,7 +79,7 @@ export function Timeline({
         },
       },
     }),
-    duration: reduceMotion ? 0 : 300,
+    duration: reduceMotion ? 0 : MOTION.duration.normal * 1000,
     easing: "cubic-bezier(0.25, 1, 0.5, 1)",
   };
 
