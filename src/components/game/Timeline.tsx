@@ -160,8 +160,8 @@ export function Timeline({
           className={cn(
             // Mobile: vertical stack, full width
             "flex flex-col items-stretch gap-2",
-            // Desktop: horizontal row with horizontal scroll; px-4 prevents content from clipping at edges
-            "md:flex-row md:items-end md:justify-center md:gap-3 md:overflow-x-auto md:px-4 md:pb-4",
+            // Desktop: horizontal row with horizontal scroll; edge spacers prevent clipping
+            "md:flex-row md:items-end md:justify-center md:gap-3 md:overflow-x-auto md:pb-4",
             // Always maintain a minimum height so the section doesn't collapse
             "min-h-[80px] md:min-h-[300px] xl:min-h-[326px]",
             placedCards.length === 0 && "justify-center",
@@ -169,6 +169,9 @@ export function Timeline({
           role="group"
           aria-label="Your timeline"
         >
+          {/* Edge spacer — keeps content away from scroll container edges on desktop */}
+          <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
+
           {/* Zone 0 — before all cards */}
           {hasPending && (
             <DropZone
@@ -264,6 +267,9 @@ export function Timeline({
           {placedCards.length === 0 && !hasPending && (
             <p className="text-text-secondary self-center text-sm">No cards placed yet</p>
           )}
+
+          {/* Edge spacer — mirrors the leading spacer to balance scroll padding */}
+          <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
         </div>
       </div>
 
