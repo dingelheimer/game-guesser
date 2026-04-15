@@ -268,6 +268,15 @@ describe("Timeline", () => {
       expect(screen.queryByText("No cards placed yet")).not.toBeInTheDocument();
     });
 
+    it("forces portrait aspect-[3/4] on unrevealed placed cards in the timeline", () => {
+      const { container } = render(<Timeline placedCards={[tentativeTimelineCard]} />);
+      const card = Array.from(container.querySelectorAll("div")).find((el) =>
+        el.className.includes("aspect-[3/4]"),
+      );
+      expect(card).toBeDefined();
+      expect(card?.className).toContain("aspect-[3/4]");
+    });
+
     it("does not render a year marker for unrevealed timeline cards", () => {
       const { container } = render(<Timeline placedCards={[tentativeTimelineCard]} />);
 
