@@ -40,7 +40,6 @@ const mocks = vi.hoisted(() => {
       data: result.data,
       error: result.error,
     };
-    // All chaining methods return the same chain (no new result consumed).
     for (const method of [
       "eq",
       "neq",
@@ -126,12 +125,11 @@ vi.mock("./deck", async () => {
   return {
     ...actual,
     buildDeck: mocks.mockBuildDeck,
-    // No-op shuffle so turn order is deterministic in tests.
     fisherYatesShuffle: <T>(arr: T[]): T[] => arr,
   };
 });
 
-import { updateSettings, startGame, claimHost } from "./hostActions";
+import { startGame } from "./hostActions";
 
 function queueResults(...results: readonly MockQueryResult[]) {
   mocks.queryResults.push(...results);
@@ -144,15 +142,6 @@ function authenticate(userId = "user-1") {
   });
 }
 
-function updateOperation(ops: MockOperation[], table: string, index = 0) {
-  const found = ops.filter(
-    (entry): entry is MockOperation & { action: "update" } =>
-      entry.table === table && entry.action === "update",
-  )[index];
-  if (found === undefined) throw new Error(`Expected an update operation for ${table}.`);
-  return found;
-}
-
 function insertOperation(ops: MockOperation[], table: string, index = 0) {
   const found = ops.filter(
     (entry): entry is MockOperation & { action: "insert" } =>
@@ -162,74 +151,16 @@ function insertOperation(ops: MockOperation[], table: string, index = 0) {
   return found;
 }
 
-// ── updateSettings ────────────────────────────────────────────────────────────
+function updateOperation(ops: MockOperation[], table: string, index = 0) {
+  const found = ops.filter(
+    (entry): entry is MockOperation & { action: "update" } =>
+      entry.table === table && entry.action === "update",
+  )[index];
+  if (found === undefined) throw new Error(`Expected an update operation for ${table}.`);
+  return found;
+}
 
-describe("updateSettings", () => {
-  const roomId = "11111111-1111-4111-8111-111111111111";
-  const hostId = "22222222-2222-4222-8222-222222222222";
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.operations.length = 0;
-    mocks.serviceOperations.length = 0;
-    mocks.queryResults.length = 0;
-  });
-
-  it("lets the host update room settings", async () => {
-    authenticate(hostId);
-    const settings = {
-      difficulty: "hard",
-      turnTimer: "30",
-      tokensEnabled: false,
-      startingTokens: 0,
-      winCondition: 15,
-      gameMode: "competitive",
-      variant: "expert",
-      genreLockId: null,
-      consoleLockFamily: null,
-      decadeStart: null,
-      speedRound: false,
-    } as const;
-
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { error: null },
-    );
-
-    const result = await updateSettings(roomId, settings);
-
-    expect(result).toEqual({ success: true, data: { roomId, settings } });
-    expect(updateOperation(mocks.operations, "rooms").payload).toEqual({ settings });
-  });
-
-  it("rejects settings updates from non-host players", async () => {
-    authenticate("33333333-3333-4333-8333-333333333333");
-
-    queueResults({ data: { host_id: hostId, status: "lobby", settings: null }, error: null });
-
-    const result = await updateSettings(roomId, {
-      difficulty: "medium",
-      turnTimer: "60",
-      tokensEnabled: true,
-      startingTokens: 2,
-      winCondition: 10,
-      gameMode: "competitive",
-      variant: "standard",
-      genreLockId: null,
-      consoleLockFamily: null,
-      decadeStart: null,
-      speedRound: false,
-    });
-
-    expect(result).toEqual({
-      success: false,
-      error: { code: "UNAUTHORIZED", message: "Only the host can update room settings." },
-    });
-    expect(mocks.operations.some((op) => op.action === "update")).toBe(false);
-  });
-});
-
-// ── startGame ─────────────────────────────────────────────────────────────────
+// ── startGame (happy path) ────────────────────────────────────────────────────
 
 describe("startGame", () => {
   const roomId = "11111111-1111-4111-8111-111111111111";
@@ -264,11 +195,8 @@ describe("startGame", () => {
 
   function queueFullSuccess(settings = defaultSettings) {
     queueResults(
-      // 1. rooms select (getRoomState)
       { data: { host_id: hostId, status: "lobby", settings }, error: null },
-      // 2. room_players count (getRoomPlayerCount)
       { count: 2, error: null },
-      // 3. room_players select (fetch players)
       {
         data: [
           { user_id: player1, display_name: "Alice" },
@@ -276,7 +204,6 @@ describe("startGame", () => {
         ],
         error: null,
       },
-      // 4. games select (service client — starting cards + first turn)
       {
         data: [
           { id: 101, name: "Game A", release_year: 2000 },
@@ -285,13 +212,9 @@ describe("startGame", () => {
         ],
         error: null,
       },
-      // 5. screenshots select (service client — first turn card)
       { data: [{ game_id: 103, igdb_image_id: "sc_abc123" }], error: null },
-      // 6. game_sessions insert (service client)
       { data: { id: gameSessionId }, error: null },
-      // 7. game_players insert (service client)
       { data: null, error: null },
-      // 8. rooms update (set playing)
       { data: { id: roomId }, error: null },
     );
   }
@@ -306,10 +229,8 @@ describe("startGame", () => {
     if (!result.success) return;
 
     expect(result.data.gameSessionId).toBe(gameSessionId);
-    // turnOrder is [player1, player2] (shuffle is a no-op in tests)
     expect(result.data.turnOrder).toEqual([player1, player2]);
     expect(result.data.firstCard.screenshotImageId).toBe("sc_abc123");
-    // Starting cards keyed by userId
     expect(result.data.startingCards[player1]).toEqual({
       gameId: 101,
       releaseYear: 2000,
@@ -333,7 +254,7 @@ describe("startGame", () => {
 
     expect(payload["room_id"]).toBe(roomId);
     expect(payload["deck"]).toEqual(deck);
-    expect(payload["deck_cursor"]).toBe(3); // 2 starting cards + 1 first turn card
+    expect(payload["deck_cursor"]).toBe(3);
     expect(payload["turn_order"]).toEqual([player1, player2]);
     expect(payload["active_player_id"]).toBe(player1);
 
@@ -358,7 +279,7 @@ describe("startGame", () => {
     const aliceRow = rows.find((r) => r["user_id"] === player1);
     expect(aliceRow).toBeDefined();
     expect(aliceRow?.["display_name"]).toBe("Alice");
-    expect(aliceRow?.["tokens"]).toBe(2); // startingTokens from settings
+    expect(aliceRow?.["tokens"]).toBe(2);
     expect(aliceRow?.["turn_position"]).toBe(0);
     expect(aliceRow?.["timeline"]).toHaveLength(1);
 
@@ -428,197 +349,5 @@ describe("startGame", () => {
       consoleLockFamily: null,
       decadeStart: null,
     });
-  });
-
-  it("rejects game start when fewer than two players are present", async () => {
-    authenticate(hostId);
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { count: 1, error: null },
-    );
-
-    const result = await startGame(roomId);
-
-    expect(result).toEqual({
-      success: false,
-      error: {
-        code: "VALIDATION_ERROR",
-        message: "At least two players are required to start the game.",
-      },
-    });
-  });
-
-  it("rejects game start when the room is no longer in the lobby", async () => {
-    authenticate(hostId);
-    queueResults(
-      { data: { host_id: hostId, status: "playing", settings: null }, error: null },
-      { count: 2, error: null },
-    );
-
-    const result = await startGame(roomId);
-
-    expect(result).toEqual({
-      success: false,
-      error: { code: "CONFLICT", message: "This room is no longer in the lobby." },
-    });
-    expect(mocks.operations.some((op) => op.action === "update")).toBe(false);
-  });
-
-  it("returns INTERNAL_ERROR when deck building fails", async () => {
-    authenticate(hostId);
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { count: 2, error: null },
-      {
-        data: [
-          { user_id: player1, display_name: "Alice" },
-          { user_id: player2, display_name: "Bob" },
-        ],
-        error: null,
-      },
-    );
-    mocks.mockBuildDeck.mockRejectedValue(new Error("RPC failed"));
-
-    const result = await startGame(roomId);
-
-    expect(result).toEqual({
-      success: false,
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "Failed to build the game deck. Please try again.",
-      },
-    });
-  });
-
-  it("returns INTERNAL_ERROR when deck is too small", async () => {
-    authenticate(hostId);
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { count: 2, error: null },
-      {
-        data: [
-          { user_id: player1, display_name: "Alice" },
-          { user_id: player2, display_name: "Bob" },
-        ],
-        error: null,
-      },
-    );
-    // Only 2 games, but need at least 3 (2 players + 1 first turn card).
-    mocks.mockBuildDeck.mockResolvedValue([101, 102]);
-
-    const result = await startGame(roomId);
-
-    expect(result).toEqual({
-      success: false,
-      error: {
-        code: "INTERNAL_ERROR",
-        message:
-          "Not enough games are available for this difficulty. Try a different difficulty setting.",
-      },
-    });
-  });
-});
-
-// ── claimHost ─────────────────────────────────────────────────────────────────
-
-describe("claimHost", () => {
-  const roomId = "11111111-1111-4111-8111-111111111111";
-  const hostId = "22222222-2222-4222-8222-222222222222";
-  const callerId = "33333333-3333-4333-8333-333333333333";
-  const newHostId = "44444444-4444-4444-8444-444444444444";
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.operations.length = 0;
-    mocks.serviceOperations.length = 0;
-    mocks.queryResults.length = 0;
-  });
-
-  it("transfers host when the current host is absent from presence", async () => {
-    authenticate(callerId);
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { data: { status: "transferred", new_host_id: newHostId }, error: null },
-    );
-
-    const result = await claimHost(roomId, [callerId]);
-
-    expect(result).toEqual({ success: true, data: { newHostId } });
-
-    const rpcOp = mocks.operations.find((op) => op.action === "rpc");
-    expect(rpcOp).toBeDefined();
-    expect(rpcOp?.fn).toBe("claim_host");
-    expect(rpcOp?.args).toEqual({ target_room_id: roomId, expected_host_id: hostId });
-  });
-
-  it("rejects when the host is still present in presence", async () => {
-    authenticate(callerId);
-    queueResults({ data: { host_id: hostId, status: "lobby", settings: null }, error: null });
-
-    const result = await claimHost(roomId, [callerId, hostId]);
-
-    expect(result).toEqual({
-      success: false,
-      error: { code: "CONFLICT", message: "The host is still connected — no transfer needed." },
-    });
-    expect(mocks.operations.some((op) => op.action === "rpc")).toBe(false);
-  });
-
-  it("returns CONFLICT when the host was already transferred (race condition)", async () => {
-    authenticate(callerId);
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { data: { status: "host_changed" }, error: null },
-    );
-
-    const result = await claimHost(roomId, [callerId]);
-
-    expect(result).toEqual({
-      success: false,
-      error: { code: "CONFLICT", message: "Host was already transferred." },
-    });
-  });
-
-  it("returns UNAUTHORIZED when the caller is already the host", async () => {
-    authenticate(hostId);
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { data: { status: "already_host" }, error: null },
-    );
-
-    const result = await claimHost(roomId, [callerId]);
-
-    expect(result).toEqual({
-      success: false,
-      error: { code: "UNAUTHORIZED", message: "You are already the host." },
-    });
-  });
-
-  it("returns CONFLICT when no players are available to become host", async () => {
-    authenticate(callerId);
-    queueResults(
-      { data: { host_id: hostId, status: "lobby", settings: null }, error: null },
-      { data: { status: "no_players" }, error: null },
-    );
-
-    const result = await claimHost(roomId, [callerId]);
-
-    expect(result).toEqual({
-      success: false,
-      error: { code: "CONFLICT", message: "No players are available to become host." },
-    });
-  });
-
-  it("returns NOT_FOUND when the room does not exist or is not in lobby", async () => {
-    authenticate(callerId);
-    queueResults({ data: null, error: null });
-
-    const result = await claimHost(roomId, [callerId]);
-
-    expect(result).toEqual({
-      success: false,
-      error: { code: "NOT_FOUND", message: "That room no longer exists." },
-    });
-    expect(mocks.operations.some((op) => op.action === "rpc")).toBe(false);
   });
 });
