@@ -6,16 +6,20 @@ import { REALTIME_SUBSCRIBE_STATES, type RealtimeChannel } from "@supabase/realt
 import { Clock3, Signal, Trophy } from "lucide-react";
 import {
   proceedFromChallenge,
-  proceedFromExpertVerification,
-  proceedFromPlatformBonus,
-  skipTurn,
   submitChallenge,
-  submitExpertVerification,
   submitPlacement,
+} from "@/lib/multiplayer/challengeActions";
+import {
+  proceedFromExpertVerification,
+  submitExpertVerification,
+} from "@/lib/multiplayer/expertVerificationActions";
+import type { TurnFollowUpResult } from "@/lib/multiplayer/gameActionTypes";
+import {
+  proceedFromPlatformBonus,
   submitPlatformBonus,
-  submitTeamVote,
-  type TurnFollowUpResult,
-} from "@/lib/multiplayer/gameActions";
+} from "@/lib/multiplayer/platformBonusActions";
+import { submitTeamVote } from "@/lib/multiplayer/teamVoteActions";
+import { skipTurn } from "@/lib/multiplayer/turnActions";
 import { LobbyPresenceSchema, type LobbyPresence } from "@/lib/multiplayer/lobby";
 import type { MultiplayerGamePageData } from "@/lib/multiplayer/gamePage";
 import { buildConnectedPresence, buildSeedPresence } from "@/lib/multiplayer/presence";
