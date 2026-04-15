@@ -1,5 +1,7 @@
 # Game Guesser
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 A video game timeline guessing party game inspired by Hitster. Built with Next.js, Supabase, and Vercel.
 
 ## Getting Started
@@ -43,3 +45,12 @@ supabase start          # Start local Postgres, Auth, Realtime
 pnpm db:types:local     # Generate types from local database
 pnpm db:reset:local     # Reset local DB and regenerate types
 ```
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
+submitting a pull request.
+
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getMultiplayerGamePageData } from "@/lib/multiplayer/gamePage";

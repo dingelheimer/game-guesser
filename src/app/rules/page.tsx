@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Metadata } from "next";
 import { ArrowUpDown, Coins, Eye, Sparkles, Trophy, Users } from "lucide-react";
 

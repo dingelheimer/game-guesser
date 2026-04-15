@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Sort multiplayer players into final standings order.
  * Higher scores rank first; ties are broken by earlier turn position.

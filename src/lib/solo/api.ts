@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Client-side API wrappers for the solo game Edge Functions.
  * Uses the Supabase browser client (anon key) — no auth required for solo mode.

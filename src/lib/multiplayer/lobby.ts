@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { z } from "zod";
 
 const ROOM_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
 import { AnimatePresence, type AnimatePresenceProps } from "framer-motion";

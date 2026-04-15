@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";

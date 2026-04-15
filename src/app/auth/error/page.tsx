@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
