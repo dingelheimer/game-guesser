@@ -110,7 +110,10 @@ export function SoloResultControls({
   const isPlatformBonusPending =
     correct && availablePlatforms.length > 0 && platformBonusResult === null && !isExpertVariant;
   const isExpertVerificationPending =
-    correct && availablePlatforms.length > 0 && expertVerificationResult === null && isExpertVariant;
+    correct &&
+    availablePlatforms.length > 0 &&
+    expertVerificationResult === null &&
+    isExpertVariant;
 
   // Rich screen reader message; empty string when panel is hidden so the live
   // region only announces when actual result data is present.
@@ -144,8 +147,8 @@ export function SoloResultControls({
               <div className="w-full space-y-2">
                 {isProVariant ? (
                   <div className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-100">
-                    <strong>PRO Required:</strong> answer the platform bonus correctly to keep
-                    this card.
+                    <strong>PRO Required:</strong> answer the platform bonus correctly to keep this
+                    card.
                   </div>
                 ) : null}
                 {isExpertVariant ? (

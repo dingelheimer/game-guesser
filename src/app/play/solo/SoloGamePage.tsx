@@ -71,6 +71,7 @@ export function SoloGamePage({
       {phase === "idle" && (
         <motion.div
           key="difficulty"
+          className="flex flex-1 flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -86,7 +87,7 @@ export function SoloGamePage({
       {phase === "starting" && (
         <motion.div
           key="loading"
-          className="text-text-secondary flex min-h-[60vh] items-center justify-center gap-3"
+          className="text-text-secondary flex flex-1 flex-col items-center justify-center gap-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -105,6 +106,7 @@ export function SoloGamePage({
         phase === "game_over") && (
         <motion.div
           key="game"
+          className="flex flex-1 flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
