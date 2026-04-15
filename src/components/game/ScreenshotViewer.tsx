@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import type { SyntheticEvent } from "react";
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import { useReducedMotion } from "framer-motion";
-import { SearchIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,12 +14,13 @@ import {
 import { igdbImageUrl } from "@/lib/igdb/images";
 import { cn } from "@/lib/utils";
 
-function stopTriggerEvent(event: SyntheticEvent<HTMLButtonElement>) {
+function stopClickPropagation(event: MouseEvent<HTMLButtonElement>) {
   event.stopPropagation();
 }
 
 /**
  * Opens the unrevealed hero-card screenshot in a full-resolution dialog.
+ * The entire card face is the click target — tap or click anywhere to zoom.
  */
 export function ScreenshotViewer({
   screenshotImageId,
@@ -36,19 +35,14 @@ export function ScreenshotViewer({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
+        {/* Transparent full-coverage button — pointer events bubble to dnd-kit
+            for drag (distance ≥ 8px); taps/clicks open the lightbox dialog. */}
+        <button
           type="button"
-          variant="secondary"
-          size="icon-sm"
-          className="absolute top-3 right-3 z-10 bg-black/70 text-white shadow-md backdrop-blur-sm hover:bg-black/80"
+          className="absolute inset-0 z-10 cursor-pointer bg-transparent"
           aria-label="View full-size screenshot"
-          onClick={stopTriggerEvent}
-          onMouseDown={stopTriggerEvent}
-          onPointerDown={stopTriggerEvent}
-          onTouchStart={stopTriggerEvent}
-        >
-          <SearchIcon />
-        </Button>
+          onClick={stopClickPropagation}
+        />
       </DialogTrigger>
 
       <DialogContent
