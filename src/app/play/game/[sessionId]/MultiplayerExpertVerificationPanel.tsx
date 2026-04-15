@@ -123,7 +123,7 @@ export function MultiplayerExpertVerificationPanel({
                 setYearInput(e.target.value);
               }}
               disabled={result !== null}
-              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:ring-1 focus:ring-amber-400/60 focus:outline-none disabled:opacity-50"
+              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 disabled:opacity-50"
             />
             {result !== null && (
               <p className="mt-1 text-xs text-slate-400">

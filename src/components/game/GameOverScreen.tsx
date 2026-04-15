@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, Loader2, RotateCcw, Share2, Trophy } from "lucide-react";
 import Link from "next/link";
@@ -21,6 +21,12 @@ import { cn } from "@/lib/utils";
 import type { RevealedCardData } from "@/lib/solo/api";
 import { getSoloDifficultyLabel } from "@/lib/solo/share";
 import type { DifficultyTier } from "@/lib/difficulty";
+import {
+  describeTimelineSlot,
+  StatCard,
+  SlotPreview,
+  TimelineCardPreview,
+} from "@/components/game/GameOverScreen.helpers";
 
 function revealedToTimelineItem(card: RevealedCardData): TimelineItem {
   return {
@@ -55,75 +61,6 @@ interface GameOverScreenProps {
   scoreError?: string | undefined;
   onPlayAgain: () => void;
   onChangeDifficulty: () => void;
-}
-
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-surface-800/80 rounded-2xl border border-white/10 p-4 backdrop-blur">
-      <p className="text-text-secondary text-xs font-semibold tracking-[0.18em] uppercase">
-        {label}
-      </p>
-      <p className="text-text-primary mt-2 font-mono text-4xl font-bold tabular-nums">{value}</p>
-    </div>
-  );
-}
-
-function describeTimelineSlot(placedCards: TimelineItem[], position: number): string {
-  const previousCard = position > 0 ? placedCards[position - 1] : undefined;
-  const nextCard = placedCards[position];
-
-  if (previousCard !== undefined && nextCard !== undefined) {
-    return `between ${previousCard.title} (${String(previousCard.releaseYear)}) and ${nextCard.title} (${String(nextCard.releaseYear)})`;
-  }
-
-  if (previousCard !== undefined) {
-    return `after ${previousCard.title} (${String(previousCard.releaseYear)})`;
-  }
-
-  if (nextCard !== undefined) {
-    return `before ${nextCard.title} (${String(nextCard.releaseYear)})`;
-  }
-
-  return "as the first card on the timeline";
-}
-
-function SlotPreview({ active, label }: { active: boolean; label: string }) {
-  return (
-    <div
-      className={cn(
-        "flex h-24 w-[4.5rem] shrink-0 items-center justify-center rounded-2xl border border-dashed px-2 text-center",
-        active
-          ? "border-emerald-400 bg-emerald-500/10 shadow-[0_0_18px_rgba(52,211,153,0.25)]"
-          : "bg-surface-900/60 border-white/12",
-      )}
-      aria-label={active ? `Correct slot: ${label}` : `Timeline slot: ${label}`}
-    >
-      <div className="flex flex-col items-center gap-2">
-        <div
-          className={cn("w-1 rounded-full", active ? "h-12 bg-emerald-400" : "h-8 bg-white/20")}
-        />
-        <span
-          className={cn(
-            "text-[10px] font-semibold tracking-[0.18em] uppercase",
-            active ? "text-emerald-300" : "text-text-secondary/60",
-          )}
-        >
-          {active ? "Place" : "Slot"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function TimelineCardPreview({ card }: { card: TimelineItem }) {
-  return (
-    <div className="bg-surface-800/70 flex w-28 shrink-0 flex-col rounded-2xl border border-white/10 p-3">
-      <span className="text-primary-300 font-mono text-xs font-semibold tabular-nums">
-        {card.releaseYear}
-      </span>
-      <span className="text-text-primary mt-2 line-clamp-2 text-sm font-medium">{card.title}</span>
-    </div>
-  );
 }
 
 export function GameOverScreen({
@@ -186,6 +123,20 @@ export function GameOverScreen({
   );
   const firstPositionDescription = positionDescriptions[0];
 
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  const [announcement, setAnnouncement] = useState("");
+  useEffect(() => {
+    setAnnouncement(
+      endedOnIncorrectPlacement
+        ? `Game over! Final score: ${String(score)}. Your longest streak was ${String(bestStreak)}.`
+        : `Deck cleared! Final score: ${String(score)}. Your longest streak was ${String(bestStreak)}.`,
+    );
+  }, [score, bestStreak, endedOnIncorrectPlacement]);
+
   return (
     <motion.section
       className="flex min-h-screen w-full items-center justify-center px-4 py-6 md:px-6 md:py-10"
@@ -193,6 +144,10 @@ export function GameOverScreen({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.25 }}
     >
+      {/* Screen reader announcement for game-over result; assertive interrupts. */}
+      <div className="sr-only" aria-live="assertive" aria-atomic="true">
+        {announcement}
+      </div>
       <div className="bg-surface-900/95 w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-black/30 backdrop-blur">
         <div className="grid gap-8 px-4 py-6 md:px-8 md:py-10 xl:grid-cols-[280px_minmax(0,1fr)] xl:items-center">
           <div className="flex flex-col items-center gap-4">
@@ -229,7 +184,11 @@ export function GameOverScreen({
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-display text-text-primary text-4xl font-bold md:text-5xl">
+                <h2
+                  ref={headingRef}
+                  tabIndex={-1}
+                  className="font-display text-text-primary text-4xl font-bold focus:outline-none md:text-5xl"
+                >
                   {endedOnIncorrectPlacement ? "Game Over" : "Perfect Run"}
                 </h2>
                 {difficulty !== null && (
