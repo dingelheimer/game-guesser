@@ -17,6 +17,7 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { cn } from "@/lib/utils";
 import { MOTION } from "@/lib/motion";
 import { GameCard } from "./GameCard";
@@ -335,7 +336,7 @@ export function Timeline({
         </div>
       </div>
 
-      <DragOverlay dropAnimation={dropAnimation}>
+      <DragOverlay dropAnimation={dropAnimation} modifiers={[snapCenterToCursor]}>
         {activeCard ? (
           <div
             className={cn(
