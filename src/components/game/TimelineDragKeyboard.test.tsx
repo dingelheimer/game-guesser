@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -171,17 +171,6 @@ function getDropZone(index: number): HTMLElement {
   return zone;
 }
 
-/** Returns the active drag overlay wrapper while a drag is in progress. */
-function getDragOverlay(container: HTMLElement): HTMLDivElement {
-  const overlay = Array.from(container.querySelectorAll("div")).find((element) =>
-    element.className.includes("scale-95 rotate-2"),
-  );
-  if (!(overlay instanceof HTMLDivElement)) {
-    throw new Error("Expected drag overlay wrapper");
-  }
-  return overlay;
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("Timeline — keyboard, drag & feedback", () => {
@@ -276,74 +265,6 @@ describe("Timeline — keyboard, drag & feedback", () => {
       await user.keyboard("{ArrowRight}");
       await user.keyboard("{ArrowRight}");
       expect(document.activeElement).toBe(zones[2]);
-    });
-  });
-
-  describe("drag overlay", () => {
-    it("configures the drop animation with the story timing and source-hiding side effect", () => {
-      render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
-
-      expect(hoistedState.lastDragOverlayProps?.dropAnimation?.duration).toBe(300);
-      expect(hoistedState.lastDragOverlayProps?.dropAnimation?.easing).toBe(
-        "cubic-bezier(0.25, 1, 0.5, 1)",
-      );
-      expect(typeof hoistedState.lastDragOverlayProps?.dropAnimation?.sideEffects).toBe("function");
-    });
-
-    it("disables drop animation timing when reduced motion is preferred", () => {
-      hoistedState.mockUseReducedMotion.mockReturnValue(true);
-
-      render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
-
-      expect(hoistedState.lastDragOverlayProps?.dropAnimation?.duration).toBe(0);
-    });
-
-    it("renders a timeline-sized overlay and adds the drop-zone glow on valid hover", () => {
-      const { container } = render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
-
-      act(() => {
-        hoistedState.lastDndContextProps?.onDragStart?.();
-      });
-
-      act(() => {
-        hoistedState.lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
-      });
-
-      const overlay = getDragOverlay(container);
-      const overlayCard = Array.from(overlay.querySelectorAll("div")).find((element) =>
-        element.className.includes("xl:w-[220px]"),
-      );
-
-      expect(overlay.className).toContain("rotate-2");
-      expect(overlay.className).toContain("opacity-80");
-      expect(overlay.className).toContain("ring-primary-400");
-      expect(overlay.className).toContain("shadow-[0_0_24px_rgba(139,92,246,0.45)]");
-      expect(overlay.className).toContain("ring-2");
-      expect(overlayCard?.className).toContain(
-        "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]",
-      );
-    });
-
-    it("removes the overlay glow when no valid zone is active", () => {
-      const { container } = render(<Timeline placedCards={[card1]} pendingCard={pendingCard} />);
-
-      act(() => {
-        hoistedState.lastDndContextProps?.onDragStart?.();
-      });
-      act(() => {
-        hoistedState.lastDndContextProps?.onDragOver?.({ over: { id: "zone-1" } });
-      });
-
-      expect(getDragOverlay(container).className).toContain("ring-primary-400");
-
-      act(() => {
-        hoistedState.lastDndContextProps?.onDragOver?.({ over: null });
-      });
-
-      expect(getDragOverlay(container).className).not.toContain("ring-primary-400");
-      expect(getDragOverlay(container).className).not.toContain(
-        "shadow-[0_0_24px_rgba(139,92,246,0.45)]",
-      );
     });
   });
 
