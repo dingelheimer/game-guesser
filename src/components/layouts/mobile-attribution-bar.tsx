@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { GameDataAttribution } from "@/components/layouts/game-data-attribution";
 
 /** Slim mobile attribution bar that sits above the fixed bottom navigation. */

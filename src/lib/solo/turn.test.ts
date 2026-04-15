@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it } from "vitest";
 import { processTurn } from "../../../supabase/functions/solo-turn/logic/turn";
 import type { SessionSnapshot } from "../../../supabase/functions/solo-turn/logic/turn";

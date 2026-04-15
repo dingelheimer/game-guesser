@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Metadata } from "next";
 import { ArrowUpDown, Eye, Gamepad2, Sparkles, Trophy, Users } from "lucide-react";
 import { LandingHero } from "@/app/_components/LandingHero";

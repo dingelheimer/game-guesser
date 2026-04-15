@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { Timeline, type TimelineItem } from "@/components/game/Timeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MultiplayerGamePagePlayer, MultiplayerTurnCard } from "@/lib/multiplayer/gamePage";
