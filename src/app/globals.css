@@ -204,3 +204,24 @@
       env(safe-area-inset-left);
   }
 }
+
+/*
+ * CSS-level reduced-motion baseline.
+ *
+ * The JS useReducedMotion() hook covers Framer Motion animations, but
+ * CSS-only utilities (animate-pulse, animate-spin, Tailwind transitions)
+ * are not affected by the hook. This rule catches those cases.
+ *
+ * Note: transition-color and transition-opacity are intentionally excluded
+ * so hover/focus colour cues remain functional for keyboard users.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

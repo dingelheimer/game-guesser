@@ -14,16 +14,19 @@ import { Timeline } from "@/components/game/Timeline";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 import { hiddenToTimelineItem } from "@/stores/soloGameStore";
 import { submitScoreAction } from "@/lib/auth/actions";
+import { MOTION } from "@/lib/motion";
 
 function PlacementResult({ correct }: { correct: boolean }) {
+  const reduceMotion = useReducedMotion();
   return (
     <motion.div
       className={cn(
         "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold",
         correct ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400",
       )}
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={reduceMotion === true ? { opacity: 0 } : { opacity: 0, y: -8 }}
+      animate={reduceMotion === true ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      transition={{ duration: MOTION.duration.fast }}
       role="status"
       aria-live="polite"
     >
@@ -281,8 +284,8 @@ export function SoloGame({ username }: { username: string | null }) {
               exit={reduceMotion === true ? {} : { opacity: 0, y: -12 }}
               transition={
                 isRevealing && lastPlacementCorrect === false
-                  ? { duration: 0.5 }
-                  : { duration: 0.25 }
+                  ? { duration: MOTION.duration.slow }
+                  : { duration: MOTION.duration.fast }
               }
               className={cn(
                 "relative",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Gamepad2, LogIn, Sparkles, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MOTION } from "@/lib/motion";
 
 interface LandingHeroProps {
   isAuthenticated: boolean;
@@ -13,7 +14,6 @@ interface LandingHeroProps {
 
 const previewYears = ["1994", "2001", "2017"] as const;
 const statChips = ["Solo Endless", "2-8 players", "Platform Bonus"] as const;
-const easeOutCurve = [0.22, 1, 0.36, 1] as const;
 
 /** Animated hero section for the marketing landing page. */
 export function LandingHero({ isAuthenticated, primaryCtaLabel }: LandingHeroProps) {
@@ -37,7 +37,11 @@ export function LandingHero({ isAuthenticated, primaryCtaLabel }: LandingHeroPro
     : {
         variants: {
           hidden: { opacity: 0, y: 18 },
-          visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: easeOutCurve } },
+          visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: MOTION.duration.normal, ease: MOTION.ease.out },
+          },
         },
       };
   const visualMotionProps = prefersReducedMotion
@@ -45,7 +49,7 @@ export function LandingHero({ isAuthenticated, primaryCtaLabel }: LandingHeroPro
     : {
         initial: { opacity: 0, scale: 0.96, y: 16 },
         animate: { opacity: 1, scale: 1, y: 0 },
-        transition: { duration: 0.5, ease: easeOutCurve, delay: 0.15 },
+        transition: { duration: MOTION.duration.normal, ease: MOTION.ease.out, delay: 0.15 },
       };
 
   return (

@@ -4,6 +4,7 @@
 import { motion } from "framer-motion";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { MOTION } from "@/lib/motion";
 import { GameCard } from "./GameCard";
 import type { TimelineItem } from "./timelineTypes";
 import { PENDING_DRAGGABLE_ID, ZONE_DATA_ATTR, zoneDroppableId } from "./timelineTypes";
@@ -47,9 +48,7 @@ export function DropZone({
   const { setNodeRef, isOver } = useDroppable({ id: zoneDroppableId(index) });
   const isActive = isOver || isFocused;
 
-  const spring = reduceMotion
-    ? { duration: 0 }
-    : { type: "spring" as const, stiffness: 500, damping: 30 };
+  const spring = reduceMotion ? { duration: 0 } : { type: "spring" as const, ...MOTION.spring };
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
     switch (e.key) {

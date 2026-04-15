@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Trophy, Zap } from "lucide-react";
 import { getSoloDifficultyLabel } from "@/lib/solo/share";
 import { cn } from "@/lib/utils";
+import { MOTION } from "@/lib/motion";
 import type { DifficultyTier } from "@/lib/difficulty";
 
 const BONUS_BADGE_DURATION_MS = 1800;
@@ -60,7 +61,7 @@ export function ScoreBar({
               initial={reduceMotion === true ? { opacity: 0 } : { opacity: 0, x: -8, scale: 0.96 }}
               animate={reduceMotion === true ? { opacity: 1 } : { opacity: 1, x: 0, scale: 1 }}
               exit={reduceMotion === true ? { opacity: 0 } : { opacity: 0, x: 8, scale: 0.98 }}
-              transition={{ duration: reduceMotion === true ? 0.01 : 0.2 }}
+              transition={{ duration: reduceMotion === true ? 0.01 : MOTION.duration.fast }}
               role="status"
               aria-live="polite"
             >
