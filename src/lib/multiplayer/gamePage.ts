@@ -2,164 +2,29 @@
 import "server-only";
 
 import { z } from "zod";
-import type { PlatformOption } from "@/lib/platformBonus";
 import { createClient } from "@/lib/supabase/server";
-import {
-  LobbyPlayerRoleSchema,
-  LobbySettingsSchema,
-  DisplayNameSchema,
-  type LobbyPlayerRole,
-  type LobbySettings,
-} from "./lobby";
+import { LobbySettingsSchema, DisplayNameSchema } from "./lobby";
 import { buildPlatformLabel } from "./platformLabel";
-import { TimelineEntrySchema, TurnPhaseSchema, TurnStateSchema, type TurnPhase } from "./deck";
+import { TimelineEntrySchema, TurnPhaseSchema, TurnStateSchema } from "./deck";
+import {
+  CoverRowSchema,
+  GamePlatformRowSchema,
+  GamePlayerRowSchema,
+  GameRowSchema,
+  GameSessionRowSchema,
+  PlatformRowSchema,
+  RoomPlayerPresenceRowSchema,
+  SessionIdSchema,
+} from "./gamePageSchemas";
+import { buildHiddenTurnCard, buildRevealedTurnCard } from "./gamePageTypes";
+import type { MultiplayerGamePageData } from "./gamePageTypes";
 
-const SessionIdSchema = z.uuid();
-const SessionStatusSchema = z.enum(["active", "finished", "abandoned"]);
-const RoomPlayerPresenceRowSchema = z.object({
-  joined_at: z.iso.datetime({ offset: true }),
-  role: LobbyPlayerRoleSchema,
-  user_id: z.uuid(),
-});
-const GamePlayerRowSchema = z.object({
-  display_name: z.string(),
-  score: z.number().int(),
-  timeline: z.unknown(),
-  tokens: z.number().int(),
-  turn_position: z.number().int(),
-  user_id: z.uuid(),
-});
-const GameSessionRowSchema = z.object({
-  active_player_id: z.uuid().nullable(),
-  current_turn: z.unknown().nullable(),
-  id: z.uuid().nullable(),
-  room_id: z.uuid().nullable(),
-  settings: z.unknown().nullable(),
-  status: SessionStatusSchema.nullable(),
-  team_score: z.number().int().nullable().default(null),
-  team_timeline: z.unknown().nullable().default(null),
-  team_tokens: z.number().int().nullable().default(null),
-  turn_number: z.number().int().nullable(),
-  winner_id: z.uuid().nullable(),
-});
-const CoverRowSchema = z.object({
-  game_id: z.number().int(),
-  igdb_image_id: z.string(),
-});
-const GamePlatformRowSchema = z.object({
-  game_id: z.number().int(),
-  platform_id: z.number().int(),
-});
-const PlatformRowSchema = z.object({
-  id: z.number().int(),
-  name: z.string(),
-});
-const GameRowSchema = z.object({
-  id: z.number().int(),
-  name: z.string(),
-  release_year: z.number().int(),
-});
-
-/**
- * Hydrated card shown inside a multiplayer player's revealed timeline.
- */
-export type MultiplayerTimelineCard = Readonly<{
-  coverImageId: string | null;
-  gameId: number;
-  isRevealed: boolean;
-  platform: string;
-  releaseYear: number;
-  screenshotImageId: string | null;
-  title: string;
-}>;
-
-/**
- * Display state for the currently active multiplayer turn card.
- */
-export type MultiplayerTurnCard = Readonly<{
-  coverImageId: string | null;
-  gameId: number | null;
-  isRevealed: boolean;
-  platform: string;
-  releaseYear: number | null;
-  screenshotImageId: string | null;
-  title: string;
-}>;
-
-/**
- * Player payload rendered by the multiplayer game page.
- */
-export type MultiplayerGamePagePlayer = Readonly<{
-  displayName: z.infer<typeof DisplayNameSchema>;
-  joinedAt: string;
-  role: LobbyPlayerRole;
-  score: number;
-  timeline: readonly MultiplayerTimelineCard[];
-  tokens: number;
-  turnPosition: number;
-  userId: string;
-}>;
-
-/**
- * Serializable server payload used to render and hydrate the multiplayer game page.
- */
-export type MultiplayerGamePageData = Readonly<{
-  currentTurn: Readonly<{
-    activePlayerId: string;
-    card: MultiplayerTurnCard;
-    phase: TurnPhase;
-    phaseDeadline: string | null;
-    platformOptions: readonly PlatformOption[];
-    platformBonusPlayerId?: string | null;
-    votes?: Readonly<Record<string, Readonly<{ position: number; locked: boolean }>>>;
-  }>;
-  currentUserId: string;
-  players: readonly MultiplayerGamePagePlayer[];
-  roomId: string;
-  sessionId: string;
-  settings: LobbySettings;
-  status: "active" | "finished";
-  teamScore: number | null;
-  teamTimeline: readonly MultiplayerTimelineCard[] | null;
-  teamTokens: number | null;
-  turnNumber: number;
-  winner: Readonly<{
-    displayName: z.infer<typeof DisplayNameSchema>;
-    userId: string;
-  }> | null;
-}>;
-
-function buildHiddenTurnCard(
-  gameId: number | null,
-  screenshotImageId: string,
-): MultiplayerTurnCard {
-  return {
-    gameId,
-    screenshotImageId,
-    coverImageId: null,
-    title: "?",
-    releaseYear: null,
-    platform: "",
-    isRevealed: false,
-  };
-}
-
-function buildRevealedTurnCard(
-  game: z.infer<typeof GameRowSchema>,
-  screenshotImageId: string,
-  coverImageId: string | null,
-  platform: string,
-): MultiplayerTurnCard {
-  return {
-    coverImageId,
-    gameId: game.id,
-    isRevealed: true,
-    platform,
-    releaseYear: game.release_year,
-    screenshotImageId,
-    title: game.name,
-  };
-}
+export type {
+  MultiplayerGamePageData,
+  MultiplayerGamePagePlayer,
+  MultiplayerTimelineCard,
+  MultiplayerTurnCard,
+} from "./gamePageTypes";
 
 /**
  * Load the server-side data required to render the multiplayer game screen.
