@@ -4,36 +4,16 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { GameCard } from "@/components/game/GameCard";
 import { GameOverScreen } from "@/components/game/GameOverScreen";
 import type { ScoreStatus } from "@/components/game/GameOverScreen";
-import { PlatformBonusInput } from "@/components/game/PlatformBonusInput";
 import { ScoreBar } from "@/components/game/ScoreBar";
+import { SoloResultControls } from "@/components/game/SoloResultControls";
 import { Timeline } from "@/components/game/Timeline";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 import { hiddenToTimelineItem } from "@/stores/soloGameStore";
 import { submitScoreAction } from "@/lib/auth/actions";
 import { MOTION } from "@/lib/motion";
-
-function PlacementResult({ correct }: { correct: boolean }) {
-  const reduceMotion = useReducedMotion();
-  return (
-    <motion.div
-      className={cn(
-        "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold",
-        correct ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400",
-      )}
-      initial={reduceMotion === true ? { opacity: 0 } : { opacity: 0, y: -8 }}
-      animate={reduceMotion === true ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      transition={{ duration: MOTION.duration.fast }}
-      role="status"
-      aria-live="polite"
-    >
-      {correct ? "✓ Correct!" : "✗ Wrong placement"}
-    </motion.div>
-  );
-}
 
 type IncorrectPlacementStage = "idle" | "indicator" | "sliding" | "revealing" | "done";
 
@@ -76,7 +56,9 @@ export function SoloGame({ username }: { username: string | null }) {
   const reduceMotion = useReducedMotion();
   const [incorrectPlacementStage, setIncorrectPlacementStage] =
     useState<IncorrectPlacementStage>("idle");
-  const [expertYearInput, setExpertYearInput] = useState("");
+
+  // Focus management refs for keyboard navigation
+  const timelineWrapperRef = useRef<HTMLDivElement>(null);
 
   // Track which sessionId we've already submitted a score for (prevents double-submit)
   const submittedSessionRef = useRef<string | null>(null);
@@ -144,12 +126,13 @@ export function SoloGame({ username }: { username: string | null }) {
     }
   }, [phase]);
 
-  // Reset expert year input when a new turn starts
+  // Move focus to the timeline wrapper when placing starts so keyboard users
+  // can Tab directly to the first drop zone
   useEffect(() => {
-    if (phase === "placing") {
-      setExpertYearInput("");
+    if (isPlacing) {
+      timelineWrapperRef.current?.focus();
     }
-  }, [phase]);
+  }, [isPlacing]);
 
   useEffect(() => {
     if (!isIncorrectReveal || revealedCard === null) {
@@ -313,114 +296,30 @@ export function SoloGame({ username }: { username: string | null }) {
         </AnimatePresence>
 
         {/* Placement result + platform bonus + next turn */}
-        <AnimatePresence>
-          {shouldShowResultControls && (
-            <motion.div
-              className="flex w-full max-w-lg flex-col items-center gap-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <PlacementResult correct={lastPlacementCorrect} />
-
-              {lastPlacementCorrect && availablePlatforms.length > 0 && (
-                <div className="w-full space-y-2">
-                  {isProVariant ? (
-                    <div className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-100">
-                      <strong>PRO Required:</strong> answer the platform bonus correctly to keep
-                      this card.
-                    </div>
-                  ) : null}
-                  {isExpertVariant ? (
-                    <div className="space-y-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-amber-300">Expert Verification</p>
-                        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-amber-100 uppercase">
-                          EXPERT Required
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-200">
-                        Enter the exact release year and all platforms to keep this card.
-                      </p>
-                      {expertVerificationResult !== null ? (
-                        <p
-                          className={cn(
-                            "text-sm font-medium",
-                            expertVerificationResult === "correct"
-                              ? "text-emerald-300"
-                              : "text-rose-300",
-                          )}
-                        >
-                          {expertVerificationResult === "correct"
-                            ? "✓ Verified — card kept!"
-                            : "✗ Failed — card lost."}
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          <div>
-                            <label
-                              htmlFor="solo-expert-year"
-                              className="mb-1 block text-xs font-medium text-slate-300"
-                            >
-                              Release year
-                            </label>
-                            <input
-                              id="solo-expert-year"
-                              type="number"
-                              inputMode="numeric"
-                              placeholder="e.g. 2001"
-                              value={expertYearInput}
-                              onChange={(e) => {
-                                setExpertYearInput(e.target.value);
-                              }}
-                              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:ring-1 focus:ring-amber-400/60 focus:outline-none"
-                            />
-                          </div>
-                          <PlatformBonusInput
-                            platforms={availablePlatforms}
-                            correctPlatformIds={correctPlatformIds}
-                            result={null}
-                            onSubmit={(selectedPlatformIds) => {
-                              const year = parseInt(expertYearInput, 10);
-                              if (!isNaN(year)) {
-                                submitExpertVerification(year, selectedPlatformIds);
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <PlatformBonusInput
-                      platforms={availablePlatforms}
-                      correctPlatformIds={correctPlatformIds}
-                      result={platformBonusResult}
-                      onSubmit={submitPlatformGuess}
-                    />
-                  )}
-                </div>
-              )}
-
-              <Button
-                onClick={advanceTurn}
-                className="w-full max-w-sm"
-                aria-label={
-                  !lastPlacementCorrect && !isTeamworkMode ? "See game over screen" : "Next turn"
-                }
-                disabled={
-                  (isProVariant && isPlatformBonusPending) ||
-                  (isExpertVariant && isExpertVerificationPending)
-                }
-              >
-                {!lastPlacementCorrect && !isTeamworkMode ? "See Result" : "Next Turn →"}
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <SoloResultControls
+          show={shouldShowResultControls}
+          correct={lastPlacementCorrect ?? false}
+          revealedCard={revealedCard}
+          timelineItems={timelineItems}
+          availablePlatforms={availablePlatforms}
+          correctPlatformIds={correctPlatformIds}
+          platformBonusResult={platformBonusResult}
+          expertVerificationResult={expertVerificationResult}
+          isProVariant={isProVariant}
+          isExpertVariant={isExpertVariant}
+          isTeamworkMode={isTeamworkMode}
+          onAdvanceTurn={advanceTurn}
+          onSubmitPlatformGuess={submitPlatformGuess}
+          onSubmitExpertVerification={submitExpertVerification}
+        />
       </div>
 
       {/* Timeline */}
-      <div className="flex min-w-0 flex-1 flex-col justify-center">
+      <div
+        ref={timelineWrapperRef}
+        tabIndex={-1}
+        className="flex min-w-0 flex-1 flex-col justify-center focus:outline-none"
+      >
         <div className="flex items-center gap-3 px-4 pt-1 pb-2">
           <div className="bg-surface-700 h-px flex-1" />
           <span className="text-text-secondary/70 text-xs font-medium tracking-wider uppercase">

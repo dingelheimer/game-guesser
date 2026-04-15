@@ -101,9 +101,17 @@ export default async function RootLayout({
       <body className="bg-surface-900 flex min-h-full flex-col">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <TooltipProvider>
+            <a
+              href="#main-content"
+              className="focus:bg-primary-500 sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:outline-none"
+            >
+              Skip to content
+            </a>
             <NoiseOverlay />
             <Header username={username} />
-            <main className="flex flex-1 flex-col pb-28 md:pb-0">{children}</main>
+            <main id="main-content" className="flex flex-1 flex-col pb-28 md:pb-0">
+              {children}
+            </main>
             <Footer />
             <MobileAttributionBar />
             <BottomNav username={username} />
