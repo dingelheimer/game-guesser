@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import { Fragment, useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   DndContext,
@@ -12,6 +12,7 @@ import {
   useSensor,
   useSensors,
   defaultDropAnimationSideEffects,
+  type Announcements,
   type DropAnimation,
   type DragEndEvent,
   type DragOverEvent,
@@ -24,6 +25,20 @@ import { ZONE_DATA_ATTR, parseZoneIndex } from "./timelineTypes";
 import { YearMarker, DropZone, DraggablePendingCard } from "./TimelineDropZone";
 
 export type { TimelineItem } from "./timelineTypes";
+
+/**
+ * Returns a human-readable drop zone position label for screen reader announcements.
+ * Zone index `i` corresponds to the slot before `placedCards[i]`.
+ */
+function describeZonePosition(placedCards: TimelineItem[], index: number): string {
+  const prev = placedCards[index - 1];
+  const next = placedCards[index];
+  if (prev !== undefined && next !== undefined)
+    return `between ${prev.title} (${String(prev.releaseYear)}) and ${next.title} (${String(next.releaseYear)})`;
+  if (prev !== undefined) return `after ${prev.title} (${String(prev.releaseYear)})`;
+  if (next !== undefined) return `before ${next.title} (${String(next.releaseYear)})`;
+  return "at the first position";
+}
 
 export interface TimelineProps {
   /** Cards already placed on the timeline, sorted by releaseYear ASC. */
@@ -94,6 +109,32 @@ export function Timeline({
     useSensor(KeyboardSensor),
   );
 
+  const announcements = useMemo<Announcements>(
+    () => ({
+      onDragStart() {
+        return pendingCard
+          ? `Picked up ${pendingCard.title}. Use arrow keys to move between drop zones.`
+          : "Picked up game card. Use arrow keys to move between drop zones.";
+      },
+      onDragOver({ over }) {
+        if (!over) return "Not over a drop zone.";
+        const idx = parseZoneIndex(String(over.id));
+        if (idx === null) return "Not over a drop zone.";
+        return `Hovering over position: ${describeZonePosition(placedCards, idx)}.`;
+      },
+      onDragEnd({ over }) {
+        if (!over) return "Card placement cancelled.";
+        const idx = parseZoneIndex(String(over.id));
+        if (idx === null) return "Card placement cancelled.";
+        return `Placed ${pendingCard?.title ?? "game card"} ${describeZonePosition(placedCards, idx)}.`;
+      },
+      onDragCancel() {
+        return "Drag cancelled. Card returned to original position.";
+      },
+    }),
+    [pendingCard, placedCards],
+  );
+
   const handlePlace = useCallback(
     (position: number) => {
       onPlaceCard?.(position);
@@ -144,6 +185,7 @@ export function Timeline({
   return (
     <DndContext
       sensors={sensors}
+      accessibility={{ announcements }}
       onDragStart={() => {
         setActiveCard(pendingCard ?? null);
         setActiveDropZoneId(null);

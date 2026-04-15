@@ -180,4 +180,32 @@ describe("GameOverScreen", () => {
     expect(screen.getAllByLabelText(/Correct slot:/)).toHaveLength(2);
     expect(screen.queryByText(/Platform Bonuses:/i)).not.toBeInTheDocument();
   });
+
+  it("renders an assertive live region announcing the final score", () => {
+    render(
+      <GameOverScreen
+        difficulty="hard"
+        score={5}
+        turnsPlayed={1}
+        bestStreak={1}
+        bonusPointsEarned={0}
+        bonusOpportunities={0}
+        shareOutcomes={["wrong"]}
+        shareYearRange={{ start: 2005, end: 2007 }}
+        timelineItems={[]}
+        failedCard={failedCard}
+        validPositions={[0]}
+        endedOnIncorrectPlacement
+        username={null}
+        scoreStatus="idle"
+        onPlayAgain={vi.fn()}
+        onChangeDifficulty={vi.fn()}
+      />,
+    );
+
+    const region = screen.getByText(/Game over! Final score: 5/i);
+    expect(region).toBeInTheDocument();
+    expect(region).toHaveAttribute("aria-live", "assertive");
+    expect(region).toHaveAttribute("aria-atomic", "true");
+  });
 });
