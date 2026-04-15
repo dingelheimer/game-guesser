@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Build a stable multiplayer platform label from a game's platform names.
  */

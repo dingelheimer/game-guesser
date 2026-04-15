@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { TimelineEntry } from "./deck";
 import type { LobbySettings } from "./lobby";
 import type { PlatformOption } from "@/lib/platformBonus";
