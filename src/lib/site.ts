@@ -5,6 +5,7 @@ export const siteConfig = {
   description:
     "A video game timeline guessing party game where you place games by release year, chase streaks, and compete with friends.",
   ogImage: "/og.png",
+  repoUrl: "https://github.com/dingelheimer/game-guesser",
 } as const;
 
 export function getSiteUrl(path = "/") {
