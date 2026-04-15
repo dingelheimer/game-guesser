@@ -216,7 +216,7 @@ export function SoloGame({ username }: { username: string | null }) {
       : (revealedCard?.platform_names[0] ?? "Unknown");
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col">
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col">
       {/* Score bar */}
       {difficulty !== null && (
         <ScoreBar
@@ -318,7 +318,7 @@ export function SoloGame({ username }: { username: string | null }) {
       <div
         ref={timelineWrapperRef}
         tabIndex={-1}
-        className="flex min-w-0 flex-1 flex-col justify-center focus:outline-none"
+        className="flex min-w-0 flex-1 flex-col justify-end focus:outline-none"
       >
         <div className="flex items-center gap-3 px-4 pt-1 pb-2">
           <div className="bg-surface-700 h-px flex-1" />
