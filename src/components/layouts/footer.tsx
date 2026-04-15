@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { GameDataAttribution } from "@/components/layouts/game-data-attribution";
 
 /** Desktop footer with persistent game-data attribution. */

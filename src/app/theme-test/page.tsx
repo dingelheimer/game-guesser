@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
 import { CheckCircle, Gamepad2, Moon, Sun, Trophy, XCircle } from "lucide-react";

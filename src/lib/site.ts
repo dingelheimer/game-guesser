@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 export const siteConfig = {
   name: "Game Guesser",
   url: "https://gameguesser.com",

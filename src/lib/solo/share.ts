@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { DifficultyTier } from "@/lib/difficulty";
 
 const DIFFICULTY_LABELS: Record<DifficultyTier, string> = {
