@@ -110,13 +110,19 @@ vi.mock("@/lib/supabase/client", () => ({
   createClient: () => mocks.supabaseMock,
 }));
 
-vi.mock("@/lib/multiplayer/gameActions", () => ({
+vi.mock("@/lib/multiplayer/challengeActions", () => ({
   proceedFromChallenge: mocks.proceedFromChallengeMock,
-  proceedFromPlatformBonus: mocks.proceedFromPlatformBonusMock,
-  skipTurn: mocks.skipTurnMock,
   submitChallenge: mocks.submitChallengeMock,
   submitPlacement: mocks.submitPlacementMock,
+}));
+
+vi.mock("@/lib/multiplayer/platformBonusActions", () => ({
+  proceedFromPlatformBonus: mocks.proceedFromPlatformBonusMock,
   submitPlatformBonus: mocks.submitPlatformBonusMock,
+}));
+
+vi.mock("@/lib/multiplayer/turnActions", () => ({
+  skipTurn: mocks.skipTurnMock,
 }));
 
 const initialGame = initialGameFixture;
