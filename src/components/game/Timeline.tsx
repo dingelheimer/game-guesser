@@ -291,7 +291,7 @@ export function Timeline({
                       platform={card.platform}
                       isRevealed={card.isRevealed}
                       size="timeline"
-                      className="w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]"
+                      className="aspect-[3/4] w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]"
                     />
                   </div>
                   {card.isRevealed ? <YearMarker year={card.releaseYear} /> : null}
@@ -358,6 +358,7 @@ export function Timeline({
               platform={activeCard.platform}
               isRevealed={activeCard.isRevealed}
               size="timeline"
+              className="aspect-[3/4]"
             />
           </div>
         ) : null}
