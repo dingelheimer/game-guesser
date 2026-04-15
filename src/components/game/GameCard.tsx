@@ -4,6 +4,7 @@
 import Image from "next/image";
 import { useReducedMotion, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { MOTION } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScreenshotViewer } from "@/components/game/ScreenshotViewer";
 import { coverUrl, screenshotUrl, screenshotUrlMobile } from "@/lib/igdb/images";
@@ -51,16 +52,17 @@ export function GameCard({
   className,
 }: GameCardProps) {
   const reduceMotion = useReducedMotion() ?? false;
-  const motionEase = [0.4, 0, 0.2, 1] as const;
   const sizeClasses =
     size === "timeline"
       ? "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]"
       : "w-[70vw] shrink-0 md:w-[340px] lg:w-[420px] xl:w-[480px]";
   const aspectRatioClass = isRevealed ? "aspect-[3/4]" : "aspect-video";
-  const flipTransition = reduceMotion ? { duration: 0 } : { duration: 0.6, ease: motionEase };
+  const flipTransition = reduceMotion
+    ? {}
+    : { duration: MOTION.duration.slow, ease: MOTION.ease.default };
   const layoutTransition = reduceMotion
     ? { duration: 0 }
-    : { layout: { duration: 0.35, ease: motionEase } };
+    : { layout: { duration: MOTION.duration.normal, ease: MOTION.ease.default } };
 
   const screenshotSrc =
     screenshotImageId !== null
@@ -103,18 +105,21 @@ export function GameCard({
       <motion.div
         className="relative h-full w-full"
         style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateY }}
+        animate={reduceMotion ? {} : { rotateY }}
         initial={false}
         transition={flipTransition}
         aria-label={isRevealed ? `${title}, ${String(releaseYear)}` : "Mystery game card"}
       >
         {/* ── Front face — Screenshot (hidden state) ─────────────────── */}
-        <div
+        <motion.div
           className={cn(
             "absolute inset-0 overflow-hidden rounded-2xl",
             "bg-surface-900 border border-white/10",
           )}
           style={{ backfaceVisibility: "hidden" }}
+          initial={false}
+          animate={reduceMotion ? { opacity: isRevealed ? 0 : 1 } : {}}
+          transition={reduceMotion ? { duration: MOTION.duration.fast } : {}}
           aria-hidden={isRevealed}
         >
           {screenshotSrc !== null ? (
@@ -149,19 +154,19 @@ export function GameCard({
               ?
             </span>
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Back face — Revealed state ─────────────────────────────── */}
-        <div
+        <motion.div
           className={cn(
             "absolute inset-0 overflow-hidden rounded-2xl",
             "bg-surface-800 border border-white/10",
             isRevealed && "ring-primary-500 shadow-[0_0_20px_rgba(139,92,246,0.5)] ring-2",
           )}
-          style={{
-            backfaceVisibility: "hidden",
-            transform: "rotateY(180deg)",
-          }}
+          style={reduceMotion ? {} : { backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          initial={false}
+          animate={reduceMotion ? { opacity: isRevealed ? 1 : 0 } : {}}
+          transition={reduceMotion ? { duration: MOTION.duration.fast } : {}}
           aria-hidden={!isRevealed}
         >
           {/* Cover art */}
@@ -198,7 +203,7 @@ export function GameCard({
             {/* Platform */}
             <span className="text-text-secondary text-xs">{platform}</span>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
     </motion.div>
   );
