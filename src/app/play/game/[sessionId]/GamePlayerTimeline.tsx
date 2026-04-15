@@ -66,7 +66,7 @@ export function GamePlayerTimeline({
   return (
     <Card
       className={cn(
-        "border-border/60 bg-surface-800/70 transition-shadow",
+        "border-border/60 bg-surface-800/70 overflow-visible transition-shadow",
         isActive && "border-primary-400/70 shadow-[0_0_24px_rgba(139,92,246,0.22)]",
         !isConnected && "opacity-80",
       )}
