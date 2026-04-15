@@ -11,6 +11,7 @@ import { submitScoreAction } from "@/lib/auth/actions";
 import { useSoloGameStore } from "@/stores/soloGameStore";
 import type { LobbyGenre } from "@/lib/multiplayer/lobby";
 import { SoloStartScreen } from "./SoloStartScreen";
+import { MOTION } from "@/lib/motion";
 
 interface PendingScore {
   score: number;
@@ -73,7 +74,7 @@ export function SoloGamePage({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: MOTION.duration.fast }}
         >
           <SoloStartScreen
             genres={genres}
@@ -89,7 +90,7 @@ export function SoloGamePage({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: MOTION.duration.fast }}
           aria-busy="true"
           aria-label="Starting game…"
         >
@@ -107,7 +108,7 @@ export function SoloGamePage({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: MOTION.duration.fast }}
         >
           <SoloGame username={username} />
         </motion.div>

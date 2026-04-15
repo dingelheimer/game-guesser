@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import { Fragment, useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   DndContext,
@@ -12,17 +12,33 @@ import {
   useSensor,
   useSensors,
   defaultDropAnimationSideEffects,
+  type Announcements,
   type DropAnimation,
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { MOTION } from "@/lib/motion";
 import { GameCard } from "./GameCard";
 import type { TimelineItem } from "./timelineTypes";
 import { ZONE_DATA_ATTR, parseZoneIndex } from "./timelineTypes";
 import { YearMarker, DropZone, DraggablePendingCard } from "./TimelineDropZone";
 
 export type { TimelineItem } from "./timelineTypes";
+
+/**
+ * Returns a human-readable drop zone position label for screen reader announcements.
+ * Zone index `i` corresponds to the slot before `placedCards[i]`.
+ */
+function describeZonePosition(placedCards: TimelineItem[], index: number): string {
+  const prev = placedCards[index - 1];
+  const next = placedCards[index];
+  if (prev !== undefined && next !== undefined)
+    return `between ${prev.title} (${String(prev.releaseYear)}) and ${next.title} (${String(next.releaseYear)})`;
+  if (prev !== undefined) return `after ${prev.title} (${String(prev.releaseYear)})`;
+  if (next !== undefined) return `before ${next.title} (${String(next.releaseYear)})`;
+  return "at the first position";
+}
 
 export interface TimelineProps {
   /** Cards already placed on the timeline, sorted by releaseYear ASC. */
@@ -56,6 +72,8 @@ export function Timeline({
   const reduceMotion = useReducedMotion() ?? false;
   const [activeCard, setActiveCard] = useState<TimelineItem | null>(null);
   const [activeDropZoneId, setActiveDropZoneId] = useState<string | null>(null);
+  /** True from the moment the card is dropped until the next drag starts. */
+  const [isDropping, setIsDropping] = useState(false);
   /**
    * Roving tabindex: tracks which drop zone has tabIndex=0.
    * Keyboard users Tab into zone 0, then use arrow keys to navigate.
@@ -67,7 +85,7 @@ export function Timeline({
   const isOverlayOverValidDropZone = activeDropZoneId !== null;
   const cardLayoutTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.3, ease: [0.25, 1, 0.5, 1] as const };
+    : { duration: MOTION.duration.normal, ease: MOTION.ease.snappy };
   const dropAnimation: DropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({
       styles: {
@@ -76,7 +94,7 @@ export function Timeline({
         },
       },
     }),
-    duration: reduceMotion ? 0 : 300,
+    duration: reduceMotion ? 0 : MOTION.duration.normal * 1000,
     easing: "cubic-bezier(0.25, 1, 0.5, 1)",
   };
 
@@ -89,6 +107,32 @@ export function Timeline({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor),
+  );
+
+  const announcements = useMemo<Announcements>(
+    () => ({
+      onDragStart() {
+        return pendingCard
+          ? `Picked up ${pendingCard.title}. Use arrow keys to move between drop zones.`
+          : "Picked up game card. Use arrow keys to move between drop zones.";
+      },
+      onDragOver({ over }) {
+        if (!over) return "Not over a drop zone.";
+        const idx = parseZoneIndex(String(over.id));
+        if (idx === null) return "Not over a drop zone.";
+        return `Hovering over position: ${describeZonePosition(placedCards, idx)}.`;
+      },
+      onDragEnd({ over }) {
+        if (!over) return "Card placement cancelled.";
+        const idx = parseZoneIndex(String(over.id));
+        if (idx === null) return "Card placement cancelled.";
+        return `Placed ${pendingCard?.title ?? "game card"} ${describeZonePosition(placedCards, idx)}.`;
+      },
+      onDragCancel() {
+        return "Drag cancelled. Card returned to original position.";
+      },
+    }),
+    [pendingCard, placedCards],
   );
 
   const handlePlace = useCallback(
@@ -125,27 +169,34 @@ export function Timeline({
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    // Mark as dropping so the overlay sheds its drag transforms before dnd-kit
+    // runs the drop animation, preventing a visual size/rotation snap.
+    setIsDropping(true);
     setActiveDropZoneId(null);
     const overId = event.over?.id;
     if (typeof overId === "string") {
       const idx = parseZoneIndex(overId);
       if (idx !== null) handlePlace(idx);
     }
-    setActiveCard(null);
+    // Do NOT null activeCard here — keep overlay content alive for the drop
+    // animation. dnd-kit unmounts the overlay once the animation finishes.
   }
 
   return (
     <DndContext
       sensors={sensors}
+      accessibility={{ announcements }}
       onDragStart={() => {
         setActiveCard(pendingCard ?? null);
         setActiveDropZoneId(null);
+        setIsDropping(false);
       }}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
         setActiveCard(null);
         setActiveDropZoneId(null);
+        setIsDropping(false);
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
@@ -160,8 +211,8 @@ export function Timeline({
           className={cn(
             // Mobile: vertical stack, full width
             "flex flex-col items-stretch gap-2",
-            // Desktop: horizontal row with horizontal scroll; px-4 prevents content from clipping at edges
-            "md:flex-row md:items-end md:justify-center md:gap-3 md:overflow-x-auto md:px-4 md:pb-4",
+            // Desktop: horizontal row with horizontal scroll; edge spacers prevent clipping
+            "md:flex-row md:items-end md:justify-center md:gap-3 md:overflow-x-auto md:pb-4",
             // Always maintain a minimum height so the section doesn't collapse
             "min-h-[80px] md:min-h-[300px] xl:min-h-[326px]",
             placedCards.length === 0 && "justify-center",
@@ -169,6 +220,9 @@ export function Timeline({
           role="group"
           aria-label="Your timeline"
         >
+          {/* Edge spacer — keeps content away from scroll container edges on desktop */}
+          <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
+
           {/* Zone 0 — before all cards */}
           {hasPending && (
             <DropZone
@@ -264,6 +318,9 @@ export function Timeline({
           {placedCards.length === 0 && !hasPending && (
             <p className="text-text-secondary self-center text-sm">No cards placed yet</p>
           )}
+
+          {/* Edge spacer — mirrors the leading spacer to balance scroll padding */}
+          <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
         </div>
       </div>
 
@@ -271,8 +328,13 @@ export function Timeline({
         {activeCard ? (
           <div
             className={cn(
-              "pointer-events-none scale-95 rotate-2 opacity-80 transition-shadow duration-150",
+              // Bug 1 fix: w-fit + rounded-xl ensure the ring hugs the card
+              "pointer-events-none w-fit rounded-xl transition-shadow duration-150",
+              // Bug 2 fix: remove transforms on drop so the ghost matches the
+              // placed card before dnd-kit swaps overlay → timeline card
+              !isDropping && "scale-95 rotate-2 opacity-80",
               isOverlayOverValidDropZone &&
+                !isDropping &&
                 "ring-primary-400 shadow-[0_0_24px_rgba(139,92,246,0.45)] ring-2",
             )}
             aria-hidden="true"
