@@ -249,12 +249,12 @@ describe("SoloGame", () => {
     expect(cardArea).not.toHaveClass("md:pb-0");
   });
 
-  it("centers the timeline section within the available height", () => {
+  it("anchors the timeline section to the bottom of available height", () => {
     render(<SoloGame username={null} />);
 
     const timelineSection = screen.getByTestId("timeline").parentElement;
 
-    expect(timelineSection).toHaveClass("flex", "flex-1", "flex-col", "justify-center");
+    expect(timelineSection).toHaveClass("flex", "flex-1", "flex-col", "justify-end");
   });
 
   it("keeps the hero reveal controls visible after a correct placement", () => {

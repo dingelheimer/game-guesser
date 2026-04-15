@@ -93,7 +93,9 @@ describe("buildPlacementContext", () => {
   it("describes position between two cards", () => {
     const middle: TimelineItem = { ...card2, id: "3", title: "Minecraft", releaseYear: 2011 };
     const items = [card1, middle, { ...card1, id: "4", title: "The Witcher 3", releaseYear: 2015 }];
-    expect(buildPlacementContext(items, 3)).toContain("between Half-Life 2 (2004) and The Witcher 3 (2015)");
+    expect(buildPlacementContext(items, 3)).toContain(
+      "between Half-Life 2 (2004) and The Witcher 3 (2015)",
+    );
   });
 
   it("describes position after the last card", () => {
