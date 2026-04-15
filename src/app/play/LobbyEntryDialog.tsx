@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,20 +14,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { createRoom, joinRoom, leaveRoom } from "@/lib/multiplayer/actions";
-import { getFieldErrors, type FieldErrors } from "@/lib/multiplayer/actionResult";
+import { getFieldErrors } from "@/lib/multiplayer/actionResult";
 import { ensureMultiplayerSession } from "@/lib/multiplayer/browser";
-import { DisplayNameSchema, RoomCodeSchema } from "@/lib/multiplayer/lobby";
-
-const createRoomFormSchema = z.object({
-  displayName: DisplayNameSchema,
-});
-
-const joinRoomFormSchema = z.object({
-  code: RoomCodeSchema,
-  displayName: DisplayNameSchema,
-});
-
-type LobbyEntryMode = "create" | "join";
+import {
+  buildInitialState,
+  createRoomFormSchema,
+  joinRoomFormSchema,
+  LOBBY_ENTRY_COPY,
+  normalizeRoomCodeInput,
+  type LobbyEntryMode,
+  type LobbyEntryState,
+} from "./lobbyEntryTypes";
 
 type LobbyEntryDialogProps = Readonly<{
   mode: LobbyEntryMode;
@@ -36,31 +32,6 @@ type LobbyEntryDialogProps = Readonly<{
   onOpenChange: (open: boolean) => void;
   defaultDisplayName: string | null;
 }>;
-
-type LobbyEntryState = Readonly<{
-  displayName: string;
-  roomCode: string;
-  formError: string | null;
-  fieldErrors: FieldErrors | undefined;
-  conflictRoomId: string | null;
-}>;
-
-function normalizeRoomCodeInput(value: string): string {
-  return value
-    .toUpperCase()
-    .replace(/[^A-HJ-NP-Z2-9]/g, "")
-    .slice(0, 6);
-}
-
-function buildInitialState(defaultDisplayName: string | null): LobbyEntryState {
-  return {
-    displayName: defaultDisplayName ?? "",
-    roomCode: "",
-    formError: null,
-    fieldErrors: undefined,
-    conflictRoomId: null,
-  };
-}
 
 /**
  * Modal form used by the /play hub to create or join a multiplayer room.
@@ -77,25 +48,7 @@ export function LobbyEntryDialog({
   const [isPending, setIsPending] = useState(false);
   const [state, setState] = useState<LobbyEntryState>(() => buildInitialState(defaultDisplayName));
 
-  const copy = useMemo(
-    () =>
-      mode === "create"
-        ? {
-            title: "Create Room",
-            description: "Pick the display name other players will see when they join your lobby.",
-            submitLabel: "Create Room",
-            pendingLabel: "Creating room…",
-            errorMessage: "Please enter a valid display name before creating a room.",
-          }
-        : {
-            title: "Join Room",
-            description: "Enter a room code and the display name you want to show in the lobby.",
-            submitLabel: "Join Room",
-            pendingLabel: "Joining room…",
-            errorMessage: "Please provide a valid room code and display name before joining.",
-          },
-    [mode],
-  );
+  const copy = LOBBY_ENTRY_COPY[mode];
 
   useEffect(() => {
     if (!open) {
