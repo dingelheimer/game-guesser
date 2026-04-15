@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { MOTION } from "@/lib/motion";
 import { Button } from "@/components/ui/button";
 import type { PlatformOption } from "@/lib/platformBonus";
 
@@ -119,7 +120,7 @@ export function PlatformBonusInput({
           )}
           initial={reduceMotion === true ? {} : { opacity: 0, scale: 0.9 }}
           animate={reduceMotion === true ? {} : { opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: MOTION.duration.fast }}
           role="status"
           aria-live="polite"
         >
