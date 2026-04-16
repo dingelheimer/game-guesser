@@ -107,10 +107,10 @@ export function DropZone({
         className="bg-primary-500/40 hidden h-full items-center justify-center overflow-hidden rounded md:flex"
         animate={
           isActive
-            ? { width: 52, opacity: 1 }
+            ? { width: 80, opacity: 1 }
             : reduceMotion
-              ? { width: isFirst ? 20 : 16, opacity: isFirst ? 0.7 : 0.5 }
-              : { width: isFirst ? 20 : 16, opacity: isFirst ? [0.5, 0.9, 0.5] : [0.3, 0.6, 0.3] }
+              ? { width: isFirst ? 36 : 28, opacity: isFirst ? 0.7 : 0.5 }
+              : { width: isFirst ? 36 : 28, opacity: isFirst ? [0.5, 0.9, 0.5] : [0.3, 0.6, 0.3] }
         }
         transition={
           isActive
