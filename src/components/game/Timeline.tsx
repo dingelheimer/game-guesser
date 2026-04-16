@@ -79,7 +79,7 @@ export function Timeline({
    * Roving tabindex: tracks which drop zone has tabIndex=0.
    * Keyboard users Tab into zone 0, then use arrow keys to navigate.
    */
-  const [focusedZone, setFocusedZone] = useState(0);
+  const [focusedZone, setFocusedZone] = useState<number | null>(null);
 
   const hasPending = pendingCard != null;
   const zoneCount = placedCards.length + 1;
@@ -99,9 +99,9 @@ export function Timeline({
     easing: "cubic-bezier(0.25, 1, 0.5, 1)",
   };
 
-  // Reset the keyboard cursor to zone 0 whenever a new card is placed.
+  // Reset the keyboard cursor after a card is placed so no zone stays highlighted.
   useEffect(() => {
-    setFocusedZone(0);
+    setFocusedZone(null);
   }, [placedCards.length]);
 
   const sensors = useSensors(
@@ -187,6 +187,7 @@ export function Timeline({
     <DndContext
       sensors={sensors}
       accessibility={{ announcements }}
+      modifiers={[snapCenterToCursor]}
       onDragStart={() => {
         setActiveCard(pendingCard ?? null);
         setActiveDropZoneId(null);
@@ -208,34 +209,42 @@ export function Timeline({
           </div>
         )}
 
+        {/*
+         * Outer: scroll container only — no justify-content centering here.
+         * Inner: shrinks to content width on desktop so mx-auto can centre it.
+         * With few cards: inner is narrower than outer → mx-auto centres it.
+         * With many cards (overflow): inner is wider → overflow-x-auto scrolls
+         * edge-to-edge without clipping the left side.
+         */}
         <div
           className={cn(
-            // Desktop: scroll container — no justify-center to avoid clipping edges
+            // Mobile: vertical stack container
+            "flex flex-col",
+            // Desktop: horizontal scroll container (centering delegated to inner wrapper)
             "md:overflow-x-auto md:pb-4",
             // Always maintain a minimum height so the section doesn't collapse
             "min-h-[80px] md:min-h-[300px] xl:min-h-[326px]",
+            placedCards.length === 0 && "justify-center",
           )}
           role="group"
           aria-label="Your timeline"
         >
-          {/* Inner centering wrapper: mx-auto centres when content fits; resolves to 0 when overflowing */}
+          {/* Inner centering wrapper — w-fit lets mx-auto centre on desktop */}
           <div
             className={cn(
-              // Mobile: vertical stack, full width
               "flex flex-col items-stretch gap-2",
-              // Desktop: horizontal row; mx-auto centres when narrower than container
-              "mx-auto md:flex-row md:items-end md:gap-3",
-              placedCards.length === 0 && "justify-center",
+              "mx-auto md:w-fit md:flex-row md:items-end md:gap-3",
             )}
           >
             {/* Edge spacer — keeps content away from scroll container edges on desktop */}
-            <div className="hidden shrink-0 md:block md:w-6" aria-hidden="true" />
+            <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
 
             {/* Zone 0 — before all cards */}
             {hasPending && (
               <DropZone
                 index={0}
                 isFocused={focusedZone === 0}
+                isTabTarget={focusedZone === null}
                 onSelect={() => {
                   handlePlace(0);
                 }}
@@ -330,13 +339,12 @@ export function Timeline({
             )}
 
             {/* Edge spacer — mirrors the leading spacer to balance scroll padding */}
-            <div className="hidden shrink-0 md:block md:w-6" aria-hidden="true" />
+            <div className="hidden shrink-0 md:block md:w-4" aria-hidden="true" />
           </div>
-          {/* end inner centering wrapper */}
         </div>
       </div>
 
-      <DragOverlay dropAnimation={dropAnimation} modifiers={[snapCenterToCursor]}>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeCard ? (
           <div
             className={cn(

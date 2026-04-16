@@ -25,6 +25,8 @@ export function YearMarker({ year }: { year: number }) {
 export interface DropZoneProps {
   index: number;
   isFocused: boolean;
+  /** When true, gives this zone tabIndex=0 without triggering the visual highlight. */
+  isTabTarget?: boolean;
   onSelect: () => void;
   onNavigate: (direction: "prev" | "next") => void;
   onFocus: () => void;
@@ -38,6 +40,7 @@ export interface DropZoneProps {
 export function DropZone({
   index,
   isFocused,
+  isTabTarget = false,
   onSelect,
   onNavigate,
   onFocus,
@@ -68,7 +71,7 @@ export function DropZone({
   return (
     <button
       ref={setNodeRef}
-      tabIndex={isFocused ? 0 : -1}
+      tabIndex={isFocused || isTabTarget ? 0 : -1}
       {...{ [ZONE_DATA_ATTR]: index }}
       className={cn(
         "group relative flex shrink-0 items-center justify-center",
@@ -104,10 +107,10 @@ export function DropZone({
         className="bg-primary-500/40 hidden h-full items-center justify-center overflow-hidden rounded md:flex"
         animate={
           isActive
-            ? { width: 52, opacity: 1 }
+            ? { width: 80, opacity: 1 }
             : reduceMotion
-              ? { width: isFirst ? 20 : 16, opacity: isFirst ? 0.7 : 0.5 }
-              : { width: isFirst ? 20 : 16, opacity: isFirst ? [0.5, 0.9, 0.5] : [0.3, 0.6, 0.3] }
+              ? { width: isFirst ? 36 : 28, opacity: isFirst ? 0.7 : 0.5 }
+              : { width: isFirst ? 36 : 28, opacity: isFirst ? [0.5, 0.9, 0.5] : [0.3, 0.6, 0.3] }
         }
         transition={
           isActive
