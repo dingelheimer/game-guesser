@@ -236,10 +236,11 @@ describe("Timeline", () => {
         element.className.includes("xl:w-[220px]"),
       );
 
-      // Scroll container: no justify-center (would clip edges); overflow-x-auto on desktop
+      // Outer scroll container: overflow-x-auto scrolls; no justify-center (would clip edges)
       expect(rail.className).not.toContain("md:justify-center");
       expect(rail.className).toContain("md:overflow-x-auto");
-      // Inner centering wrapper: mx-auto centres content when narrower than container
+      // Inner centering wrapper: w-fit + mx-auto centres content when narrower than container
+      expect(innerWrapper.className).toContain("md:w-fit");
       expect(innerWrapper.className).toContain("mx-auto");
       expect(innerWrapper.className).toContain("md:flex-row");
       expect(timelineCard?.className).toContain("w-[40vw] md:w-[180px] lg:w-[200px] xl:w-[220px]");
