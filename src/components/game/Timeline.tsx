@@ -79,7 +79,7 @@ export function Timeline({
    * Roving tabindex: tracks which drop zone has tabIndex=0.
    * Keyboard users Tab into zone 0, then use arrow keys to navigate.
    */
-  const [focusedZone, setFocusedZone] = useState(0);
+  const [focusedZone, setFocusedZone] = useState<number | null>(null);
 
   const hasPending = pendingCard != null;
   const zoneCount = placedCards.length + 1;
@@ -99,9 +99,9 @@ export function Timeline({
     easing: "cubic-bezier(0.25, 1, 0.5, 1)",
   };
 
-  // Reset the keyboard cursor to zone 0 whenever a new card is placed.
+  // Reset the keyboard cursor after a card is placed so no zone stays highlighted.
   useEffect(() => {
-    setFocusedZone(0);
+    setFocusedZone(null);
   }, [placedCards.length]);
 
   const sensors = useSensors(
@@ -244,6 +244,7 @@ export function Timeline({
               <DropZone
                 index={0}
                 isFocused={focusedZone === 0}
+                isTabTarget={focusedZone === null}
                 onSelect={() => {
                   handlePlace(0);
                 }}

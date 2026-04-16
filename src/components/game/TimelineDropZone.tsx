@@ -25,6 +25,8 @@ export function YearMarker({ year }: { year: number }) {
 export interface DropZoneProps {
   index: number;
   isFocused: boolean;
+  /** When true, gives this zone tabIndex=0 without triggering the visual highlight. */
+  isTabTarget?: boolean;
   onSelect: () => void;
   onNavigate: (direction: "prev" | "next") => void;
   onFocus: () => void;
@@ -38,6 +40,7 @@ export interface DropZoneProps {
 export function DropZone({
   index,
   isFocused,
+  isTabTarget = false,
   onSelect,
   onNavigate,
   onFocus,
@@ -68,7 +71,7 @@ export function DropZone({
   return (
     <button
       ref={setNodeRef}
-      tabIndex={isFocused ? 0 : -1}
+      tabIndex={isFocused || isTabTarget ? 0 : -1}
       {...{ [ZONE_DATA_ATTR]: index }}
       className={cn(
         "group relative flex shrink-0 items-center justify-center",
