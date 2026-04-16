@@ -187,6 +187,7 @@ export function Timeline({
     <DndContext
       sensors={sensors}
       accessibility={{ announcements }}
+      modifiers={[snapCenterToCursor]}
       onDragStart={() => {
         setActiveCard(pendingCard ?? null);
         setActiveDropZoneId(null);
@@ -342,7 +343,7 @@ export function Timeline({
         </div>
       </div>
 
-      <DragOverlay dropAnimation={dropAnimation} modifiers={[snapCenterToCursor]}>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeCard ? (
           <div
             className={cn(
