@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Trophy, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
+import { AdSlot } from "@/components/ads/ad-slot";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function LeaderboardPage() {
   return (
     <div className="flex flex-1 justify-center px-4 py-10">
       <div className="w-full max-w-2xl space-y-6">
+        <AdSlot placement="leaderboard" size={[728, 90]} />
         {/* Header */}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
