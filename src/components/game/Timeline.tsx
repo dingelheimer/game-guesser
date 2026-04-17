@@ -233,7 +233,7 @@ export function Timeline({
           <div
             className={cn(
               "flex flex-col items-stretch gap-2",
-              "mx-auto md:w-fit md:flex-row md:items-end md:gap-3",
+              "mx-auto md:w-fit md:flex-row md:items-start md:gap-3",
             )}
           >
             {/* Edge spacer — keeps content away from scroll container edges on desktop */}

@@ -55,7 +55,7 @@ export function GameCard({
   const sizeClasses =
     size === "timeline"
       ? "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]"
-      : "w-[70vw] shrink-0 md:w-[340px] lg:w-[420px] xl:w-[480px]";
+      : "w-[80vw] shrink-0 md:w-[440px] lg:w-[540px] xl:w-[620px]";
   const aspectRatioClass = isRevealed ? "aspect-[3/4]" : "aspect-video";
   const flipTransition = reduceMotion
     ? {}
@@ -74,12 +74,12 @@ export function GameCard({
   const screenshotSizes =
     size === "timeline"
       ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, (max-width: 1280px) 200px, 220px"
-      : "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px";
+      : "(max-width: 768px) 80vw, (max-width: 1024px) 440px, (max-width: 1280px) 540px, 620px";
 
   const coverSizes =
     size === "timeline"
       ? "(max-width: 768px) 40vw, (max-width: 1024px) 180px, (max-width: 1280px) 200px, 220px"
-      : "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px";
+      : "(max-width: 768px) 80vw, (max-width: 1024px) 440px, (max-width: 1280px) 540px, 620px";
 
   if (isLoading) {
     return (
