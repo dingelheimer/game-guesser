@@ -201,7 +201,7 @@ export function Timeline({
         setIsDropping(false);
       }}
     >
-      <div className={cn("flex flex-col gap-6", className)}>
+      <div className={cn("flex flex-col gap-6", hasPending && "md:flex-1", className)}>
         {/* Desktop drag source only; mobile uses tap-to-place drop zones. */}
         {hasPending && (
           <div className="hidden justify-center md:flex">
@@ -225,6 +225,7 @@ export function Timeline({
             // Always maintain a minimum height so the section doesn't collapse
             "min-h-[80px] md:min-h-[300px] xl:min-h-[326px]",
             placedCards.length === 0 && "justify-center",
+            hasPending && "md:mt-auto",
           )}
           role="group"
           aria-label="Your timeline"

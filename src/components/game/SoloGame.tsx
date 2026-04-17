@@ -318,7 +318,10 @@ export function SoloGame({ username }: { username: string | null }) {
       <div
         ref={timelineWrapperRef}
         tabIndex={-1}
-        className="flex min-w-0 flex-1 flex-col justify-end focus:outline-none"
+        className={cn(
+          "flex min-w-0 flex-1 flex-col focus:outline-none",
+          !isPlacing && "justify-end",
+        )}
       >
         <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 pt-1 pb-2">
           <div className="bg-surface-700 h-px flex-1" />
