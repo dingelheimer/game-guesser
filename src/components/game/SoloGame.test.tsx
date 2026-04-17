@@ -209,12 +209,12 @@ describe("SoloGame", () => {
     expect(screen.getByTestId("timeline")).toHaveAttribute("data-has-pending", "true");
   });
 
-  it("collapses desktop card-area spacing during placing", () => {
+  it("hides the card area on desktop during placing", () => {
     render(<SoloGame username={null} />);
 
     const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
 
-    expect(cardArea).toHaveClass("md:gap-0", "md:pt-0", "md:pb-0");
+    expect(cardArea).toHaveClass("md:hidden");
   });
 
   it("removes the hero card and pending timeline card while submitting", () => {
@@ -242,7 +242,7 @@ describe("SoloGame", () => {
     expect(screen.getByTestId("timeline")).toHaveAttribute("data-has-pending", "false");
   });
 
-  it("restores card-area spacing during revealing", () => {
+  it("shows and centres the card area on desktop during revealing", () => {
     mockState = createState({
       phase: "revealing",
       lastPlacementCorrect: true,
@@ -253,9 +253,8 @@ describe("SoloGame", () => {
 
     const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
 
-    expect(cardArea).not.toHaveClass("md:gap-0");
-    expect(cardArea).not.toHaveClass("md:pt-0");
-    expect(cardArea).not.toHaveClass("md:pb-0");
+    expect(cardArea).not.toHaveClass("md:hidden");
+    expect(cardArea).toHaveClass("md:flex-1", "md:justify-center");
   });
 
   it("anchors the timeline section to the bottom of available height", () => {

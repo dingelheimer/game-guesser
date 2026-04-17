@@ -251,7 +251,8 @@ export function SoloGame({ username }: { username: string | null }) {
       <div
         className={cn(
           "mx-auto flex w-full max-w-7xl flex-col items-center gap-6 px-4 pt-6 pb-4",
-          isPlacing && "md:gap-0 md:pt-0 md:pb-0",
+          "md:flex-1 md:justify-center md:pt-0 md:pb-0",
+          isPlacing && "md:hidden",
         )}
       >
         <AnimatePresence mode="wait">
