@@ -91,7 +91,7 @@ describe("GameCard", () => {
 
       expect(wrapper.className).toContain("aspect-video");
       expect(wrapper.className).toContain(
-        "w-[70vw] shrink-0 md:w-[340px] lg:w-[420px] xl:w-[480px]",
+        "w-[80vw] shrink-0 md:w-[440px] lg:w-[540px] xl:w-[620px]",
       );
       expect(imgs[0]).toHaveAttribute(
         "src",
@@ -100,7 +100,7 @@ describe("GameCard", () => {
       expect(imgs[0]).toHaveClass("object-cover");
       expect(imgs[0]).toHaveAttribute(
         "sizes",
-        "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px",
+        "(max-width: 768px) 80vw, (max-width: 1024px) 440px, (max-width: 1280px) 540px, 620px",
       );
       expect(screen.getByRole("button", { name: "View full-size screenshot" })).toBeInTheDocument();
     });
@@ -164,7 +164,7 @@ describe("GameCard", () => {
       );
       expect(imgs[0]).toHaveAttribute(
         "sizes",
-        "(max-width: 768px) 70vw, (max-width: 1024px) 340px, (max-width: 1280px) 420px, 480px",
+        "(max-width: 768px) 80vw, (max-width: 1024px) 440px, (max-width: 1280px) 540px, 620px",
       );
     });
 
