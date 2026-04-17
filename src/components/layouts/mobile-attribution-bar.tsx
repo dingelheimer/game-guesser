@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import Link from "next/link";
+import Image from "next/image";
 import { Code } from "lucide-react";
 import { GameDataAttribution } from "@/components/layouts/game-data-attribution";
 import { SourceCodeLink } from "@/components/layouts/source-code-link";
@@ -13,6 +14,15 @@ export function MobileAttributionBar() {
       <div className="mx-auto flex max-w-lg items-center justify-between px-3 py-2">
         <GameDataAttribution className="text-[11px] leading-tight" />
         <div className="flex items-center gap-3">
+          <a
+            href={siteConfig.kofiUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-disabled hover:text-text-secondary flex items-center gap-1 text-[11px] leading-tight transition-colors"
+          >
+            <Image src="/kofi.svg" alt="" width={12} height={12} className="opacity-60" aria-hidden />
+            Ko-fi
+          </a>
           <Link
             href={siteConfig.privacyUrl}
             className="text-text-disabled hover:text-text-secondary text-[11px] leading-tight transition-colors"

@@ -28,6 +28,7 @@ import {
   TimelineCardPreview,
 } from "@/components/game/GameOverScreen.helpers";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { DonationPrompt } from "@/components/game/donation-prompt";
 
 function revealedToTimelineItem(card: RevealedCardData): TimelineItem {
   return {
@@ -353,6 +354,12 @@ export function GameOverScreen({
               </Link>
             )}
           </div>
+        </div>
+
+        <div className="flex justify-center px-4 pb-4 md:px-8 md:pb-8">
+          <DonationPrompt
+            correctPlacements={shareOutcomes.filter((o) => o === "correct").length}
+          />
         </div>
 
         <div className="flex justify-center px-4 pb-4 md:px-8 md:pb-8">

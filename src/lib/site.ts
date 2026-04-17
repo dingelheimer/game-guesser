@@ -7,6 +7,7 @@ export const siteConfig = {
   ogImage: "/og.png",
   repoUrl: "https://github.com/dingelheimer/game-guesser",
   privacyUrl: "/privacy",
+  kofiUrl: "https://ko-fi.com/garbageapps",
 } as const;
 
 export function getSiteUrl(path = "/") {
