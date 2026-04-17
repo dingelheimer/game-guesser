@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import Link from "next/link";
+import Image from "next/image";
 import { Code } from "lucide-react";
 import { GameDataAttribution } from "@/components/layouts/game-data-attribution";
 import { SourceCodeLink } from "@/components/layouts/source-code-link";
@@ -13,6 +14,15 @@ export function Footer() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6">
         <GameDataAttribution />
         <div className="flex items-center gap-4">
+          <a
+            href={siteConfig.kofiUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-disabled hover:text-text-secondary flex items-center gap-1 text-xs transition-colors"
+          >
+            <Image src="/kofi.svg" alt="" width={14} height={14} className="opacity-60" aria-hidden />
+            Support us on Ko-fi
+          </a>
           <Link
             href={siteConfig.privacyUrl}
             className="text-text-disabled hover:text-text-secondary text-xs transition-colors"
