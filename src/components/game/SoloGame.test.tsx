@@ -242,7 +242,7 @@ describe("SoloGame", () => {
     expect(screen.getByTestId("timeline")).toHaveAttribute("data-has-pending", "false");
   });
 
-  it("shows and centres the card area on desktop during revealing", () => {
+  it("shows card area on desktop during revealing", () => {
     mockState = createState({
       phase: "revealing",
       lastPlacementCorrect: true,
@@ -254,7 +254,7 @@ describe("SoloGame", () => {
     const cardArea = screen.getByTestId("hero-card").parentElement?.parentElement;
 
     expect(cardArea).not.toHaveClass("md:hidden");
-    expect(cardArea).toHaveClass("md:flex-1", "md:justify-center");
+    expect(cardArea).not.toHaveClass("md:flex-1", "md:justify-center");
   });
 
   it("anchors the timeline section to the bottom of available height", () => {
