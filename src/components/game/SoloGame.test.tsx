@@ -257,12 +257,26 @@ describe("SoloGame", () => {
     expect(cardArea).not.toHaveClass("md:flex-1", "md:justify-center");
   });
 
-  it("anchors the timeline section to the bottom of available height", () => {
+  it("anchors the timeline section to the bottom during revealing (justify-end applied)", () => {
+    mockState = createState({
+      phase: "revealing",
+      lastPlacementCorrect: true,
+      currentCard: null,
+    });
     render(<SoloGame username={null} />);
 
     const timelineSection = screen.getByTestId("timeline").parentElement;
 
     expect(timelineSection).toHaveClass("flex", "flex-1", "flex-col", "justify-end");
+  });
+
+  it("does not anchor the timeline section to the bottom during placing (no justify-end)", () => {
+    render(<SoloGame username={null} />);
+
+    const timelineSection = screen.getByTestId("timeline").parentElement;
+
+    expect(timelineSection).toHaveClass("flex", "flex-1", "flex-col");
+    expect(timelineSection).not.toHaveClass("justify-end");
   });
 
   it("keeps the hero reveal controls visible after a correct placement", () => {
