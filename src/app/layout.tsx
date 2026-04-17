@@ -10,10 +10,10 @@ import { Footer } from "@/components/layouts/footer";
 import { MobileAttributionBar } from "@/components/layouts/mobile-attribution-bar";
 import { NoiseOverlay } from "@/components/layouts/noise-overlay";
 import { AuthListener } from "@/components/auth/AuthListener";
+import { CookieConsentBanner } from "@/components/cookie-consent";
+import { ConsentGatedAnalytics } from "@/components/consent-gated-analytics";
 import { siteConfig } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -117,10 +117,10 @@ export default async function RootLayout({
             <BottomNav username={username} />
             <Toaster />
             <AuthListener />
+            <CookieConsentBanner />
           </TooltipProvider>
         </ThemeProvider>
-        <Analytics />
-        <SpeedInsights />
+        <ConsentGatedAnalytics />
       </body>
     </html>
   );
