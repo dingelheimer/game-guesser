@@ -31,3 +31,9 @@ Follow the web stack coding rules for TypeScript, Next.js, and Supabase
 standards. The rules file links to detailed technology references:
 
 @../kb/docs/rules/web_rules.md
+
+## Key Rules
+
+- **Stop after each story:** Do not continue to the next story without human instruction.
+- **Read files first:** Always read a file before editing it.
+- **No technical debt:** If you see code not following the coding rules, fix it immediately.

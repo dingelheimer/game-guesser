@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Metadata } from "next";
-import { ArrowUpDown, Eye, Gamepad2, Sparkles, Trophy, Users } from "lucide-react";
+import { ArrowUpDown, Eye, Sparkles } from "lucide-react";
 import { LandingHero } from "@/app/_components/LandingHero";
 import { getSiteUrl, siteConfig } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
@@ -32,33 +32,6 @@ const howItWorksSteps = [
   },
 ] as const;
 
-const featureHighlights = [
-  {
-    icon: Gamepad2,
-    title: "Solo Endless",
-    description:
-      "Jump in instantly and keep building your timeline until one wrong placement finally breaks the streak.",
-  },
-  {
-    icon: Users,
-    title: "Multiplayer 2-8 players",
-    description:
-      "Host a room, invite friends, and battle over release years, challenges, and bragging rights in real time.",
-  },
-  {
-    icon: Sparkles,
-    title: "Platform Bonus",
-    description:
-      "Correct placement is only part of the puzzle. Identify launch platforms for extra points and tougher trivia moments.",
-  },
-  {
-    icon: Trophy,
-    title: "Global Leaderboard",
-    description:
-      "Save your best solo scores, climb the rankings, and keep coming back to beat your personal best.",
-  },
-] as const;
-
 /** Marketing landing page with auth-aware CTAs and homepage structured data. */
 export default async function Home() {
   const supabase = await createClient();
@@ -84,23 +57,16 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="flex flex-1 flex-col">
-        <LandingHero isAuthenticated={isAuthenticated} primaryCtaLabel={primaryCtaLabel} />
+        <LandingHero primaryCtaLabel={primaryCtaLabel} />
 
-        <section aria-labelledby="how-it-works-heading" className="px-4 py-8 md:px-6 md:py-12">
+        <section aria-labelledby="how-it-works-label" className="px-4 py-8 md:px-6 md:py-12">
           <div className="mx-auto max-w-6xl space-y-6">
-            <div className="space-y-2 text-center md:text-left">
-              <p className="text-primary-300 text-sm font-semibold tracking-[0.22em] uppercase">
-                How It Works
-              </p>
-              <h2
-                id="how-it-works-heading"
-                className="font-display text-text-primary text-3xl font-bold md:text-4xl"
+            <div className="text-center md:text-left">
+              <p
+                id="how-it-works-label"
+                className="text-primary-300 text-sm font-semibold tracking-[0.22em] uppercase"
               >
-                Learn the loop in three quick steps.
-              </h2>
-              <p className="text-text-secondary mx-auto max-w-2xl text-sm md:mx-0 md:text-base">
-                Game Guesser is built for instant play: read the screenshot, trust your timeline
-                instincts, and enjoy the reveal.
+                How It Works
               </p>
             </div>
 
@@ -118,41 +84,6 @@ export default async function Home() {
                   </p>
                   <h3 className="text-text-primary mt-2 text-xl font-semibold">{title}</h3>
                   <p className="text-text-secondary mt-3 text-sm leading-6">{description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section aria-labelledby="features-heading" className="px-4 py-8 md:px-6 md:py-12">
-          <div className="mx-auto max-w-6xl space-y-6">
-            <div className="space-y-2 text-center md:text-left">
-              <p className="text-accent-300 text-sm font-semibold tracking-[0.22em] uppercase">
-                Why Players Stick Around
-              </p>
-              <h2
-                id="features-heading"
-                className="font-display text-text-primary text-3xl font-bold md:text-4xl"
-              >
-                Built for quick sessions, rematches, and one-more-run energy.
-              </h2>
-              <p className="text-text-secondary mx-auto max-w-2xl text-sm md:mx-0 md:text-base">
-                Whether you want a solo streak or a party-game showdown, the core mode stays easy to
-                learn and hard to master.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {featureHighlights.map(({ icon: Icon, title, description }) => (
-                <article
-                  key={title}
-                  className="bg-surface-800/75 border-border/50 rounded-3xl border p-6 shadow-lg shadow-black/10"
-                >
-                  <div className="bg-accent-500/12 text-accent-300 flex h-11 w-11 items-center justify-center rounded-2xl">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </div>
-                  <h3 className="text-text-primary mt-4 text-lg font-semibold">{title}</h3>
-                  <p className="text-text-secondary mt-2 text-sm leading-6">{description}</p>
                 </article>
               ))}
             </div>
