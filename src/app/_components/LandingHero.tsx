@@ -64,16 +64,19 @@ export function LandingHero({ primaryCtaLabel }: LandingHeroProps) {
           Guess the game. Build your timeline.
         </motion.h1>
 
-        <motion.div {...itemMotionProps} className="flex flex-col items-center gap-4">
+        <motion.div {...itemMotionProps} className="flex flex-col items-center gap-3">
           <Button
             size="lg"
             asChild
-            className="h-11 rounded-xl px-5 text-base shadow-[0_0_20px_rgba(139,92,246,0.35)] hover:shadow-[0_0_28px_rgba(139,92,246,0.5)]"
+            className="group h-16 w-full rounded-2xl px-12 text-xl font-bold tracking-wide shadow-[0_0_30px_rgba(139,92,246,0.5),0_0_60px_rgba(139,92,246,0.25)] transition-all duration-200 hover:from-primary-400 hover:to-primary-500 hover:shadow-[0_0_40px_rgba(139,92,246,0.7),0_0_80px_rgba(139,92,246,0.35)] hover:scale-[1.03] active:scale-[0.98] motion-safe:animate-pulse-glow sm:w-auto md:h-20 md:text-2xl"
           >
             <Link href="/play/solo">
-              <Gamepad2 className="h-5 w-5" aria-hidden="true" />
+              <Gamepad2 className="h-7 w-7" aria-hidden="true" />
               {primaryCtaLabel}
-              <ArrowRight className="h-5 w-5" aria-hidden="true" />
+              <ArrowRight
+                className="h-7 w-7 transition-transform group-hover:translate-x-1"
+                aria-hidden="true"
+              />
             </Link>
           </Button>
 
