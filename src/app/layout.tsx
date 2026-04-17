@@ -12,6 +12,7 @@ import { NoiseOverlay } from "@/components/layouts/noise-overlay";
 import { AuthListener } from "@/components/auth/AuthListener";
 import { CookieConsentBanner } from "@/components/cookie-consent";
 import { ConsentGatedAnalytics } from "@/components/consent-gated-analytics";
+import { AdServiceProvider } from "@/lib/ads/ad-service";
 import { siteConfig } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -100,7 +101,8 @@ export default async function RootLayout({
     >
       <body className="bg-surface-900 flex min-h-full flex-col">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <TooltipProvider>
+          <AdServiceProvider>
+            <TooltipProvider>
             <a
               href="#main-content"
               className="focus:bg-primary-500 sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:outline-none"
@@ -117,8 +119,9 @@ export default async function RootLayout({
             <BottomNav username={username} />
             <Toaster />
             <AuthListener />
-            <CookieConsentBanner />
-          </TooltipProvider>
+              <CookieConsentBanner />
+            </TooltipProvider>
+          </AdServiceProvider>
         </ThemeProvider>
         <ConsentGatedAnalytics />
       </body>

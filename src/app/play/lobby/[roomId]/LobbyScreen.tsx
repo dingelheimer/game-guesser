@@ -15,6 +15,7 @@ import { LobbyHostControls } from "./LobbyHostControls";
 import { LobbyPlayerList } from "./LobbyPlayerList";
 import { LobbySettingsPanel } from "./LobbySettingsPanel";
 import { useLobbyRealtime } from "./useLobbyRealtime";
+import { AdSlot } from "@/components/ads/ad-slot";
 
 /**
  * Props for the multiplayer lobby client screen.
@@ -293,6 +294,8 @@ export function LobbyScreen({ initialRoom }: LobbyScreenProps) {
             {leaveError}
           </p>
         )}
+
+        <AdSlot placement="lobby" size={[728, 90]} />
       </div>
     </div>
   );
