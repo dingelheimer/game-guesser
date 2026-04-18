@@ -14,7 +14,7 @@ import {
   classifyPlacementOutcome,
   extendShareYearRange,
 } from "@/lib/share";
-import type { ShareYearRange } from "@/lib/share";
+import type { ShareOutcome, ShareYearRange } from "@/lib/share";
 import * as api from "@/lib/solo/api";
 
 export type { GamePhase, SoloGameState };
@@ -56,6 +56,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   expertVerificationResult: null,
   teamTokens: null,
   teamWinCondition: null,
+  referenceCard: null,
+  guess: null,
 
   async startGame(
     difficulty: DifficultyTier,
@@ -99,6 +101,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         expertVerificationResult: null,
         teamTokens: gameMode === "teamwork" ? 5 : null,
         teamWinCondition: gameMode === "teamwork" ? (teamWinCondition ?? 10) : null,
+        referenceCard: variant === "higher_lower" ? (res.timeline[0] ?? null) : null,
+        guess: null,
       });
     } catch (err) {
       set({
@@ -179,6 +183,50 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         timelineItems,
         droppedPosition: null,
         correctionTargetPosition: null,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  },
+
+  async guessRelation(guess: "higher" | "lower") {
+    const { phase, sessionId, currentCard, timelineItems } = get();
+    if (phase !== "placing" || sessionId === null || currentCard === null) return;
+
+    set({ phase: "submitting", error: null, guess });
+
+    try {
+      const result = await api.submitHigherLowerTurn(sessionId, guess);
+      const shareOutcome: ShareOutcome = result.correct ? "correct" : "wrong";
+      const newTimelineItems = result.correct
+        ? [revealedToTimelineItem(result.revealed_card)]
+        : timelineItems;
+
+      set((state) => ({
+        phase: "revealing",
+        revealedCard: result.revealed_card,
+        nextCard: result.next_card ?? null,
+        timelineItems: newTimelineItems,
+        referenceCard: result.correct ? result.revealed_card : state.referenceCard,
+        score: result.score,
+        turnsPlayed: result.turns_played,
+        bestStreak: result.best_streak,
+        currentStreak: result.current_streak,
+        shareOutcomes: [...state.shareOutcomes, shareOutcome],
+        shareYearRange: extendShareYearRange(
+          state.shareYearRange,
+          result.revealed_card.release_year,
+        ),
+        lastPlacementCorrect: result.correct,
+        validPositions: null,
+        availablePlatforms: [],
+        correctPlatformIds: [],
+        platformBonusResult: null,
+        expertVerificationResult: null,
+      }));
+    } catch (err) {
+      set({
+        phase: "placing",
+        guess: null,
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -379,6 +427,8 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
       expertVerificationResult: null,
       teamTokens: null,
       teamWinCondition: null,
+      referenceCard: null,
+      guess: null,
     });
   },
 }));
