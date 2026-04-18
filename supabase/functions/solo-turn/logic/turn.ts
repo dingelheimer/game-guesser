@@ -3,8 +3,8 @@
  * No I/O — all dependencies injected for testability.
  */
 
-import { findValidPositions, isValidPlacement } from "./validate.ts";
-import type { TimelineEntry } from "./validate.ts";
+import { findValidPositions, isCorrectGuess, isValidPlacement } from "./validate.ts";
+import type { HigherLowerGuess, TimelineEntry } from "./validate.ts";
 
 export type { TimelineEntry };
 
@@ -98,3 +98,104 @@ export function processTurn(
     new_deck: newDeck,
   };
 }
+
+/**
+ * Process one Higher Lower turn.
+ *
+ * The session timeline contains exactly one entry (the reference card). The
+ * player guesses whether the hidden card is newer ("higher") or older
+ * ("lower") than the reference. On a correct guess the hidden card becomes
+ * the new sole reference; on an incorrect guess the game ends.
+ *
+ * @param session      - current session snapshot (read-only)
+ * @param referenceYear - release year of the current reference card (timeline[0])
+ * @param newYear       - release year of the card the player is guessing
+ * @param guess         - player's direction guess
+ * @throws if deck is empty (caller must validate session status first)
+ */
+export function processHigherLowerTurn(
+  session: SessionSnapshot,
+  referenceYear: number,
+  newYear: number,
+  guess: HigherLowerGuess,
+): TurnResult {
+  const { deck, score, turns_played, current_streak, best_streak, timeline } = session;
+
+  if (deck.length === 0) {
+    throw new Error("Cannot process a turn: session deck is empty");
+  }
+
+  const currentGameId = deck[0]!;
+  const correct = isCorrectGuess(referenceYear, newYear, guess);
+  const newTurnsPlayed = turns_played + 1;
+
+  if (!correct) {
+    return {
+      correct: false,
+      game_over: true,
+      new_score: score,
+      new_turns_played: newTurnsPlayed,
+      new_current_streak: 0,
+      new_best_streak: best_streak,
+      new_timeline: timeline,
+      new_deck: deck,
+    };
+  }
+
+  const newTimeline: TimelineEntry[] = [{ game_id: currentGameId, release_year: newYear }];
+  const newDeck = deck.slice(1);
+  const newCurrentStreak = current_streak + 1;
+  const newBestStreak = Math.max(best_streak, newCurrentStreak);
+  const newScore = score + 1;
+  const gameOver = newDeck.length === 0;
+
+  return {
+    correct: true,
+    game_over: gameOver,
+    new_score: newScore,
+    new_turns_played: newTurnsPlayed,
+    new_current_streak: newCurrentStreak,
+    new_best_streak: newBestStreak,
+    new_timeline: newTimeline,
+    new_deck: newDeck,
+  };
+}
+
+/**
+ * Apply the draw-time swap for the Higher Lower variant.
+ *
+ * Scans the front of `deck` for a card whose year differs from
+ * `referenceYear`. If the front card already differs, the deck is returned
+ * unchanged. If a different-year card is found further in the deck, it is
+ * swapped to the front. If all remaining cards share `referenceYear`, the
+ * player has won (no distinguishable draws remain) — returns `null`.
+ *
+ * @param deck          - remaining game IDs after the current turn
+ * @param deckYears     - map of gameId → release year for all cards in `deck`
+ * @param referenceYear - release year of the new reference card
+ * @returns swapped deck, or `null` if all-same-year (player wins)
+ */
+export function applyDrawTimeSwap(
+  deck: readonly number[],
+  deckYears: ReadonlyMap<number, number>,
+  referenceYear: number,
+): number[] | null {
+  if (deck.length === 0) return [];
+
+  const frontYear = deckYears.get(deck[0]!) ?? referenceYear;
+  if (frontYear !== referenceYear) return [...deck];
+
+  for (let i = 1; i < deck.length; i++) {
+    const year = deckYears.get(deck[i]!) ?? referenceYear;
+    if (year !== referenceYear) {
+      const result = [...deck];
+      const tmp = result[0]!;
+      result[0] = result[i]!;
+      result[i] = tmp;
+      return result;
+    }
+  }
+
+  return null;
+}
+

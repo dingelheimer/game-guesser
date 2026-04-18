@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   findValidPositions,
+  isCorrectGuess,
   isValidPlacement,
 } from "../../../supabase/functions/solo-turn/logic/validate";
 import type { TimelineEntry } from "../../../supabase/functions/solo-turn/logic/validate";
@@ -162,3 +163,39 @@ describe("findValidPositions", () => {
     expect(findValidPositions(tl, 2020)).toEqual([2]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// isCorrectGuess
+// ---------------------------------------------------------------------------
+
+describe("isCorrectGuess — higher guess", () => {
+  it("is correct when card year is strictly greater than reference", () => {
+    expect(isCorrectGuess(2010, 2015, "higher")).toBe(true);
+    expect(isCorrectGuess(1990, 2000, "higher")).toBe(true);
+  });
+
+  it("is incorrect when card year is less than reference", () => {
+    expect(isCorrectGuess(2010, 2005, "higher")).toBe(false);
+    expect(isCorrectGuess(2000, 1995, "higher")).toBe(false);
+  });
+});
+
+describe("isCorrectGuess — lower guess", () => {
+  it("is correct when card year is strictly less than reference", () => {
+    expect(isCorrectGuess(2010, 2000, "lower")).toBe(true);
+    expect(isCorrectGuess(2000, 1985, "lower")).toBe(true);
+  });
+
+  it("is incorrect when card year is greater than reference", () => {
+    expect(isCorrectGuess(2010, 2020, "lower")).toBe(false);
+    expect(isCorrectGuess(1990, 1991, "lower")).toBe(false);
+  });
+});
+
+describe("isCorrectGuess — same-year fallback", () => {
+  it("returns true for same-year regardless of guess direction", () => {
+    expect(isCorrectGuess(2010, 2010, "higher")).toBe(true);
+    expect(isCorrectGuess(2010, 2010, "lower")).toBe(true);
+  });
+});
+
