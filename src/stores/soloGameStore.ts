@@ -1,142 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { create } from "zustand";
+import {
+  checkPlatformGuess,
+  hiddenToTimelineItem,
+  insertAtPosition,
+  pickCorrectionTarget,
+  revealedToTimelineItem,
+} from "./soloGameStore.helpers";
+import type { GamePhase, PlatformOption, SoloGameState } from "./soloGameStore.helpers";
 import type { DifficultyTier } from "@/lib/difficulty";
-import { checkPlatformGuess, type PlatformOption } from "@/lib/platformBonus";
+import type { HouseRuleParams, LobbySettings } from "@/lib/multiplayer/lobby";
 import {
   classifyPlacementOutcome,
   extendShareYearRange,
-  type ShareOutcome,
-  type ShareYearRange,
 } from "@/lib/share";
-import type { TimelineItem } from "@/components/game/Timeline";
+import type { ShareYearRange } from "@/lib/share";
 import * as api from "@/lib/solo/api";
-import type { HiddenCardData, RevealedCardData } from "@/lib/solo/api";
-import type { HouseRuleParams, LobbySettings } from "@/lib/multiplayer/lobby";
 
-// ── Phase type ────────────────────────────────────────────────────────────────
-
-export type GamePhase = "idle" | "starting" | "placing" | "submitting" | "revealing" | "game_over";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-export function revealedToTimelineItem(card: RevealedCardData): TimelineItem {
-  return {
-    id: String(card.game_id),
-    screenshotImageId: card.screenshot_image_ids[0] ?? null,
-    coverImageId: card.cover_image_id,
-    title: card.name,
-    releaseYear: card.release_year,
-    platform: card.platform_names[0] ?? "Unknown",
-    isRevealed: true,
-  };
-}
-
-export function hiddenToTimelineItem(card: HiddenCardData): TimelineItem {
-  return {
-    id: String(card.game_id),
-    screenshotImageId: card.screenshot_image_ids[0] ?? null,
-    coverImageId: null,
-    title: "?",
-    releaseYear: 0,
-    platform: "?",
-    isRevealed: false,
-  };
-}
-
-function insertAtPosition<T>(arr: T[], item: T, position: number): T[] {
-  return [...arr.slice(0, position), item, ...arr.slice(position)];
-}
-
-function pickCorrectionTarget(validPositions: readonly number[], droppedPosition: number): number {
-  const firstValidPosition = validPositions[0];
-  if (firstValidPosition === undefined) return droppedPosition;
-
-  return validPositions.reduce((bestPosition, candidatePosition) => {
-    const bestDistance = Math.abs(bestPosition - droppedPosition);
-    const candidateDistance = Math.abs(candidatePosition - droppedPosition);
-
-    if (candidateDistance < bestDistance) return candidatePosition;
-    if (candidateDistance === bestDistance) return Math.min(bestPosition, candidatePosition);
-    return bestPosition;
-  }, firstValidPosition);
-}
-
-export { checkPlatformGuess };
+export type { GamePhase, SoloGameState };
+export { checkPlatformGuess, revealedToTimelineItem, hiddenToTimelineItem };
 export type { PlatformOption };
-
-// ── Store interface ───────────────────────────────────────────────────────────
-
-export interface SoloGameState {
-  phase: GamePhase;
-  error: string | null;
-
-  sessionId: string | null;
-  difficulty: DifficultyTier | null;
-  variant: LobbySettings["variant"] | null;
-  gameMode: LobbySettings["gameMode"] | null;
-  /** Active house rules for the current or last game. */
-  houseRules: HouseRuleParams | null;
-
-  /** The card the player is currently placing (hidden — screenshot only). */
-  currentCard: HiddenCardData | null;
-  /** Queued next card, available after a correct turn. */
-  nextCard: HiddenCardData | null;
-  /** The card shown after reveal (correct or incorrect). */
-  revealedCard: RevealedCardData | null;
-
-  timelineItems: TimelineItem[];
-  /** Position where the current card was last dropped. */
-  droppedPosition: number | null;
-  /** Target position for incorrect-placement slide animation. */
-  correctionTargetPosition: number | null;
-
-  score: number;
-  turnsPlayed: number;
-  bestStreak: number;
-  currentStreak: number;
-  bonusPointsEarned: number;
-  bonusOpportunities: number;
-  shareOutcomes: ShareOutcome[];
-  shareYearRange: ShareYearRange | null;
-
-  /** Result of the last placement. null during placing/submitting. */
-  lastPlacementCorrect: boolean | null;
-  /** Valid insertion indices returned when placement is incorrect. */
-  validPositions: number[] | null;
-
-  /** Platform options shown to the player after a correct placement. */
-  availablePlatforms: PlatformOption[];
-  /** Correct platform IDs for client-side bonus validation. */
-  correctPlatformIds: number[];
-  /** Result of the platform bonus round. null until submitted. */
-  platformBonusResult: "correct" | "incorrect" | null;
-  /** Result of the expert verification round. null until submitted. */
-  expertVerificationResult: "correct" | "incorrect" | null;
-
-  /** Shared team lives for TEAMWORK mode. null when not in TEAMWORK mode. */
-  teamTokens: number | null;
-  /** Target score for TEAMWORK solo win condition. null when not in TEAMWORK mode. */
-  teamWinCondition: number | null;
-
-  // ── Actions ──────────────────────────────────────────────────────────────
-
-  startGame: (
-    difficulty: DifficultyTier,
-    houseRules?: HouseRuleParams,
-    variant?: LobbySettings["variant"],
-    gameMode?: LobbySettings["gameMode"],
-    teamWinCondition?: number,
-  ) => Promise<void>;
-  placeCard: (position: number) => Promise<void>;
-  moveCardToCorrectPosition: () => void;
-  revealMovedCard: () => void;
-  submitPlatformGuess: (selectedPlatformIds: number[]) => void;
-  submitExpertVerification: (yearGuess: number, selectedPlatformIds: number[]) => void;
-  advanceTurn: () => void;
-  resetGame: () => void;
-}
-
-// ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   phase: "idle",
@@ -226,7 +109,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
   },
 
   async placeCard(position: number) {
-    const { phase, sessionId, currentCard, timelineItems } = get();
+    const { phase, sessionId, currentCard, timelineItems, variant } = get();
     if (phase !== "placing" || sessionId === null || currentCard === null) return;
 
     const tentativeTimelineItems = insertAtPosition(
@@ -243,7 +126,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
     });
 
     try {
-      const result = await api.submitTurn(sessionId, position);
+      const result = await api.submitTurn(sessionId, position, variant ?? undefined);
       const shareOutcome = classifyPlacementOutcome(
         timelineItems.map((item) => item.releaseYear),
         position,
@@ -271,7 +154,7 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         bestStreak: result.best_streak,
         currentStreak: result.current_streak,
         bonusPointsEarned: state.bonusPointsEarned,
-        bonusOpportunities: result.correct
+        bonusOpportunities: result.correct && variant !== "standard"
           ? state.bonusOpportunities + 1
           : state.bonusOpportunities,
         shareOutcomes: [...state.shareOutcomes, shareOutcome],

@@ -91,7 +91,7 @@ const VARIANTS: {
   {
     value: "standard",
     label: "Standard",
-    description: "Optional platform bonus for extra points",
+    description: "Pure placement — no platform bonus",
   },
   {
     value: "pro",

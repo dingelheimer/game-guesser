@@ -77,9 +77,12 @@ export function startGame(
   return invokeFunction<StartGameResponse>("solo-start", body);
 }
 
-export function submitTurn(sessionId: string, position: number): Promise<TurnResponse> {
-  return invokeFunction<TurnResponse>("solo-turn", {
-    session_id: sessionId,
-    position,
-  });
+export function submitTurn(
+  sessionId: string,
+  position: number,
+  variant?: string,
+): Promise<TurnResponse> {
+  const body: Record<string, unknown> = { session_id: sessionId, position };
+  if (variant !== undefined) body["variant"] = variant;
+  return invokeFunction<TurnResponse>("solo-turn", body);
 }
