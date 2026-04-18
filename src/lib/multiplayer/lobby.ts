@@ -26,7 +26,7 @@ export const LobbyPlayerRoleSchema = z.enum(["host", "player"]);
 
 /** Shared lobby settings schema for multiplayer room configuration. */
 export const LobbySettingsSchema = z.object({
-  difficulty: z.enum(["easy", "medium", "hard", "extreme"]).default("easy"),
+  difficulty: z.enum(["easy", "medium", "hard", "extreme", "god_gamer"]).default("easy"),
   turnTimer: z.enum(["10", "30", "60", "unlimited"]).default("60"),
   tokensEnabled: z.boolean().default(true),
   startingTokens: z.number().int().min(0).max(10).default(2),
@@ -34,7 +34,7 @@ export const LobbySettingsSchema = z.object({
   /** Room-level game mode: competitive (normal) or teamwork (co-op). */
   gameMode: z.enum(["competitive", "teamwork"]).default("competitive"),
   /** Gameplay variant applied in competitive mode. */
-  variant: z.enum(["standard", "pro", "expert"]).default("standard"),
+  variant: z.enum(["standard", "pro", "expert", "higher_lower"]).default("standard"),
   // House rules — null means no filter applied.
   /** Genre lock: restrict deck to games matching this genre ID. */
   genreLockId: z.number().int().nullable().default(null),

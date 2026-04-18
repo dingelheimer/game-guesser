@@ -6,6 +6,7 @@ const DIFFICULTY_LABELS: Record<DifficultyTier, string> = {
   medium: "Medium",
   hard: "Hard",
   extreme: "Extreme",
+  god_gamer: "God Gamer",
 };
 
 export function getSoloDifficultyLabel(difficulty: DifficultyTier): string {

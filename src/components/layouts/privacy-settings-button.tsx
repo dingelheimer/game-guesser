@@ -16,10 +16,7 @@ export function PrivacySettingsButton({ className }: PrivacySettingsButtonProps)
       onClick={() => {
         CookieConsent.showPreferences();
       }}
-      className={cn(
-        "text-muted-foreground hover:text-foreground transition-colors",
-        className,
-      )}
+      className={cn("text-muted-foreground hover:text-foreground transition-colors", className)}
     >
       Privacy Settings
     </button>

@@ -22,7 +22,8 @@ export function DonationPrompt({ correctPlacements }: DonationPromptProps) {
 
   useEffect(() => {
     if (correctPlacements < 3) return;
-    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(SESSION_KEY) !== null) return;
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(SESSION_KEY) !== null)
+      return;
     sessionStorage.setItem(SESSION_KEY, "1");
     setVisible(true);
   }, [correctPlacements]);
@@ -37,18 +38,13 @@ export function DonationPrompt({ correctPlacements }: DonationPromptProps) {
         rel="noopener noreferrer"
         className="text-text-secondary hover:text-text-primary flex items-center gap-2 transition-colors"
       >
-        <Image
-          src="/kofi.svg"
-          alt=""
-          width={16}
-          height={16}
-          className="opacity-60"
-          aria-hidden
-        />
+        <Image src="/kofi.svg" alt="" width={16} height={16} className="opacity-60" aria-hidden />
         Enjoying the game? ☕ Buy us a coffee
       </a>
       <button
-        onClick={() => { setVisible(false); }}
+        onClick={() => {
+          setVisible(false);
+        }}
         aria-label="Dismiss donation prompt"
         className="text-text-disabled hover:text-text-secondary shrink-0 transition-colors"
       >

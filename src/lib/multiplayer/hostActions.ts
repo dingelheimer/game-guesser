@@ -647,8 +647,7 @@ export async function getDeckSize(
   const supabase = await createClient();
 
   const maxRank = difficultyToMaxRank(difficulty);
-  const rpcArgs: Record<string, unknown> = {};
-  if (maxRank !== null) rpcArgs["p_max_rank"] = maxRank;
+  const rpcArgs: Record<string, unknown> = { p_max_rank: maxRank };
   if (houseRules.genreLockId != null) rpcArgs["p_genre_id"] = houseRules.genreLockId;
   if (houseRules.consoleLockFamily != null)
     rpcArgs["p_platform_family"] = houseRules.consoleLockFamily;

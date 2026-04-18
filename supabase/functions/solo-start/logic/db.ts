@@ -45,11 +45,12 @@ export interface SoloStartDbOperations {
 /**
  * Difficulty-to-rank-threshold map (mirrors the build_deck RPC logic).
  */
-const DIFFICULTY_MAX_RANK: Record<string, number | null> = {
-  easy: 10,
-  medium: 20,
-  hard: 50,
-  extreme: null,
+const DIFFICULTY_MAX_RANK: Record<string, number> = {
+  easy: 2,
+  medium: 5,
+  hard: 10,
+  extreme: 50,
+  god_gamer: 100,
 };
 
 export function createSoloStartDbOperations(supabase: SupabaseClient): SoloStartDbOperations {
@@ -58,11 +59,11 @@ export function createSoloStartDbOperations(supabase: SupabaseClient): SoloStart
       difficulty: string,
       houseRules?: SoloHouseRules,
     ): Promise<EligibleGame[]> {
-      const maxRank = DIFFICULTY_MAX_RANK[difficulty] ?? null;
+      const maxRank = DIFFICULTY_MAX_RANK[difficulty];
 
       // Call the build_deck RPC which applies all filters and the pool size guard.
       const rpcArgs: Record<string, unknown> = {};
-      if (maxRank !== null) rpcArgs["p_max_rank"] = maxRank;
+      if (maxRank !== undefined) rpcArgs["p_max_rank"] = maxRank;
       if (houseRules?.genreId != null) rpcArgs["p_genre_id"] = houseRules.genreId;
       if (houseRules?.platformFamily != null)
         rpcArgs["p_platform_family"] = houseRules.platformFamily;

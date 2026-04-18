@@ -336,24 +336,30 @@ export type Database = {
       leaderboard_entries: {
         Row: {
           created_at: string;
+          difficulty: string | null;
           id: number;
           score: number;
           streak: number;
           user_id: string;
+          variant: string | null;
         };
         Insert: {
           created_at?: string;
+          difficulty?: string | null;
           id?: number;
           score: number;
           streak?: number;
           user_id: string;
+          variant?: string | null;
         };
         Update: {
           created_at?: string;
+          difficulty?: string | null;
           id?: number;
           score?: number;
           streak?: number;
           user_id?: string;
+          variant?: string | null;
         };
         Relationships: [
           {

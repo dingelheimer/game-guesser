@@ -28,7 +28,7 @@ const CODE_TO_SHARE_MODE = {
 
 const CompactShareResultPayloadSchema = z
   .object({
-    d: z.enum(["easy", "medium", "hard", "extreme"]),
+    d: z.enum(["easy", "medium", "hard", "extreme", "god_gamer"]),
     m: z.enum(["s", "m"]),
     o: z
       .string()

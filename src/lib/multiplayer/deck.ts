@@ -78,10 +78,8 @@ export function fisherYatesShuffle<T>(arr: T[]): T[] {
 
 /**
  * Map a difficulty tier to the maximum popularity rank per year.
- * Returns null for extreme difficulty (no rank limit).
  */
-export function difficultyToMaxRank(difficulty: DifficultyTier): number | null {
-  if (difficulty === "extreme") return null;
+export function difficultyToMaxRank(difficulty: DifficultyTier): number {
   return DIFFICULTY_THRESHOLDS[difficulty];
 }
 
@@ -103,8 +101,7 @@ export async function buildDeck(
 ): Promise<number[]> {
   const maxRank = difficultyToMaxRank(difficulty);
 
-  const rpcArgs: Record<string, unknown> = {};
-  if (maxRank !== null) rpcArgs["p_max_rank"] = maxRank;
+  const rpcArgs: Record<string, unknown> = { p_max_rank: maxRank };
   if (houseRules?.genreLockId != null) rpcArgs["p_genre_id"] = houseRules.genreLockId;
   if (houseRules?.consoleLockFamily != null)
     rpcArgs["p_platform_family"] = houseRules.consoleLockFamily;

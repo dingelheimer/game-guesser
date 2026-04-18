@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DifficultyTier } from "@/lib/difficulty";
-import { Shield, Zap, Flame, Skull } from "lucide-react";
+import { Shield, Zap, Flame, Skull, Crown } from "lucide-react";
 import type { HouseRuleParams, LobbyGenre, LobbySettings } from "@/lib/multiplayer/lobby";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +30,7 @@ const DIFFICULTIES: {
   {
     tier: "easy",
     label: "Easy",
-    description: "Top 10 games per year — household names",
+    description: "Top 2 per year — absolute icons",
     Icon: Shield,
     colorClass: "text-emerald-400",
     borderClass: "border-emerald-500/40 hover:border-emerald-400",
@@ -39,7 +39,7 @@ const DIFFICULTIES: {
   {
     tier: "medium",
     label: "Medium",
-    description: "Top 20 games per year — genre classics",
+    description: "Top 5 — household names",
     Icon: Zap,
     colorClass: "text-sky-400",
     borderClass: "border-sky-500/40 hover:border-sky-400",
@@ -48,7 +48,7 @@ const DIFFICULTIES: {
   {
     tier: "hard",
     label: "Hard",
-    description: "Top 50 games per year — deep cuts",
+    description: "Top 10 — genre classics",
     Icon: Flame,
     colorClass: "text-orange-400",
     borderClass: "border-orange-500/40 hover:border-orange-400",
@@ -57,11 +57,20 @@ const DIFFICULTIES: {
   {
     tier: "extreme",
     label: "Extreme",
-    description: "All games — true completionists only",
+    description: "Top 50 — deep cuts",
     Icon: Skull,
     colorClass: "text-rose-400",
     borderClass: "border-rose-500/40 hover:border-rose-400",
     bgClass: "hover:bg-rose-500/10",
+  },
+  {
+    tier: "god_gamer",
+    label: "God Gamer",
+    description: "Top 100 — near-full catalogue",
+    Icon: Crown,
+    colorClass: "text-violet-400",
+    borderClass: "border-violet-500/40 hover:border-violet-400",
+    bgClass: "hover:bg-violet-500/10",
   },
 ];
 
@@ -87,21 +96,29 @@ const VARIANTS: {
   value: LobbySettings["variant"];
   label: string;
   description: string;
+  incompatibleWith?: LobbySettings["variant"][];
 }[] = [
   {
     value: "standard",
     label: "Standard",
-    description: "Optional platform bonus for extra points",
+    description: "Pure placement — no platform bonus",
+  },
+  {
+    value: "higher_lower",
+    label: "Higher Lower",
+    description: "Newer or older? Drag left or right.",
   },
   {
     value: "pro",
     label: "PRO",
     description: "Platform bonus is required to keep the card",
+    incompatibleWith: ["higher_lower"],
   },
   {
     value: "expert",
     label: "Expert",
     description: "Future advanced ruleset",
+    incompatibleWith: ["higher_lower"],
   },
 ];
 
@@ -148,8 +165,8 @@ export function SoloStartScreen({ genres, disabled = false, onSelect }: SoloStar
             Variant
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {VARIANTS.map((option) => (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {VARIANTS.filter((option) => option.incompatibleWith === undefined || !option.incompatibleWith.includes(variant)).map((option) => (
             <button
               key={option.value}
               type="button"
@@ -268,9 +285,9 @@ export function SoloStartScreen({ genres, disabled = false, onSelect }: SoloStar
       </div>
 
       {/* Difficulty tiles */}
-      <div className="grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid w-full max-w-lg grid-cols-2 gap-3">
         {DIFFICULTIES.map(
-          ({ tier, label, description, Icon, colorClass, borderClass, bgClass }) => (
+          ({ tier, label, description, Icon, colorClass, borderClass, bgClass }, index) => (
             <button
               key={tier}
               onClick={() => {
@@ -284,6 +301,7 @@ export function SoloStartScreen({ genres, disabled = false, onSelect }: SoloStar
                 "disabled:pointer-events-none disabled:opacity-50",
                 borderClass,
                 bgClass,
+                index === DIFFICULTIES.length - 1 && DIFFICULTIES.length % 2 !== 0 && "col-span-2",
               )}
               aria-label={`${label} difficulty: ${description}`}
             >

@@ -3,6 +3,30 @@
  * No I/O — all dependencies injected for testability.
  */
 
+/** Guess direction for the Higher Lower variant. */
+export type HigherLowerGuess = "higher" | "lower";
+
+/**
+ * Check whether a Higher Lower guess is correct.
+ *
+ * - "higher" is correct when the card's release year is strictly greater than
+ *   the reference year.
+ * - "lower" is correct when the card's release year is strictly less than the
+ *   reference year.
+ * - Same-year cards are always treated as correct (defensive fallback — the
+ *   draw-time swap prevents same-year draws in practice).
+ */
+export function isCorrectGuess(
+  referenceYear: number,
+  cardYear: number,
+  guess: HigherLowerGuess,
+): boolean {
+  if (cardYear === referenceYear) return true;
+  if (guess === "higher") return cardYear > referenceYear;
+  return cardYear < referenceYear;
+}
+
+
 /** A placed card entry in the timeline. */
 export interface TimelineEntry {
   game_id: number;

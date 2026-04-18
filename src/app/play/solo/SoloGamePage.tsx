@@ -16,6 +16,8 @@ import { MOTION } from "@/lib/motion";
 interface PendingScore {
   score: number;
   streak: number;
+  difficulty?: string | null;
+  variant?: string | null;
   timestamp: number;
 }
 
@@ -57,7 +59,7 @@ export function SoloGamePage({
     // Silently discard stale scores (> 1 hour old)
     if (Date.now() - pending.timestamp > ONE_HOUR_MS) return;
 
-    void submitScoreAction(pending.score, pending.streak).then((result) => {
+    void submitScoreAction(pending.score, pending.streak, pending.difficulty, pending.variant).then((result) => {
       if ("success" in result) {
         toast.success("Score saved! Your score has been added to the leaderboard.");
       } else {
