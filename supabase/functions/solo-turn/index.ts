@@ -38,6 +38,7 @@ Deno.serve(async (req: Request) => {
   // Parse and validate request body
   let sessionId: string;
   let position: number;
+  let variant: string | undefined;
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const sid = body["session_id"];
@@ -61,6 +62,9 @@ Deno.serve(async (req: Request) => {
 
     sessionId = sid;
     position = pos;
+
+    const v = body["variant"];
+    if (typeof v === "string") variant = v;
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
@@ -140,10 +144,11 @@ Deno.serve(async (req: Request) => {
     // 5. Fetch revealed card data
     const revealedCard = await db.fetchRevealedCardData(currentGameId);
 
-    // 6. Fetch platform bonus options (only when placement is correct).
+    // 6. Fetch platform bonus options (only when placement is correct and variant
+    //    is not "standard" — Standard variant uses pure placement only).
     let platformOptions: { id: number; name: string }[] | undefined;
     let correctPlatformIds: number[] | undefined;
-    if (result.correct) {
+    if (result.correct && variant !== "standard") {
       const platformData = await db.fetchPlatformOptions(currentGameId, newYear);
       platformOptions = platformData.options;
       correctPlatformIds = platformData.correctIds;
