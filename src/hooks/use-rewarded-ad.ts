@@ -17,8 +17,7 @@ export interface UseRewardedAdResult {
 export function useRewardedAd(gameMode: GameMode): UseRewardedAdResult {
   const { provider, config } = useAdService();
 
-  const available =
-    config.rewardedAllowedModes.includes(gameMode) && provider.hasAd("rewarded");
+  const available = config.rewardedAllowedModes.includes(gameMode) && provider.hasAd("rewarded");
 
   async function watchForToken(): Promise<boolean> {
     if (!available) return false;

@@ -42,9 +42,14 @@ const updateUsernameSchema = z.object({
   username: usernameField,
 });
 
+const VALID_DIFFICULTIES = ["easy", "medium", "hard", "extreme", "god_gamer"] as const;
+const VALID_VARIANTS = ["standard", "pro", "expert", "higher_lower"] as const;
+
 const submitScoreSchema = z.object({
   score: z.number().int().min(0).max(100),
   streak: z.number().int().min(0),
+  difficulty: z.enum(VALID_DIFFICULTIES).optional(),
+  variant: z.enum(VALID_VARIANTS).optional(),
 });
 
 function str(value: FormDataEntryValue | null): string {
@@ -239,8 +244,18 @@ export async function updateUsernameAction(
   return { success: true };
 }
 
-export async function submitScoreAction(score: number, streak: number): Promise<SubmitScoreResult> {
-  const parsed = submitScoreSchema.safeParse({ score, streak });
+export async function submitScoreAction(
+  score: number,
+  streak: number,
+  difficulty?: string | null,
+  variant?: string | null,
+): Promise<SubmitScoreResult> {
+  const parsed = submitScoreSchema.safeParse({
+    score,
+    streak,
+    difficulty: difficulty ?? undefined,
+    variant: variant ?? undefined,
+  });
   if (!parsed.success) {
     return { error: "Invalid score data." };
   }
@@ -271,7 +286,13 @@ export async function submitScoreAction(score: number, streak: number): Promise<
 
   const { error: insertError } = await supabase
     .from("leaderboard_entries")
-    .insert({ user_id: user.id, score: parsed.data.score, streak: parsed.data.streak });
+    .insert({
+      user_id: user.id,
+      score: parsed.data.score,
+      streak: parsed.data.streak,
+      ...(parsed.data.difficulty !== undefined && { difficulty: parsed.data.difficulty }),
+      ...(parsed.data.variant !== undefined && { variant: parsed.data.variant }),
+    });
 
   if (insertError !== null) {
     return { error: "Failed to save score. Please try again." };

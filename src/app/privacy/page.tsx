@@ -105,8 +105,8 @@ export default function PrivacyPage() {
           <p>We collect only what we need to operate the service:</p>
           <ul className="list-disc space-y-2 pl-5">
             <li>
-              <strong className="text-text-primary">Account data</strong> — If you sign up, we
-              store your email address and chosen username via Supabase Auth. Guest sessions use an
+              <strong className="text-text-primary">Account data</strong> — If you sign up, we store
+              your email address and chosen username via Supabase Auth. Guest sessions use an
               anonymous identifier only.
             </li>
             <li>
@@ -132,7 +132,10 @@ export default function PrivacyPage() {
           <Table
             headers={["Processing Activity", "Legal Basis"]}
             rows={[
-              ["Auth session (login, anonymous play)", "Contract — necessary to provide the service"],
+              [
+                "Auth session (login, anonymous play)",
+                "Contract — necessary to provide the service",
+              ],
               [
                 "Leaderboard score submission",
                 "Legitimate interest — expected feature of the game",
@@ -199,14 +202,14 @@ export default function PrivacyPage() {
               . Analytics only collected with your consent.
             </li>
             <li>
-              <strong className="text-text-primary">IGDB / Twitch</strong> — Game database. We
-              fetch game metadata (titles, release dates, screenshots) from the IGDB API at build /
-              import time. No user data is sent to IGDB.
+              <strong className="text-text-primary">IGDB / Twitch</strong> — Game database. We fetch
+              game metadata (titles, release dates, screenshots) from the IGDB API at build / import
+              time. No user data is sent to IGDB.
             </li>
             <li>
-              <strong className="text-text-primary">Ad networks (future)</strong> — We may
-              integrate ad networks in a future update. Ads will only load with your explicit
-              consent. This policy will be updated before that change goes live.
+              <strong className="text-text-primary">Ad networks (future)</strong> — We may integrate
+              ad networks in a future update. Ads will only load with your explicit consent. This
+              policy will be updated before that change goes live.
             </li>
           </ul>
         </Section>
@@ -219,16 +222,16 @@ export default function PrivacyPage() {
           </p>
           <ul className="list-disc space-y-2 pl-5">
             <li>
-              <strong className="text-text-primary">Access</strong> — Request a copy of the
-              personal data we hold about you.
+              <strong className="text-text-primary">Access</strong> — Request a copy of the personal
+              data we hold about you.
             </li>
             <li>
               <strong className="text-text-primary">Rectification</strong> — Ask us to correct
               inaccurate data.
             </li>
             <li>
-              <strong className="text-text-primary">Erasure</strong> — Ask us to delete your
-              account and associated data (&ldquo;right to be forgotten&rdquo;).
+              <strong className="text-text-primary">Erasure</strong> — Ask us to delete your account
+              and associated data (&ldquo;right to be forgotten&rdquo;).
             </li>
             <li>
               <strong className="text-text-primary">Portability</strong> — Request your data in a
@@ -346,10 +349,7 @@ export default function PrivacyPage() {
 
         {/* Footer nav */}
         <div className="border-border/30 text-text-disabled border-t pt-6 text-xs">
-          <Link
-            href="/"
-            className="hover:text-text-secondary transition-colors"
-          >
+          <Link href="/" className="hover:text-text-secondary transition-colors">
             ← Back to Game Guesser
           </Link>
         </div>

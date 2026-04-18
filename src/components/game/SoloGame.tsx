@@ -44,6 +44,7 @@ export function SoloGame({ username }: { username: string | null }) {
   const error = useSoloGameStore((s) => s.error);
 
   const placeCard = useSoloGameStore((s) => s.placeCard);
+  const guessRelation = useSoloGameStore((s) => s.guessRelation);
   const moveCardToCorrectPosition = useSoloGameStore((s) => s.moveCardToCorrectPosition);
   const revealMovedCard = useSoloGameStore((s) => s.revealMovedCard);
   const advanceTurn = useSoloGameStore((s) => s.advanceTurn);
@@ -70,6 +71,7 @@ export function SoloGame({ username }: { username: string | null }) {
   const isRevealing = phase === "revealing";
   const isProVariant = variant === "pro";
   const isExpertVariant = variant === "expert";
+  const isHigherLower = variant === "higher_lower";
   const isTeamworkMode = gameMode === "teamwork";
   const isIncorrectReveal = isRevealing && lastPlacementCorrect === false;
   const isPlatformBonusPending =
@@ -101,7 +103,7 @@ export function SoloGame({ username }: { username: string | null }) {
 
     if (username !== null) {
       setScoreStatus("submitting");
-      void submitScoreAction(score, bestStreak).then((result) => {
+      void submitScoreAction(score, bestStreak, difficulty, variant).then((result) => {
         if ("success" in result) {
           setScoreStatus("saved");
         } else {
@@ -113,7 +115,13 @@ export function SoloGame({ username }: { username: string | null }) {
       // Guest: persist score for post-signup submission
       sessionStorage.setItem(
         "pending_score",
-        JSON.stringify({ score, streak: bestStreak, timestamp: Date.now() }),
+        JSON.stringify({
+          score,
+          streak: bestStreak,
+          difficulty: difficulty ?? null,
+          variant: variant ?? null,
+          timestamp: Date.now(),
+        }),
       );
     }
   }, [phase, sessionId, score, bestStreak, username]);
@@ -344,7 +352,12 @@ export function SoloGame({ username }: { username: string | null }) {
           {...(isPlacing
             ? {
                 onPlaceCard: (pos: number) => {
-                  void placeCard(pos);
+                  if (isHigherLower) {
+                    // Position 0 (left of reference) = "lower"; position 1 (right) = "higher"
+                    void guessRelation(pos === 0 ? "lower" : "higher");
+                  } else {
+                    void placeCard(pos);
+                  }
                 },
               }
             : {})}

@@ -20,7 +20,14 @@ export function MobileAttributionBar() {
             rel="noopener noreferrer"
             className="text-text-disabled hover:text-text-secondary flex items-center gap-1 text-[11px] leading-tight transition-colors"
           >
-            <Image src="/kofi.svg" alt="" width={12} height={12} className="opacity-60" aria-hidden />
+            <Image
+              src="/kofi.svg"
+              alt=""
+              width={12}
+              height={12}
+              className="opacity-60"
+              aria-hidden
+            />
             Ko-fi
           </a>
           <Link

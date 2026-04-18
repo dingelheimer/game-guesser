@@ -2,14 +2,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Trophy, Gamepad2 } from "lucide-react";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { LeaderboardFilters } from "./LeaderboardFilters";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Leaderboard",
+};
+
+const VALID_DIFFICULTIES = new Set(["easy", "medium", "hard", "extreme", "god_gamer"]);
+const VALID_VARIANTS = new Set(["standard", "pro", "expert", "higher_lower"]);
+
+const DIFFICULTY_LABELS: Record<string, string> = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+  extreme: "Extreme",
+  god_gamer: "God Gamer",
+};
+
+const VARIANT_LABELS: Record<string, string> = {
+  standard: "Standard",
+  higher_lower: "Higher Lower",
+  pro: "PRO",
+  expert: "EXPERT",
 };
 
 function formatRelativeDate(dateStr: string): string {
@@ -40,20 +60,61 @@ function rankLabel(rank: number): string {
   return String(rank);
 }
 
-export default async function LeaderboardPage() {
+/** Small pill badge for difficulty or variant labels. */
+function SettingsBadge({ label }: { label: string }) {
+  return (
+    <span className="border-border/50 bg-surface-700 text-text-secondary rounded-full border px-2 py-0.5 text-xs font-medium">
+      {label}
+    </span>
+  );
+}
+
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
+
+  const rawDifficulty = params["difficulty"];
+  const rawVariant = params["variant"];
+  const filterDifficulty =
+    rawDifficulty !== undefined && VALID_DIFFICULTIES.has(rawDifficulty) ? rawDifficulty : null;
+  const filterVariant =
+    rawVariant !== undefined && VALID_VARIANTS.has(rawVariant) ? rawVariant : null;
+
   const supabase = await createClient();
+
+  let query = supabase
+    .from("leaderboard_entries")
+    .select("id, user_id, score, difficulty, variant, created_at, profiles(username)")
+    .order("score", { ascending: false })
+    .order("created_at", { ascending: true })
+    .limit(50);
+
+  if (filterDifficulty !== null) {
+    query = query.eq("difficulty", filterDifficulty);
+  }
+  if (filterVariant !== null) {
+    query = query.eq("variant", filterVariant);
+  }
 
   const [{ data: userData }, { data: entries }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase
-      .from("leaderboard_entries")
-      .select("id, user_id, score, created_at, profiles(username)")
-      .order("score", { ascending: false })
-      .order("created_at", { ascending: true })
-      .limit(50),
+    query,
   ]);
 
   const currentUserId = userData.user?.id ?? null;
+
+  const filterDescription =
+    filterDifficulty !== null || filterVariant !== null
+      ? [
+          filterDifficulty !== null ? (DIFFICULTY_LABELS[filterDifficulty] ?? filterDifficulty) : null,
+          filterVariant !== null ? (VARIANT_LABELS[filterVariant] ?? filterVariant) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : null;
 
   return (
     <div className="flex flex-1 justify-center px-4 py-10">
@@ -65,7 +126,11 @@ export default async function LeaderboardPage() {
             <Trophy className="text-primary-400 h-6 w-6" />
             <h1 className="font-display text-text-primary text-2xl font-bold">Leaderboard</h1>
           </div>
-          <p className="text-text-secondary text-sm">Top 50 scores across all players</p>
+          <p className="text-text-secondary text-sm">
+            {filterDescription !== null
+              ? `Top 50 scores — ${filterDescription}`
+              : "Top 50 scores across all players"}
+          </p>
         </div>
 
         {/* Play Now CTA */}
@@ -76,6 +141,14 @@ export default async function LeaderboardPage() {
           </Link>
         </Button>
 
+        {/* Filters */}
+        <Suspense>
+          <LeaderboardFilters
+            currentDifficulty={filterDifficulty}
+            currentVariant={filterVariant}
+          />
+        </Suspense>
+
         {/* Table or empty state */}
         {!entries || entries.length === 0 ? (
           <div className="border-border/50 bg-surface-800 rounded-2xl border p-10 text-center">
@@ -84,7 +157,9 @@ export default async function LeaderboardPage() {
               No scores yet
             </p>
             <p className="text-text-secondary mb-4 text-sm">
-              Be the first to make it onto the leaderboard!
+              {filterDescription !== null
+                ? `No scores recorded for ${filterDescription} yet.`
+                : "Be the first to make it onto the leaderboard!"}
             </p>
             <Button asChild size="sm" className="gap-2">
               <Link href="/play">
@@ -100,6 +175,7 @@ export default async function LeaderboardPage() {
                 <tr className="border-border/50 border-b">
                   <th className="text-text-secondary px-4 py-3 text-left font-medium">Rank</th>
                   <th className="text-text-secondary px-4 py-3 text-left font-medium">Username</th>
+                  <th className="text-text-secondary px-4 py-3 text-left font-medium">Settings</th>
                   <th className="text-text-secondary px-4 py-3 text-right font-medium">Score</th>
                   <th className="text-text-secondary px-4 py-3 text-right font-medium">Date</th>
                 </tr>
@@ -110,6 +186,14 @@ export default async function LeaderboardPage() {
                   const isCurrentUser = currentUserId !== null && entry.user_id === currentUserId;
                   const username =
                     (entry.profiles as { username: string } | null)?.username ?? "Unknown";
+                  const diffLabel =
+                    entry.difficulty !== null
+                      ? (DIFFICULTY_LABELS[entry.difficulty] ?? entry.difficulty)
+                      : null;
+                  const variantLabel =
+                    entry.variant !== null
+                      ? (VARIANT_LABELS[entry.variant] ?? entry.variant)
+                      : null;
 
                   return (
                     <tr
@@ -135,6 +219,12 @@ export default async function LeaderboardPage() {
                           )}
                         </span>
                       </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {diffLabel !== null && <SettingsBadge label={diffLabel} />}
+                          {variantLabel !== null && <SettingsBadge label={variantLabel} />}
+                        </div>
+                      </td>
                       <td className="font-display text-text-primary px-4 py-3 text-right font-bold">
                         {entry.score}
                       </td>
@@ -152,3 +242,4 @@ export default async function LeaderboardPage() {
     </div>
   );
 }
+

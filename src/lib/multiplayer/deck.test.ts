@@ -36,20 +36,24 @@ describe("fisherYatesShuffle", () => {
 // ── difficultyToMaxRank ───────────────────────────────────────────────────────
 
 describe("difficultyToMaxRank", () => {
-  it("maps easy to 10", () => {
-    expect(difficultyToMaxRank("easy")).toBe(10);
+  it("maps easy to 2", () => {
+    expect(difficultyToMaxRank("easy")).toBe(2);
   });
 
-  it("maps medium to 20", () => {
-    expect(difficultyToMaxRank("medium")).toBe(20);
+  it("maps medium to 5", () => {
+    expect(difficultyToMaxRank("medium")).toBe(5);
   });
 
-  it("maps hard to 50", () => {
-    expect(difficultyToMaxRank("hard")).toBe(50);
+  it("maps hard to 10", () => {
+    expect(difficultyToMaxRank("hard")).toBe(10);
   });
 
-  it("maps extreme to null (no limit)", () => {
-    expect(difficultyToMaxRank("extreme")).toBeNull();
+  it("maps extreme to 50", () => {
+    expect(difficultyToMaxRank("extreme")).toBe(50);
+  });
+
+  it("maps god_gamer to 100", () => {
+    expect(difficultyToMaxRank("god_gamer")).toBe(100);
   });
 });
 
@@ -68,7 +72,7 @@ describe("buildDeck", () => {
 
     const result = await buildDeck(mockServiceClient, "easy");
 
-    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 10 });
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 2 });
     expect(result).toEqual([1, 2, 3]);
   });
 
@@ -77,7 +81,7 @@ describe("buildDeck", () => {
 
     await buildDeck(mockServiceClient, "medium");
 
-    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 20 });
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 5 });
   });
 
   it("calls build_deck RPC with correct max_rank for hard difficulty", async () => {
@@ -85,15 +89,23 @@ describe("buildDeck", () => {
 
     await buildDeck(mockServiceClient, "hard");
 
-    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 50 });
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 10 });
   });
 
-  it("calls build_deck RPC without p_max_rank for extreme difficulty", async () => {
+  it("calls build_deck RPC with correct max_rank for extreme difficulty", async () => {
     mockRpc.mockResolvedValue({ data: [10, 11, 12], error: null });
 
     await buildDeck(mockServiceClient, "extreme");
 
-    expect(mockRpc).toHaveBeenCalledWith("build_deck", {});
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 50 });
+  });
+
+  it("calls build_deck RPC with correct max_rank for god_gamer difficulty", async () => {
+    mockRpc.mockResolvedValue({ data: [13, 14, 15], error: null });
+
+    await buildDeck(mockServiceClient, "god_gamer");
+
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 100 });
   });
 
   it("includes p_genre_id when genreLockId is set", async () => {
@@ -105,7 +117,7 @@ describe("buildDeck", () => {
       decadeStart: null,
     });
 
-    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 10, p_genre_id: 42 });
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 2, p_genre_id: 42 });
   });
 
   it("includes p_platform_family when consoleLockFamily is set", async () => {
@@ -118,7 +130,7 @@ describe("buildDeck", () => {
     });
 
     expect(mockRpc).toHaveBeenCalledWith("build_deck", {
-      p_max_rank: 20,
+      p_max_rank: 5,
       p_platform_family: "nintendo",
     });
   });
@@ -132,7 +144,7 @@ describe("buildDeck", () => {
       decadeStart: 1990,
     });
 
-    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 50, p_decade_start: 1990 });
+    expect(mockRpc).toHaveBeenCalledWith("build_deck", { p_max_rank: 10, p_decade_start: 1990 });
   });
 
   it("includes all house rule params when all are set", async () => {
@@ -145,7 +157,7 @@ describe("buildDeck", () => {
     });
 
     expect(mockRpc).toHaveBeenCalledWith("build_deck", {
-      p_max_rank: 10,
+      p_max_rank: 2,
       p_genre_id: 5,
       p_platform_family: "playstation",
       p_decade_start: 2000,

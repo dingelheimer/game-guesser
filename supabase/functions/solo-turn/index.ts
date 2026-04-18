@@ -14,7 +14,7 @@
  */
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { processTurn } from "./logic/turn.ts";
+import { processTurn, processHigherLowerTurn, applyDrawTimeSwap } from "./logic/turn.ts";
 import { createSoloTurnDbOperations } from "./logic/db.ts";
 import type { SessionUpdate } from "./logic/db.ts";
 
@@ -37,11 +37,12 @@ Deno.serve(async (req: Request) => {
 
   // Parse and validate request body
   let sessionId: string;
-  let position: number;
+  let position: number | undefined;
+  let guess: "higher" | "lower" | undefined;
+  let variant: string | undefined;
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const sid = body["session_id"];
-    const pos = body["position"];
 
     if (typeof sid !== "string" || sid.trim() === "") {
       return new Response(
@@ -49,18 +50,34 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }
-
-    if (typeof pos !== "number" || !Number.isInteger(pos) || pos < 0) {
-      return new Response(
-        JSON.stringify({
-          error: "Missing required parameter: position (non-negative integer)",
-        }),
-        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
-      );
-    }
-
     sessionId = sid;
-    position = pos;
+
+    const v = body["variant"];
+    if (typeof v === "string") variant = v;
+
+    if (variant === "higher_lower") {
+      const g = body["guess"];
+      if (g !== "higher" && g !== "lower") {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing required parameter: guess must be "higher" or "lower" for higher_lower variant',
+          }),
+          { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+        );
+      }
+      guess = g;
+    } else {
+      const pos = body["position"];
+      if (typeof pos !== "number" || !Number.isInteger(pos) || pos < 0) {
+        return new Response(
+          JSON.stringify({
+            error: "Missing required parameter: position (non-negative integer)",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+        );
+      }
+      position = pos;
+    }
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
@@ -101,11 +118,84 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // 2. Get the release year for the current card
     const currentGameId = session.deck[0]!;
     const newYear = await db.fetchReleaseYear(currentGameId);
 
-    // 3. Process the turn
+    // ── Higher Lower variant ────────────────────────────────────────────────
+    if (variant === "higher_lower") {
+      const referenceEntry = session.timeline[0];
+      if (referenceEntry === undefined) {
+        throw new Error("Higher Lower session has no reference card in timeline");
+      }
+      const referenceYear = referenceEntry.release_year;
+
+      const result = processHigherLowerTurn(
+        {
+          score: session.score,
+          turns_played: session.turns_played,
+          current_streak: session.current_streak,
+          best_streak: session.best_streak,
+          deck: session.deck,
+          timeline: session.timeline,
+        },
+        referenceYear,
+        newYear,
+        guess!,
+      );
+
+      // Apply draw-time swap to prevent same-year draws on the next turn.
+      let finalDeck = result.new_deck;
+      let allSameYearWin = false;
+      if (result.correct && finalDeck.length > 0) {
+        const deckYears = await db.fetchReleaseYears(finalDeck);
+        const swapped = applyDrawTimeSwap(finalDeck, deckYears, newYear);
+        if (swapped === null) {
+          allSameYearWin = true;
+          finalDeck = [];
+        } else {
+          finalDeck = swapped;
+        }
+      }
+
+      const isGameOver = result.game_over || allSameYearWin;
+      const update: SessionUpdate = {
+        status: isGameOver ? "game_over" : "active",
+        score: result.new_score,
+        turns_played: result.new_turns_played,
+        best_streak: result.new_best_streak,
+        current_streak: result.new_current_streak,
+        deck: finalDeck,
+        timeline: result.new_timeline,
+      };
+
+      if (!result.correct) {
+        update.failed_game_id = currentGameId;
+      }
+
+      await db.saveSession(sessionId, update);
+
+      const revealedCard = await db.fetchRevealedCardData(currentGameId);
+      let nextCard = null;
+      if (!isGameOver && finalDeck.length > 0) {
+        nextCard = await db.fetchHiddenCardData(finalDeck[0]!);
+      }
+
+      return new Response(
+        JSON.stringify({
+          correct: result.correct,
+          revealed_card: revealedCard,
+          score: result.new_score,
+          turns_played: result.new_turns_played,
+          current_streak: result.new_current_streak,
+          best_streak: result.new_best_streak,
+          game_over: isGameOver,
+          ...(nextCard !== null && { next_card: nextCard }),
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
+    }
+
+    // ── Standard / PRO / EXPERT path ───────────────────────────────────────
     const result = processTurn(
       {
         score: session.score,
@@ -116,10 +206,9 @@ Deno.serve(async (req: Request) => {
         timeline: session.timeline,
       },
       newYear,
-      position,
+      position!,
     );
 
-    // 4. Persist updated session
     const update: SessionUpdate = {
       status: result.game_over ? "game_over" : "active",
       score: result.new_score,
@@ -137,19 +226,17 @@ Deno.serve(async (req: Request) => {
 
     await db.saveSession(sessionId, update);
 
-    // 5. Fetch revealed card data
     const revealedCard = await db.fetchRevealedCardData(currentGameId);
 
-    // 6. Fetch platform bonus options (only when placement is correct).
+    // Fetch platform bonus options (correct placement only; not for "standard").
     let platformOptions: { id: number; name: string }[] | undefined;
     let correctPlatformIds: number[] | undefined;
-    if (result.correct) {
+    if (result.correct && variant !== "standard") {
       const platformData = await db.fetchPlatformOptions(currentGameId, newYear);
       platformOptions = platformData.options;
       correctPlatformIds = platformData.correctIds;
     }
 
-    // 7. Fetch next card (if game isn't over)
     let nextCard = null;
     if (!result.game_over) {
       const nextGameId = result.new_deck[0];

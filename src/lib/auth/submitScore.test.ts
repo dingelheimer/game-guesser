@@ -158,6 +158,59 @@ describe("submitScoreAction", () => {
       });
     });
 
+    it("includes difficulty and variant when provided", async () => {
+      setupAuth("user-abc");
+      setupRateLimit(false);
+      setupInsert(true);
+
+      const result = await submitScoreAction(42, 7, "hard", "standard");
+
+      expect(result).toEqual({ success: true });
+      expect(mockInsert).toHaveBeenCalledWith({
+        user_id: "user-abc",
+        score: 42,
+        streak: 7,
+        difficulty: "hard",
+        variant: "standard",
+      });
+    });
+
+    it("omits difficulty and variant when not provided", async () => {
+      setupAuth("user-abc");
+      setupRateLimit(false);
+      setupInsert(true);
+
+      await submitScoreAction(10, 2);
+
+      const insertArg = mockInsert.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect("difficulty" in insertArg).toBe(false);
+      expect("variant" in insertArg).toBe(false);
+    });
+
+    it("omits difficulty and variant when null", async () => {
+      setupAuth("user-abc");
+      setupRateLimit(false);
+      setupInsert(true);
+
+      await submitScoreAction(10, 2, null, null);
+
+      const insertArg = mockInsert.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect("difficulty" in insertArg).toBe(false);
+      expect("variant" in insertArg).toBe(false);
+    });
+
+    it("rejects invalid difficulty value", async () => {
+      const result = await submitScoreAction(10, 2, "legendary");
+
+      expect(result).toEqual({ error: "Invalid score data." });
+    });
+
+    it("rejects invalid variant value", async () => {
+      const result = await submitScoreAction(10, 2, "easy", "turbo");
+
+      expect(result).toEqual({ error: "Invalid score data." });
+    });
+
     it("returns error when insert fails", async () => {
       setupAuth("user-abc");
       setupRateLimit(false);

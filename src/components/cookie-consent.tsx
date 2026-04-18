@@ -46,8 +46,7 @@ export function CookieConsentBanner() {
               acceptAllBtn: "Accept all",
               acceptNecessaryBtn: "Reject all",
               showPreferencesBtn: "Manage preferences",
-              footer:
-                '<a href="/privacy" target="_blank">Privacy Policy</a>',
+              footer: '<a href="/privacy" target="_blank">Privacy Policy</a>',
             },
             preferencesModal: {
               title: "Cookie preferences",
