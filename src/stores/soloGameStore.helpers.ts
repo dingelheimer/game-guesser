@@ -120,6 +120,14 @@ export interface SoloGameState {
   /** Target score for TEAMWORK solo win condition. null when not in TEAMWORK mode. */
   teamWinCondition: number | null;
 
+  /**
+   * The reference card for Higher Lower variant. Always the single revealed
+   * card on the timeline. null for all other variants.
+   */
+  referenceCard: RevealedCardData | null;
+  /** The last Higher Lower guess direction. null outside Higher Lower turns. */
+  guess: "higher" | "lower" | null;
+
   // ── Actions ──────────────────────────────────────────────────────────────
 
   startGame: (
@@ -130,6 +138,8 @@ export interface SoloGameState {
     teamWinCondition?: number,
   ) => Promise<void>;
   placeCard: (position: number) => Promise<void>;
+  /** Higher Lower variant: submit "higher" or "lower" guess against the reference card. */
+  guessRelation: (guess: "higher" | "lower") => Promise<void>;
   moveCardToCorrectPosition: () => void;
   revealMovedCard: () => void;
   submitPlatformGuess: (selectedPlatformIds: number[]) => void;
