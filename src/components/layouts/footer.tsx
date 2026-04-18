@@ -20,7 +20,14 @@ export function Footer() {
             rel="noopener noreferrer"
             className="text-text-disabled hover:text-text-secondary flex items-center gap-1 text-xs transition-colors"
           >
-            <Image src="/kofi.svg" alt="" width={14} height={14} className="opacity-60" aria-hidden />
+            <Image
+              src="/kofi.svg"
+              alt=""
+              width={14}
+              height={14}
+              className="opacity-60"
+              aria-hidden
+            />
             Support us on Ko-fi
           </a>
           <Link
