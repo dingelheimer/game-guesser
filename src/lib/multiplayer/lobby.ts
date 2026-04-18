@@ -26,7 +26,7 @@ export const LobbyPlayerRoleSchema = z.enum(["host", "player"]);
 
 /** Shared lobby settings schema for multiplayer room configuration. */
 export const LobbySettingsSchema = z.object({
-  difficulty: z.enum(["easy", "medium", "hard", "extreme"]).default("easy"),
+  difficulty: z.enum(["easy", "medium", "hard", "extreme", "god_gamer"]).default("easy"),
   turnTimer: z.enum(["10", "30", "60", "unlimited"]).default("60"),
   tokensEnabled: z.boolean().default(true),
   startingTokens: z.number().int().min(0).max(10).default(2),

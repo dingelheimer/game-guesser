@@ -16,7 +16,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildInitialSession } from "./logic/session.ts";
 import { createSoloStartDbOperations, type SoloHouseRules } from "./logic/db.ts";
 
-const VALID_DIFFICULTIES = new Set(["easy", "medium", "hard", "extreme"]);
+const VALID_DIFFICULTIES = new Set(["easy", "medium", "hard", "extreme", "god_gamer"]);
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error:
-            'Missing or invalid parameter: difficulty must be "easy", "medium", "hard", or "extreme"',
+            'Missing or invalid parameter: difficulty must be "easy", "medium", "hard", "extreme", or "god_gamer"',
         }),
         { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );

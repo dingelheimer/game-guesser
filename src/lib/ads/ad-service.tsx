@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { getConsentState } from "./consent-manager";
 import { defaultAdConfig } from "./ad-config";

@@ -3,57 +3,78 @@ import { describe, expect, it } from "vitest";
 import { computePopularityScore, DIFFICULTY_THRESHOLDS, rankToTier } from "./difficulty";
 
 describe("DIFFICULTY_THRESHOLDS", () => {
-  it("easy is top 10", () => {
-    expect(DIFFICULTY_THRESHOLDS.easy).toBe(10);
+  it("easy is top 2", () => {
+    expect(DIFFICULTY_THRESHOLDS.easy).toBe(2);
   });
 
-  it("medium is top 20", () => {
-    expect(DIFFICULTY_THRESHOLDS.medium).toBe(20);
+  it("medium is top 5", () => {
+    expect(DIFFICULTY_THRESHOLDS.medium).toBe(5);
   });
 
-  it("hard is top 50", () => {
-    expect(DIFFICULTY_THRESHOLDS.hard).toBe(50);
+  it("hard is top 10", () => {
+    expect(DIFFICULTY_THRESHOLDS.hard).toBe(10);
+  });
+
+  it("extreme is top 50", () => {
+    expect(DIFFICULTY_THRESHOLDS.extreme).toBe(50);
+  });
+
+  it("god_gamer is top 100", () => {
+    expect(DIFFICULTY_THRESHOLDS.god_gamer).toBe(100);
   });
 });
 
 describe("rankToTier", () => {
-  it.each([1, 5, 10])("rank %i → easy", (rank) => {
+  it.each([1, 2])("rank %i → easy", (rank) => {
     expect(rankToTier(rank)).toBe("easy");
   });
 
-  it.each([11, 15, 20])("rank %i → medium", (rank) => {
+  it.each([3, 4, 5])("rank %i → medium", (rank) => {
     expect(rankToTier(rank)).toBe("medium");
   });
 
-  it.each([21, 35, 50])("rank %i → hard", (rank) => {
+  it.each([6, 8, 10])("rank %i → hard", (rank) => {
     expect(rankToTier(rank)).toBe("hard");
   });
 
-  it.each([51, 100, 1000])("rank %i → extreme", (rank) => {
+  it.each([11, 30, 50])("rank %i → extreme", (rank) => {
     expect(rankToTier(rank)).toBe("extreme");
   });
 
-  it("null rank → extreme", () => {
-    expect(rankToTier(null)).toBe("extreme");
+  it.each([51, 75, 100])("rank %i → god_gamer", (rank) => {
+    expect(rankToTier(rank)).toBe("god_gamer");
   });
 
-  it("undefined rank → extreme", () => {
-    expect(rankToTier(undefined)).toBe("extreme");
+  it.each([101, 500, 1000])("rank %i → god_gamer (beyond cap)", (rank) => {
+    expect(rankToTier(rank)).toBe("god_gamer");
   });
 
-  it("boundary: rank 10 is easy, rank 11 is medium", () => {
-    expect(rankToTier(10)).toBe("easy");
-    expect(rankToTier(11)).toBe("medium");
+  it("null rank → god_gamer", () => {
+    expect(rankToTier(null)).toBe("god_gamer");
   });
 
-  it("boundary: rank 20 is medium, rank 21 is hard", () => {
-    expect(rankToTier(20)).toBe("medium");
-    expect(rankToTier(21)).toBe("hard");
+  it("undefined rank → god_gamer", () => {
+    expect(rankToTier(undefined)).toBe("god_gamer");
   });
 
-  it("boundary: rank 50 is hard, rank 51 is extreme", () => {
-    expect(rankToTier(50)).toBe("hard");
-    expect(rankToTier(51)).toBe("extreme");
+  it("boundary: rank 2 is easy, rank 3 is medium", () => {
+    expect(rankToTier(2)).toBe("easy");
+    expect(rankToTier(3)).toBe("medium");
+  });
+
+  it("boundary: rank 5 is medium, rank 6 is hard", () => {
+    expect(rankToTier(5)).toBe("medium");
+    expect(rankToTier(6)).toBe("hard");
+  });
+
+  it("boundary: rank 10 is hard, rank 11 is extreme", () => {
+    expect(rankToTier(10)).toBe("hard");
+    expect(rankToTier(11)).toBe("extreme");
+  });
+
+  it("boundary: rank 50 is extreme, rank 51 is god_gamer", () => {
+    expect(rankToTier(50)).toBe("extreme");
+    expect(rankToTier(51)).toBe("god_gamer");
   });
 });
 
