@@ -34,7 +34,7 @@ export const LobbySettingsSchema = z.object({
   /** Room-level game mode: competitive (normal) or teamwork (co-op). */
   gameMode: z.enum(["competitive", "teamwork"]).default("competitive"),
   /** Gameplay variant applied in competitive mode. */
-  variant: z.enum(["standard", "pro", "expert"]).default("standard"),
+  variant: z.enum(["standard", "pro", "expert", "higher_lower"]).default("standard"),
   // House rules — null means no filter applied.
   /** Genre lock: restrict deck to games matching this genre ID. */
   genreLockId: z.number().int().nullable().default(null),

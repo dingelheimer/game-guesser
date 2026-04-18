@@ -62,6 +62,8 @@ export interface SoloTurnDbOperations {
   fetchHiddenCardData: (gameId: number) => Promise<HiddenCardData>;
   /** Fetch only the release year for the current card (used for validation). */
   fetchReleaseYear: (gameId: number) => Promise<number>;
+  /** Fetch release years for multiple game IDs in a single query. */
+  fetchReleaseYears: (gameIds: number[]) => Promise<Map<number, number>>;
   /** Build platform bonus options (correct platforms + era-based distractors). */
   fetchPlatformOptions: (
     gameId: number,
@@ -109,6 +111,25 @@ export function createSoloTurnDbOperations(supabase: SupabaseClient): SoloTurnDb
       }
 
       return (data as { release_year: number }).release_year;
+    },
+
+    async fetchReleaseYears(gameIds: number[]): Promise<Map<number, number>> {
+      if (gameIds.length === 0) return new Map();
+
+      const { data, error } = await supabase
+        .from("games")
+        .select("id, release_year")
+        .in("id", gameIds);
+
+      if (error !== null) {
+        throw new Error(`Failed to fetch release years: ${error.message}`);
+      }
+
+      const result = new Map<number, number>();
+      for (const game of data ?? []) {
+        result.set((game as { id: number }).id, (game as { release_year: number }).release_year);
+      }
+      return result;
     },
 
     async fetchRevealedCardData(gameId: number): Promise<RevealedCardData> {

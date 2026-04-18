@@ -69,11 +69,13 @@ async function invokeFunction<T>(name: string, body: Record<string, unknown>): P
 export function startGame(
   difficulty: DifficultyTier,
   houseRules?: HouseRuleParams,
+  variant?: string,
 ): Promise<StartGameResponse> {
   const body: Record<string, unknown> = { difficulty };
   if (houseRules?.genreLockId != null) body["genre_id"] = houseRules.genreLockId;
   if (houseRules?.consoleLockFamily != null) body["platform_family"] = houseRules.consoleLockFamily;
   if (houseRules?.decadeStart != null) body["decade_start"] = houseRules.decadeStart;
+  if (variant !== undefined) body["variant"] = variant;
   return invokeFunction<StartGameResponse>("solo-start", body);
 }
 
@@ -85,4 +87,15 @@ export function submitTurn(
   const body: Record<string, unknown> = { session_id: sessionId, position };
   if (variant !== undefined) body["variant"] = variant;
   return invokeFunction<TurnResponse>("solo-turn", body);
+}
+
+export function submitHigherLowerTurn(
+  sessionId: string,
+  guess: "higher" | "lower",
+): Promise<TurnResponse> {
+  return invokeFunction<TurnResponse>("solo-turn", {
+    session_id: sessionId,
+    variant: "higher_lower",
+    guess,
+  });
 }
