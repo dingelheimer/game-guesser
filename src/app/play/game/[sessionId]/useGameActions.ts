@@ -187,16 +187,14 @@ export function useGameActions({
         return;
       }
       coreTransitions.applyChallengeMade(result.data.challenge.displayName);
-      void channelRef.current?.send({
-        type: "broadcast",
-        event: "challenge_made",
-        payload: result.data.challenge,
-      });
       coreTransitions.applyTurnRevealed(result.data.reveal);
       void channelRef.current?.send({
         type: "broadcast",
         event: "turn_revealed",
-        payload: result.data.reveal,
+        payload: {
+          ...result.data.reveal,
+          challengeDisplayName: result.data.challenge.displayName,
+        },
       });
       if (result.data.followUp !== undefined) scheduleFollowUp(result.data.followUp);
     };

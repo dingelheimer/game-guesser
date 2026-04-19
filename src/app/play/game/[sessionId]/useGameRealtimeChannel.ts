@@ -172,6 +172,9 @@ export function useGameRealtimeChannel({
       .on("broadcast", { event: "turn_revealed" }, (message) => {
         const parsed = TurnRevealedPayloadSchema.safeParse(message.payload);
         if (parsed.success) {
+          if (parsed.data.challengeDisplayName !== undefined) {
+            applyChallengeMade(parsed.data.challengeDisplayName);
+          }
           applyTurnRevealed({
             card: parsed.data.card,
             isCorrect: parsed.data.isCorrect,
