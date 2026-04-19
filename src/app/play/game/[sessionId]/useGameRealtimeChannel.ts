@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LobbyPresence } from "@/lib/multiplayer/lobby";
 import { LobbyPresenceSchema } from "@/lib/multiplayer/lobby";
 import type { MultiplayerGamePageData } from "@/lib/multiplayer/gamePage";
+import { fetchReconciliationState } from "@/lib/multiplayer/reconciliationAction";
 import { buildConnectedPresence, buildSeedPresence } from "@/lib/multiplayer/presence";
 import {
   buildHiddenTurnCard,
@@ -24,6 +25,8 @@ import {
   TurnSkippedPayloadSchema,
   TurnStartedPayloadSchema,
 } from "./gameScreenState";
+import { FOLLOW_UP_RECOVERY_TIMEOUT_MS } from "./gameScreenTypes";
+import { mergeReconciliationPayload } from "./useGameReconciliation";
 import type { useGameBonusTransitions } from "./useGameBonusTransitions";
 import type { useGameStateTransitions } from "./useGameStateTransitions";
 
@@ -96,6 +99,26 @@ export function useGameRealtimeChannel({
     });
     channelRef.current = channel;
 
+    let recoveryTimeoutId: number | null = null;
+
+    const clearRecoveryTimeout = () => {
+      if (recoveryTimeoutId !== null) {
+        window.clearTimeout(recoveryTimeoutId);
+        recoveryTimeoutId = null;
+      }
+    };
+
+    const scheduleRecovery = () => {
+      clearRecoveryTimeout();
+      recoveryTimeoutId = window.setTimeout(() => {
+        void (async () => {
+          const serverState = await fetchReconciliationState(initialGame.sessionId);
+          if (serverState === null) return;
+          setGame((prev) => mergeReconciliationPayload(prev, serverState));
+        })();
+      }, FOLLOW_UP_RECOVERY_TIMEOUT_MS);
+    };
+
     const syncPlayers = () => {
       setPresence(
         buildConnectedPresence(
@@ -158,6 +181,7 @@ export function useGameRealtimeChannel({
       .on("broadcast", { event: "turn_started" }, (message) => {
         const parsed = TurnStartedPayloadSchema.safeParse(message.payload);
         if (!parsed.success) return;
+        clearRecoveryTimeout();
         const sid =
           typeof parsed.data.screenshot === "string"
             ? parsed.data.screenshot
@@ -201,11 +225,15 @@ export function useGameRealtimeChannel({
               ? {}
               : { challengerId: parsed.data.challengerId }),
           });
+          scheduleRecovery();
         }
       })
       .on("broadcast", { event: "platform_bonus_result" }, (message) => {
         const parsed = PlatformBonusResultPayloadSchema.safeParse(message.payload);
-        if (parsed.success) applyPlatformBonusResult(parsed.data);
+        if (parsed.success) {
+          applyPlatformBonusResult(parsed.data);
+          scheduleRecovery();
+        }
       })
       .on("broadcast", { event: "expert_verification_result" }, (message) => {
         const parsed = ExpertVerificationResultPayloadSchema.safeParse(message.payload);
@@ -217,7 +245,10 @@ export function useGameRealtimeChannel({
       })
       .on("broadcast", { event: "game_over" }, (message) => {
         const parsed = GameOverPayloadSchema.safeParse(message.payload);
-        if (parsed.success) applyGameOver(parsed.data);
+        if (parsed.success) {
+          clearRecoveryTimeout();
+          applyGameOver(parsed.data);
+        }
       })
       .on("broadcast", { event: "team_vote_updated" }, (message) => {
         const parsed = TeamVoteUpdatedPayloadSchema.safeParse(message.payload);
@@ -229,7 +260,10 @@ export function useGameRealtimeChannel({
       })
       .on("broadcast", { event: "team_game_over" }, (message) => {
         const parsed = TeamGameOverPayloadSchema.safeParse(message.payload);
-        if (parsed.success) applyTeamGameOver(parsed.data);
+        if (parsed.success) {
+          clearRecoveryTimeout();
+          applyTeamGameOver(parsed.data);
+        }
       })
       .subscribe((status) => {
         if (status !== REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) return;
@@ -246,6 +280,7 @@ export function useGameRealtimeChannel({
 
     return () => {
       channelRef.current = null;
+      clearRecoveryTimeout();
       clearDisconnectGrace();
       clearFailedPlacementTimeout();
       clearProgressionTimeout();

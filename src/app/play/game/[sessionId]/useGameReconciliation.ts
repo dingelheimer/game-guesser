@@ -3,7 +3,10 @@
 
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import type { MultiplayerGamePageData } from "@/lib/multiplayer/gamePage";
-import { fetchReconciliationState } from "@/lib/multiplayer/reconciliationAction";
+import {
+  fetchReconciliationState,
+  type ReconciliationPayload,
+} from "@/lib/multiplayer/reconciliationAction";
 import { buildHiddenTurnCard, reconcilePlayers } from "./gameScreenState";
 import { RECONCILIATION_POLL_INTERVAL_MS } from "./gameScreenTypes";
 
@@ -13,6 +16,55 @@ type UseGameReconciliationParams = Readonly<{
   isSubmittingPlacement: boolean;
   setGame: Dispatch<SetStateAction<MultiplayerGamePageData>>;
 }>;
+
+/**
+ * Merges a {@link ReconciliationPayload} from the DB into the current client game state.
+ *
+ * Returns the updated game state with players, scores, tokens, timelines, and turn
+ * information reconciled from the server-authoritative snapshot.
+ */
+export function mergeReconciliationPayload(
+  prev: MultiplayerGamePageData,
+  serverState: ReconciliationPayload,
+): MultiplayerGamePageData {
+  const scores: Record<string, number> = {};
+  const timelines: Record<
+    string,
+    ReadonlyArray<Readonly<{ gameId: number; name: string; releaseYear: number }>>
+  > = {};
+  const tokens: Record<string, number> = {};
+  for (const p of serverState.players) {
+    scores[p.userId] = p.score;
+    timelines[p.userId] = p.timeline;
+    tokens[p.userId] = p.tokens;
+  }
+
+  const turnAdvanced = serverState.turnNumber > prev.turnNumber;
+  const newCard = turnAdvanced
+    ? buildHiddenTurnCard(serverState.currentTurn.screenshotImageId, serverState.currentTurn.gameId)
+    : prev.currentTurn.card;
+
+  return {
+    ...prev,
+    status: serverState.status,
+    turnNumber: serverState.turnNumber,
+    currentTurn: {
+      ...prev.currentTurn,
+      activePlayerId: serverState.currentTurn.activePlayerId,
+      card: newCard,
+      phase: serverState.currentTurn.phase,
+      phaseDeadline: serverState.currentTurn.phaseDeadline,
+      platformOptions: serverState.currentTurn.platformOptions,
+      ...(serverState.currentTurn.platformBonusPlayerId !== undefined
+        ? { platformBonusPlayerId: serverState.currentTurn.platformBonusPlayerId }
+        : {}),
+      ...(serverState.currentTurn.votes !== undefined
+        ? { votes: serverState.currentTurn.votes }
+        : {}),
+    },
+    players: reconcilePlayers(prev.players, timelines, scores, tokens, null),
+  };
+}
 
 /**
  * Polls the DB every {@link RECONCILIATION_POLL_INTERVAL_MS} seconds and reconciles
@@ -47,49 +99,7 @@ export function useGameReconciliation({
 
         if (!turnAdvanced && !phaseChanged) return;
 
-        setGame((prev) => {
-          const scores: Record<string, number> = {};
-          const timelines: Record<
-            string,
-            ReadonlyArray<Readonly<{ gameId: number; name: string; releaseYear: number }>>
-          > = {};
-          const tokens: Record<string, number> = {};
-          for (const p of serverState.players) {
-            scores[p.userId] = p.score;
-            timelines[p.userId] = p.timeline;
-            tokens[p.userId] = p.tokens;
-          }
-
-          const reconciledPlayers = reconcilePlayers(prev.players, timelines, scores, tokens, null);
-
-          const newCard = turnAdvanced
-            ? buildHiddenTurnCard(
-                serverState.currentTurn.screenshotImageId,
-                serverState.currentTurn.gameId,
-              )
-            : prev.currentTurn.card;
-
-          return {
-            ...prev,
-            status: serverState.status,
-            turnNumber: serverState.turnNumber,
-            currentTurn: {
-              ...prev.currentTurn,
-              activePlayerId: serverState.currentTurn.activePlayerId,
-              card: newCard,
-              phase: serverState.currentTurn.phase,
-              phaseDeadline: serverState.currentTurn.phaseDeadline,
-              platformOptions: serverState.currentTurn.platformOptions,
-              ...(serverState.currentTurn.platformBonusPlayerId !== undefined
-                ? { platformBonusPlayerId: serverState.currentTurn.platformBonusPlayerId }
-                : {}),
-              ...(serverState.currentTurn.votes !== undefined
-                ? { votes: serverState.currentTurn.votes }
-                : {}),
-            },
-            players: reconciledPlayers,
-          };
-        });
+        setGame((prev) => mergeReconciliationPayload(prev, serverState));
       })();
     }, RECONCILIATION_POLL_INTERVAL_MS);
 
