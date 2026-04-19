@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { describe, it, expect } from "vitest";
-import {
-  revealedToTimelineItem,
-  hiddenToTimelineItem,
-  checkPlatformGuess,
-} from "./soloGameStore";
+import { revealedToTimelineItem, hiddenToTimelineItem, checkPlatformGuess } from "./soloGameStore";
 import type { RevealedCardData, HiddenCardData } from "@/lib/solo/api";
 
 // ── Test fixtures ─────────────────────────────────────────────────────────────

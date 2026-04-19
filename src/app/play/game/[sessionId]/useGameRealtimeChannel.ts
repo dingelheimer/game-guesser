@@ -90,7 +90,7 @@ export function useGameRealtimeChannel({
 
     const channel = supabase.channel(`room:${initialGame.roomId}`, {
       config: {
-        broadcast: { self: true },
+        broadcast: { self: false },
         presence: { key: initialGame.currentUserId },
       },
     });

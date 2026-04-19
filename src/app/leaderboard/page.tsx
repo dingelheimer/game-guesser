@@ -109,7 +109,9 @@ export default async function LeaderboardPage({
   const filterDescription =
     filterDifficulty !== null || filterVariant !== null
       ? [
-          filterDifficulty !== null ? (DIFFICULTY_LABELS[filterDifficulty] ?? filterDifficulty) : null,
+          filterDifficulty !== null
+            ? (DIFFICULTY_LABELS[filterDifficulty] ?? filterDifficulty)
+            : null,
           filterVariant !== null ? (VARIANT_LABELS[filterVariant] ?? filterVariant) : null,
         ]
           .filter(Boolean)
@@ -143,10 +145,7 @@ export default async function LeaderboardPage({
 
         {/* Filters */}
         <Suspense>
-          <LeaderboardFilters
-            currentDifficulty={filterDifficulty}
-            currentVariant={filterVariant}
-          />
+          <LeaderboardFilters currentDifficulty={filterDifficulty} currentVariant={filterVariant} />
         </Suspense>
 
         {/* Table or empty state */}
@@ -242,4 +241,3 @@ export default async function LeaderboardPage({
     </div>
   );
 }
-
