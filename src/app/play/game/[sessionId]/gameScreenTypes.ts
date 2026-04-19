@@ -24,6 +24,9 @@ export const STALE_PHASE_THRESHOLD_MS = 5000;
 /** Interval (ms) for the periodic DB reconciliation safety-net poll. */
 export const RECONCILIATION_POLL_INTERVAL_MS = 15000;
 
+/** How long (ms) a receiving client waits for a follow-up broadcast before fetching from DB. */
+export const FOLLOW_UP_RECOVERY_TIMEOUT_MS = TURN_FOLLOW_UP_DELAY_MS + 3500;
+
 /** Seconds to wait for a disconnected active player before auto-skipping. */
 export const ACTIVE_PLAYER_DISCONNECT_GRACE_SECONDS = 30;
 
