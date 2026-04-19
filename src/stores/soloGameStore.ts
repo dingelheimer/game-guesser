@@ -10,10 +10,7 @@ import {
 import type { GamePhase, PlatformOption, SoloGameState } from "./soloGameStore.helpers";
 import type { DifficultyTier } from "@/lib/difficulty";
 import type { HouseRuleParams, LobbySettings } from "@/lib/multiplayer/lobby";
-import {
-  classifyPlacementOutcome,
-  extendShareYearRange,
-} from "@/lib/share";
+import { classifyPlacementOutcome, extendShareYearRange } from "@/lib/share";
 import type { ShareOutcome, ShareYearRange } from "@/lib/share";
 import * as api from "@/lib/solo/api";
 
@@ -158,9 +155,10 @@ export const useSoloGameStore = create<SoloGameState>()((set, get) => ({
         bestStreak: result.best_streak,
         currentStreak: result.current_streak,
         bonusPointsEarned: state.bonusPointsEarned,
-        bonusOpportunities: result.correct && variant !== "standard"
-          ? state.bonusOpportunities + 1
-          : state.bonusOpportunities,
+        bonusOpportunities:
+          result.correct && variant !== "standard"
+            ? state.bonusOpportunities + 1
+            : state.bonusOpportunities,
         shareOutcomes: [...state.shareOutcomes, shareOutcome],
         shareYearRange: extendShareYearRange(
           state.shareYearRange,

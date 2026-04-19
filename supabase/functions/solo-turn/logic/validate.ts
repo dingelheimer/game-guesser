@@ -26,7 +26,6 @@ export function isCorrectGuess(
   return cardYear < referenceYear;
 }
 
-
 /** A placed card entry in the timeline. */
 export interface TimelineEntry {
   game_id: number;

@@ -284,15 +284,13 @@ export async function submitScoreAction(
     return { error: "Please wait a moment before submitting another score." };
   }
 
-  const { error: insertError } = await supabase
-    .from("leaderboard_entries")
-    .insert({
-      user_id: user.id,
-      score: parsed.data.score,
-      streak: parsed.data.streak,
-      ...(parsed.data.difficulty !== undefined && { difficulty: parsed.data.difficulty }),
-      ...(parsed.data.variant !== undefined && { variant: parsed.data.variant }),
-    });
+  const { error: insertError } = await supabase.from("leaderboard_entries").insert({
+    user_id: user.id,
+    score: parsed.data.score,
+    streak: parsed.data.streak,
+    ...(parsed.data.difficulty !== undefined && { difficulty: parsed.data.difficulty }),
+    ...(parsed.data.variant !== undefined && { variant: parsed.data.variant }),
+  });
 
   if (insertError !== null) {
     return { error: "Failed to save score. Please try again." };

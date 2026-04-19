@@ -11,13 +11,7 @@ export type { PlatformOption };
 
 // ── Phase type ────────────────────────────────────────────────────────────────
 
-export type GamePhase =
-  | "idle"
-  | "starting"
-  | "placing"
-  | "submitting"
-  | "revealing"
-  | "game_over";
+export type GamePhase = "idle" | "starting" | "placing" | "submitting" | "revealing" | "game_over";
 
 // ── Pure helper functions ─────────────────────────────────────────────────────
 
