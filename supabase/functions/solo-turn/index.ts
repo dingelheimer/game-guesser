@@ -60,7 +60,8 @@ Deno.serve(async (req: Request) => {
       if (g !== "higher" && g !== "lower") {
         return new Response(
           JSON.stringify({
-            error: 'Missing required parameter: guess must be "higher" or "lower" for higher_lower variant',
+            error:
+              'Missing required parameter: guess must be "higher" or "lower" for higher_lower variant',
           }),
           { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
         );

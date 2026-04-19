@@ -62,9 +62,12 @@ const TurnRevealedCardSchema = z.object({
 
 /**
  * Broadcast payload schema for the turn_revealed event.
+ * `challengeDisplayName` is merged in from the former `challenge_made` event
+ * when the reveal was triggered by a challenge (Story 30.2).
  */
 export const TurnRevealedPayloadSchema = z.object({
   card: TurnRevealedCardSchema,
+  challengeDisplayName: z.string().optional(),
   challengeResult: z.enum(["challenger_wins", "challenger_loses"]).optional(),
   challengerId: z.uuid().optional(),
   expertVerificationDeadline: z.iso.datetime({ offset: true }).optional(),

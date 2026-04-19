@@ -223,9 +223,7 @@ const hlSession = (overrides: Partial<SessionSnapshot> = {}): SessionSnapshot =>
 
 describe("processHigherLowerTurn — invalid input", () => {
   it("throws when deck is empty", () => {
-    expect(() =>
-      processHigherLowerTurn(hlSession({ deck: [] }), 2010, 2015, "higher"),
-    ).toThrow();
+    expect(() => processHigherLowerTurn(hlSession({ deck: [] }), 2010, 2015, "higher")).toThrow();
   });
 });
 
@@ -289,12 +287,7 @@ describe("processHigherLowerTurn — correct guess", () => {
   });
 
   it("increments current_streak", () => {
-    const result = processHigherLowerTurn(
-      hlSession({ current_streak: 2 }),
-      2010,
-      2015,
-      "higher",
-    );
+    const result = processHigherLowerTurn(hlSession({ current_streak: 2 }), 2010, 2015, "higher");
     expect(result.new_current_streak).toBe(3);
   });
 
@@ -373,4 +366,3 @@ describe("applyDrawTimeSwap — all-same-year win", () => {
     expect(applyDrawTimeSwap(deck, years, 2013)).toBeNull();
   });
 });
-

@@ -125,6 +125,10 @@ vi.mock("@/lib/multiplayer/turnActions", () => ({
   skipTurn: mocks.skipTurnMock,
 }));
 
+vi.mock("@/lib/multiplayer/reconciliationAction", () => ({
+  fetchReconciliationState: vi.fn(async () => null),
+}));
+
 const initialGame = initialGameFixture;
 
 describe("GameScreen", () => {
@@ -217,16 +221,9 @@ describe("GameScreen", () => {
     expect(mocks.submitChallengeMock).toHaveBeenCalledWith(initialGame.sessionId);
     expect(mocks.sendMock).toHaveBeenCalledWith({
       type: "broadcast",
-      event: "challenge_made",
-      payload: {
-        challengerId: "22222222-2222-4222-8222-222222222222",
-        displayName: "Sam Player",
-      },
-    });
-    expect(mocks.sendMock).toHaveBeenCalledWith({
-      type: "broadcast",
       event: "turn_revealed",
       payload: expect.objectContaining({
+        challengeDisplayName: "Sam Player",
         challengeResult: "challenger_wins",
         challengerId: "22222222-2222-4222-8222-222222222222",
       }),

@@ -166,7 +166,10 @@ export function SoloStartScreen({ genres, disabled = false, onSelect }: SoloStar
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {VARIANTS.filter((option) => option.incompatibleWith === undefined || !option.incompatibleWith.includes(variant)).map((option) => (
+          {VARIANTS.filter(
+            (option) =>
+              option.incompatibleWith === undefined || !option.incompatibleWith.includes(variant),
+          ).map((option) => (
             <button
               key={option.value}
               type="button"
