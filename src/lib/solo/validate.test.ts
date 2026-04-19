@@ -198,4 +198,3 @@ describe("isCorrectGuess — same-year fallback", () => {
     expect(isCorrectGuess(2010, 2010, "lower")).toBe(true);
   });
 });
-

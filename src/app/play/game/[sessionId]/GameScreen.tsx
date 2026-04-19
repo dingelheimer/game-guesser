@@ -26,6 +26,7 @@ import { MultiplayerTeamworkGameOver } from "./MultiplayerTeamworkGameOver";
 import { TeamVotingPanel } from "./TeamVotingPanel";
 import { useAutoProgression } from "./useAutoProgression";
 import { useGameActions } from "./useGameActions";
+import { useGameReconciliation } from "./useGameReconciliation";
 import { useGameBonusTransitions } from "./useGameBonusTransitions";
 import { useGameRealtimeChannel } from "./useGameRealtimeChannel";
 import { useGameStateTransitions } from "./useGameStateTransitions";
@@ -172,10 +173,15 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const isTeamworkMode = game.settings.gameMode === "teamwork";
 
   const actions = useGameActions({
+    bonusTransitions,
+    challengeRequestKeyRef,
     channelRef,
+    coreTransitions,
     currentPlayer,
+    expertVerificationRequestKeyRef,
     game,
     platformBonusPlayerId,
+    platformBonusRequestKeyRef,
     presence,
     progressionTimeoutRef,
     setActionError,
@@ -187,8 +193,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     setIsSubmittingPlatformBonus,
     setIsSubmittingTeamVote,
     setPlacementFeedback,
-    bonusTransitions,
-    coreTransitions,
+    skipRequestKeyRef,
   });
 
   useAutoProgression({
@@ -203,6 +208,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     platformBonusRequestKeyRef,
     secondsRemaining,
     skipRequestKeyRef,
+  });
+
+  useGameReconciliation({
+    game,
+    isSubmittingPlacement,
+    setGame,
   });
 
   if (currentPlayer === undefined) {

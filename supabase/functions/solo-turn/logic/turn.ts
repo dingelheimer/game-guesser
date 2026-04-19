@@ -198,4 +198,3 @@ export function applyDrawTimeSwap(
 
   return null;
 }
-
