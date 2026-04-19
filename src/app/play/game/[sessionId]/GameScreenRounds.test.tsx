@@ -124,6 +124,10 @@ vi.mock("@/lib/multiplayer/turnActions", () => ({
   skipTurn: mocks.skipTurnMock,
 }));
 
+vi.mock("@/lib/multiplayer/reconciliationAction", () => ({
+  fetchReconciliationState: vi.fn(async () => null),
+}));
+
 const initialGame = initialGameFixture;
 
 describe("GameScreen", () => {

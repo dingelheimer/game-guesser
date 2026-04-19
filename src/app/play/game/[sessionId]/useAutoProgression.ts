@@ -4,6 +4,7 @@
 import { useEffect, type RefObject } from "react";
 import type { TurnSkippedReason } from "@/lib/multiplayer/turns";
 import type { MultiplayerGamePageData } from "@/lib/multiplayer/gamePage";
+import { STALE_PHASE_POLL_INTERVAL_MS, STALE_PHASE_THRESHOLD_MS } from "./gameScreenTypes";
 
 /** Params for the auto-progression hook. */
 type UseAutoProgressionParams = Readonly<{
@@ -102,5 +103,29 @@ export function useAutoProgression({
     game.turnNumber,
     handleProceedFromExpertVerification,
     secondsRemaining,
+  ]);
+
+  // Stale-phase recovery: if phaseDeadline has passed by more than the threshold
+  // and the phase hasn't advanced, clear the request key so auto-progression retries.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const { phase, phaseDeadline } = game.currentTurn;
+      if (phaseDeadline === null) return;
+      const overdueMs = Date.now() - new Date(phaseDeadline).getTime();
+      if (overdueMs <= STALE_PHASE_THRESHOLD_MS) return;
+      if (phase === "placing") skipRequestKeyRef.current = null;
+      else if (phase === "challenge_window") challengeRequestKeyRef.current = null;
+      else if (phase === "platform_bonus") platformBonusRequestKeyRef.current = null;
+      else if (phase === "expert_verification") expertVerificationRequestKeyRef.current = null;
+    }, STALE_PHASE_POLL_INTERVAL_MS);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [
+    challengeRequestKeyRef,
+    expertVerificationRequestKeyRef,
+    game.currentTurn,
+    platformBonusRequestKeyRef,
+    skipRequestKeyRef,
   ]);
 }

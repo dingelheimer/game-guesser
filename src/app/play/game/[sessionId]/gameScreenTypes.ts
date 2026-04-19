@@ -15,6 +15,15 @@ export const FAILED_PLACEMENT_PREVIEW_MS = 900;
 /** Delay (ms) before broadcasting the follow-up turn or game-over event. */
 export const TURN_FOLLOW_UP_DELAY_MS = 1500;
 
+/** Interval (ms) for the stale-phase recovery check in auto-progression. */
+export const STALE_PHASE_POLL_INTERVAL_MS = 5000;
+
+/** How far past a phaseDeadline (ms) before treating the phase as stale. */
+export const STALE_PHASE_THRESHOLD_MS = 5000;
+
+/** Interval (ms) for the periodic DB reconciliation safety-net poll. */
+export const RECONCILIATION_POLL_INTERVAL_MS = 15000;
+
 /** Seconds to wait for a disconnected active player before auto-skipping. */
 export const ACTIVE_PLAYER_DISCONNECT_GRACE_SECONDS = 30;
 

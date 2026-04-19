@@ -31,11 +31,14 @@ type BonusTransitions = ReturnType<typeof useGameBonusTransitions>;
 
 type UseGameActionsParams = Readonly<{
   bonusTransitions: BonusTransitions;
+  challengeRequestKeyRef: RefObject<string | null>;
   channelRef: RefObject<RealtimeChannel | null>;
   coreTransitions: CoreTransitions;
   currentPlayer: MultiplayerGamePageData["players"][number] | undefined;
+  expertVerificationRequestKeyRef: RefObject<string | null>;
   game: MultiplayerGamePageData;
   platformBonusPlayerId: string;
+  platformBonusRequestKeyRef: RefObject<string | null>;
   presence: LobbyPresence[];
   progressionTimeoutRef: RefObject<number | null>;
   setActionError: Dispatch<SetStateAction<string | null>>;
@@ -47,16 +50,20 @@ type UseGameActionsParams = Readonly<{
   setIsSubmittingPlatformBonus: Dispatch<SetStateAction<boolean>>;
   setIsSubmittingTeamVote: Dispatch<SetStateAction<boolean>>;
   setPlacementFeedback: Dispatch<SetStateAction<PlacementFeedback>>;
+  skipRequestKeyRef: RefObject<string | null>;
 }>;
 
 /** Custom hook encapsulating all server-action handler callbacks. */
 export function useGameActions({
   bonusTransitions,
+  challengeRequestKeyRef,
   channelRef,
   coreTransitions,
   currentPlayer,
+  expertVerificationRequestKeyRef,
   game,
   platformBonusPlayerId,
+  platformBonusRequestKeyRef,
   presence,
   progressionTimeoutRef,
   setActionError,
@@ -68,6 +75,7 @@ export function useGameActions({
   setIsSubmittingPlatformBonus,
   setIsSubmittingTeamVote,
   setPlacementFeedback,
+  skipRequestKeyRef,
 }: UseGameActionsParams) {
   return useMemo(() => {
     const scheduleFollowUp = (followUp: TurnFollowUpResult) => {
@@ -114,7 +122,10 @@ export function useGameActions({
       });
       if (!result.success) {
         setIsSkippingTurn(false);
-        if (result.error.code !== "CONFLICT") setActionError(result.error.message);
+        if (result.error.code !== "CONFLICT") {
+          setActionError(result.error.message);
+          skipRequestKeyRef.current = null;
+        }
         return;
       }
       coreTransitions.applyTurnSkipped();
@@ -158,7 +169,10 @@ export function useGameActions({
       setActionError(null);
       const result = await proceedFromChallenge(game.sessionId);
       if (!result.success) {
-        if (result.error.code !== "CONFLICT") setActionError(result.error.message);
+        if (result.error.code !== "CONFLICT") {
+          setActionError(result.error.message);
+          challengeRequestKeyRef.current = null;
+        }
         return;
       }
       coreTransitions.applyTurnRevealed(result.data.reveal);
@@ -203,7 +217,10 @@ export function useGameActions({
       setActionError(null);
       const result = await proceedFromPlatformBonus(game.sessionId);
       if (!result.success) {
-        if (result.error.code !== "CONFLICT") setActionError(result.error.message);
+        if (result.error.code !== "CONFLICT") {
+          setActionError(result.error.message);
+          platformBonusRequestKeyRef.current = null;
+        }
         return;
       }
       bonusTransitions.applyPlatformBonusResult(result.data.bonus);
@@ -243,7 +260,10 @@ export function useGameActions({
       setActionError(null);
       const result = await proceedFromExpertVerification(game.sessionId);
       if (!result.success) {
-        if (result.error.code !== "CONFLICT") setActionError(result.error.message);
+        if (result.error.code !== "CONFLICT") {
+          setActionError(result.error.message);
+          expertVerificationRequestKeyRef.current = null;
+        }
         return;
       }
       bonusTransitions.applyExpertVerificationResult(result.data.verification);
