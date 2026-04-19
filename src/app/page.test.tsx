@@ -30,7 +30,7 @@ describe("Home page", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the guest CTA and landing-page sections", async () => {
+  it("renders the guest CTA and how-it-works section", async () => {
     getUserMock.mockResolvedValue({
       data: {
         user: null,
@@ -41,14 +41,8 @@ describe("Home page", () => {
     render(await Home());
 
     expect(screen.getByRole("link", { name: "Play Now" })).toHaveAttribute("href", "/play/solo");
-    expect(
-      screen.getByRole("heading", { name: /learn the loop in three quick steps/i }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("heading", {
-        name: /built for quick sessions, rematches, and one-more-run energy/i,
-      }),
-    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: /see the screenshot/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /place it on your timeline/i })).toBeInTheDocument();
   });
 
   it("uses the authenticated primary CTA label", async () => {
