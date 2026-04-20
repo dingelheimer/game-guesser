@@ -343,7 +343,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
         />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-          <Card className="border-border/60 bg-surface-800/70">
+          <Card className="border-border/60 bg-surface-800/70 overflow-visible">
             <CardHeader>
               <CardTitle>Current Card</CardTitle>
               <CardDescription>
