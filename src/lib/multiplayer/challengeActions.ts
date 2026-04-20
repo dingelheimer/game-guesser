@@ -371,3 +371,5 @@ export async function proceedFromChallenge(
     reveal: revealResult.data.reveal,
   });
 }
+
+export { acceptChallenge } from "./acceptChallengeAction";

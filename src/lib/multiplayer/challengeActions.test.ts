@@ -96,7 +96,7 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: mocks.mockCreateServiceClient,
 }));
 
-import { proceedFromChallenge, submitPlacement } from "./challengeActions";
+import { acceptChallenge, proceedFromChallenge, submitPlacement } from "./challengeActions";
 
 const sessionId = "11111111-1111-4111-8111-111111111111";
 const roomId = "22222222-2222-4222-8222-222222222222";
@@ -378,6 +378,319 @@ describe("proceedFromChallenge", () => {
         current_turn: expect.objectContaining({
           phase: "platform_bonus",
         }),
+      }),
+    });
+  });
+});
+
+describe("acceptChallenge", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.regularOperations.length = 0;
+    mocks.regularResults.length = 0;
+    mocks.serviceOperations.length = 0;
+    mocks.serviceResults.length = 0;
+  });
+
+  it("rejects if the caller is the active player", async () => {
+    authenticate(activePlayerId);
+    queueRegular({ data: { user_id: activePlayerId }, error: null });
+    queueService({
+      data: {
+        room_id: roomId,
+        status: "active",
+        deck: [101, 102],
+        deck_cursor: 2,
+        current_turn: {
+          phase: "challenge_window",
+          activePlayerId,
+          gameId: 101,
+          screenshotImageId: "shot-101",
+          placedPosition: 1,
+          phaseDeadline: "2099-04-12T12:00:00.000Z",
+        },
+        turn_number: 1,
+        turn_order: [activePlayerId, otherPlayerId],
+        active_player_id: activePlayerId,
+        settings: defaultSettings,
+      },
+      error: null,
+    });
+
+    const result = await acceptChallenge(sessionId, [activePlayerId, otherPlayerId]);
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED",
+        message: "The active player cannot accept their own placement.",
+      },
+    });
+    expect(mocks.serviceOperations.some((op) => op.action === "update")).toBe(false);
+  });
+
+  it("rejects if the phase is not challenge_window", async () => {
+    authenticate(otherPlayerId);
+    queueRegular({ data: { user_id: otherPlayerId }, error: null });
+    queueService({
+      data: {
+        room_id: roomId,
+        status: "active",
+        deck: [101, 102],
+        deck_cursor: 2,
+        current_turn: {
+          phase: "placing",
+          activePlayerId,
+          gameId: 101,
+          screenshotImageId: "shot-101",
+          phaseDeadline: "2099-04-12T12:00:00.000Z",
+        },
+        turn_number: 1,
+        turn_order: [activePlayerId, otherPlayerId],
+        active_player_id: activePlayerId,
+        settings: defaultSettings,
+      },
+      error: null,
+    });
+
+    const result = await acceptChallenge(sessionId, [activePlayerId, otherPlayerId]);
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: "This multiplayer turn is not in the challenge window.",
+      },
+    });
+  });
+
+  it("rejects if a challenger has already been set", async () => {
+    authenticate(otherPlayerId);
+    queueRegular({ data: { user_id: otherPlayerId }, error: null });
+    queueService({
+      data: {
+        room_id: roomId,
+        status: "active",
+        deck: [101, 102],
+        deck_cursor: 2,
+        current_turn: {
+          phase: "challenge_window",
+          activePlayerId,
+          gameId: 101,
+          screenshotImageId: "shot-101",
+          placedPosition: 1,
+          phaseDeadline: "2099-04-12T12:00:00.000Z",
+          challengerId: otherPlayerId,
+        },
+        turn_number: 1,
+        turn_order: [activePlayerId, otherPlayerId],
+        active_player_id: activePlayerId,
+        settings: defaultSettings,
+      },
+      error: null,
+    });
+
+    const result = await acceptChallenge(sessionId, [activePlayerId, otherPlayerId]);
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: "A player already challenged this placement.",
+      },
+    });
+  });
+
+  it("records partial acceptance when not all non-active players have accepted", async () => {
+    const thirdPlayerId = "55555555-5555-4555-8555-555555555555";
+    authenticate(otherPlayerId);
+    queueRegular({ data: { user_id: otherPlayerId }, error: null });
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102],
+          deck_cursor: 2,
+          current_turn: {
+            phase: "challenge_window",
+            activePlayerId,
+            gameId: 101,
+            screenshotImageId: "shot-101",
+            placedPosition: 1,
+            phaseDeadline: "2099-04-12T12:00:00.000Z",
+          },
+          turn_number: 1,
+          turn_order: [activePlayerId, otherPlayerId, thirdPlayerId],
+          active_player_id: activePlayerId,
+          settings: defaultSettings,
+        },
+        error: null,
+      },
+      { data: { id: sessionId }, error: null },
+    );
+
+    const result = await acceptChallenge(sessionId, [activePlayerId, otherPlayerId, thirdPlayerId]);
+
+    expect(result).toEqual({ success: true, data: { allAccepted: false } });
+    const updateOp = updateOperation(mocks.serviceOperations, "game_sessions");
+    expect(updateOp.payload).toMatchObject({
+      current_turn: expect.objectContaining({
+        phase: "challenge_window",
+        acceptedPlayerIds: [otherPlayerId],
+      }),
+    });
+  });
+
+  it("is idempotent when the caller already accepted", async () => {
+    authenticate(otherPlayerId);
+    queueRegular({ data: { user_id: otherPlayerId }, error: null });
+    queueService({
+      data: {
+        room_id: roomId,
+        status: "active",
+        deck: [101, 102],
+        deck_cursor: 2,
+        current_turn: {
+          phase: "challenge_window",
+          activePlayerId,
+          gameId: 101,
+          screenshotImageId: "shot-101",
+          placedPosition: 1,
+          phaseDeadline: "2099-04-12T12:00:00.000Z",
+          acceptedPlayerIds: [otherPlayerId],
+        },
+        turn_number: 1,
+        turn_order: [activePlayerId, otherPlayerId],
+        active_player_id: activePlayerId,
+        settings: defaultSettings,
+      },
+      error: null,
+    });
+
+    const result = await acceptChallenge(sessionId, [activePlayerId, otherPlayerId]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    // 2-player game, otherPlayer already accepted — allAccepted should be true
+    expect(result.data.allAccepted).toBe(true);
+    expect(mocks.serviceOperations.some((op) => op.action === "update")).toBe(false);
+  });
+
+  it("proceeds to reveal when last non-active player accepts in a 2-player game", async () => {
+    authenticate(otherPlayerId);
+    queueRegular(
+      { data: { user_id: otherPlayerId }, error: null },
+      { data: { user_id: otherPlayerId }, error: null },
+    );
+    queueService(
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103, 104],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "challenge_window",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            placedPosition: 1,
+            phaseDeadline: "2099-04-12T12:00:00.000Z",
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: defaultSettings,
+        },
+        error: null,
+      },
+      { data: { id: sessionId }, error: null },
+      {
+        data: {
+          room_id: roomId,
+          status: "active",
+          deck: [101, 102, 103, 104],
+          deck_cursor: 3,
+          current_turn: {
+            phase: "revealing",
+            activePlayerId,
+            gameId: 103,
+            screenshotImageId: "shot-103",
+            placedPosition: 1,
+            acceptedPlayerIds: [otherPlayerId],
+          },
+          turn_number: 4,
+          turn_order: [activePlayerId, otherPlayerId],
+          active_player_id: activePlayerId,
+          settings: defaultSettings,
+        },
+        error: null,
+      },
+      {
+        data: {
+          user_id: activePlayerId,
+          display_name: "Alex Host",
+          score: 4,
+          tokens: 2,
+          turn_position: 0,
+          timeline: [{ gameId: 100, releaseYear: 1990, name: "F-Zero" }],
+        },
+        error: null,
+      },
+      { data: { id: 103, name: "Portal 2", release_year: 1995 }, error: null },
+      { data: { game_id: 103, igdb_image_id: "cover-103" }, error: null },
+      { data: [{ game_id: 103, platform_id: 10 }], error: null },
+      { data: [{ id: 10, name: "PC" }], error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      {
+        data: [
+          {
+            user_id: activePlayerId,
+            display_name: "Alex Host",
+            score: 5,
+            tokens: 2,
+            turn_position: 0,
+            timeline: [
+              { gameId: 100, releaseYear: 1990, name: "F-Zero" },
+              { gameId: 103, releaseYear: 1995, name: "Portal 2" },
+            ],
+          },
+          {
+            user_id: otherPlayerId,
+            display_name: "Sam Player",
+            score: 3,
+            tokens: 2,
+            turn_position: 1,
+            timeline: [{ gameId: 200, releaseYear: 2001, name: "Halo" }],
+          },
+        ],
+        error: null,
+      },
+      { data: [{ igdb_image_id: "shot-104" }], error: null },
+      { data: { room_id: roomId }, error: null },
+    );
+
+    const result = await acceptChallenge(sessionId, [activePlayerId, otherPlayerId]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.allAccepted).toBe(true);
+    expect(result.data.reveal).toMatchObject({
+      isCorrect: true,
+      scores: {
+        [activePlayerId]: 5,
+        [otherPlayerId]: 3,
+      },
+    });
+    expect(result.data.followUp).toBeDefined();
+    const updates = updateOperations(mocks.serviceOperations, "game_sessions");
+    expect(updates[0]?.payload).toMatchObject({
+      current_turn: expect.objectContaining({
+        phase: "revealing",
+        acceptedPlayerIds: [otherPlayerId],
       }),
     });
   });

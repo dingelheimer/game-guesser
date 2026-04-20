@@ -54,6 +54,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const [disconnectCountdown, setDisconnectCountdown] = useState<number | null>(null);
   const [disconnectGrace, setDisconnectGrace] = useState<DisconnectGraceState>(null);
   const [isSubmittingChallenge, setIsSubmittingChallenge] = useState(false);
+  const [_isAcceptingChallenge, setIsAcceptingChallenge] = useState(false);
   const [isSubmittingExpertVerification, setIsSubmittingExpertVerification] = useState(false);
   const [isSubmittingPlatformBonus, setIsSubmittingPlatformBonus] = useState(false);
   const [isSubmittingPlacement, setIsSubmittingPlacement] = useState(false);
@@ -98,6 +99,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     setDisconnectGrace,
     setExpertVerificationResult,
     setGame,
+    setIsAcceptingChallenge,
     setIsSkippingTurn,
     setIsSubmittingChallenge,
     setIsSubmittingExpertVerification,
@@ -186,6 +188,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     progressionTimeoutRef,
     setActionError,
     setGame,
+    setIsAcceptingChallenge,
     setIsSkippingTurn,
     setIsSubmittingChallenge,
     setIsSubmittingExpertVerification,
