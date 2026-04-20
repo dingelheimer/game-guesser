@@ -143,7 +143,7 @@ describe("resolveTurn", () => {
     mocks.serviceResults.length = 0;
   });
 
-  it("enters the platform bonus phase after a correct placement", async () => {
+  it("skips platform bonus for Standard variant after a correct placement", async () => {
     authenticate(activePlayerId);
     queueRegular({ data: { user_id: activePlayerId }, error: null });
     queueService(
@@ -152,7 +152,7 @@ describe("resolveTurn", () => {
           room_id: roomId,
           status: "active",
           deck: [101, 102, 103],
-          deck_cursor: 3,
+          deck_cursor: 1,
           current_turn: {
             phase: "revealing",
             activePlayerId,
@@ -163,7 +163,7 @@ describe("resolveTurn", () => {
           turn_number: 4,
           turn_order: [activePlayerId, otherPlayerId],
           active_player_id: activePlayerId,
-          settings: { ...defaultSettings, winCondition: 5 },
+          settings: { ...defaultSettings, winCondition: 10 },
         },
         error: null,
       },
@@ -183,10 +183,6 @@ describe("resolveTurn", () => {
       { data: [{ game_id: 103, platform_id: 10 }], error: null },
       { data: [{ id: 10, name: "PC" }], error: null },
       { data: null, error: null },
-      { data: [{ platform_id: 10 }], error: null },
-      { data: [{ id: 10, name: "PC" }], error: null },
-      { data: [], error: null },
-      { data: [], error: null },
       { data: null, error: null },
       {
         data: [
@@ -212,8 +208,8 @@ describe("resolveTurn", () => {
         ],
         error: null,
       },
-      { data: { id: sessionId }, error: null },
-      { data: { id: roomId }, error: null },
+      { data: [{ igdb_image_id: "shot-102" }], error: null },
+      { data: { room_id: roomId }, error: null },
     );
 
     const result = await resolveTurn(sessionId);
@@ -223,22 +219,20 @@ describe("resolveTurn", () => {
       return;
     }
 
-    expect(result.data.followUp).toBeUndefined();
+    expect(result.data.followUp).toBeDefined();
     expect(result.data.reveal).toMatchObject({
       isCorrect: true,
-      platformOptions: [{ id: 10, name: "PC" }],
       scores: {
         [activePlayerId]: 5,
         [otherPlayerId]: 3,
       },
     });
-    expect(updateOperations(mocks.serviceOperations, "game_sessions")).toContainEqual({
+    expect(updateOperations(mocks.serviceOperations, "game_sessions")).not.toContainEqual({
       action: "update",
       table: "game_sessions",
       payload: expect.objectContaining({
         current_turn: expect.objectContaining({
           phase: "platform_bonus",
-          platformOptions: [{ id: 10, name: "PC" }],
         }),
       }),
     });
