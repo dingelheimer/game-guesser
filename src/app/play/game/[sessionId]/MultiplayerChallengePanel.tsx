@@ -8,34 +8,46 @@ import { cn } from "@/lib/utils";
  * Props for the multiplayer challenge-window panel.
  */
 export type MultiplayerChallengePanelProps = Readonly<{
+  acceptedCount: number;
   activePlayerName: string | null;
   canChallenge: boolean;
   challengeNotice: string | null;
+  hasCurrentUserAccepted: boolean;
+  isAcceptingChallenge: boolean;
   isCurrentUserActive: boolean;
   isSubmittingChallenge: boolean;
   isVisible: boolean;
+  onAcceptChallenge: () => void;
   onChallenge: () => void;
   playerTokens: number;
   secondsRemaining: number | null;
+  totalRequired: number;
 }>;
 
 /**
  * Render the multiplayer challenge countdown, CTA, and challenge status notice.
  */
 export function MultiplayerChallengePanel({
+  acceptedCount,
   activePlayerName,
   canChallenge,
   challengeNotice,
+  hasCurrentUserAccepted,
+  isAcceptingChallenge,
   isCurrentUserActive,
   isSubmittingChallenge,
   isVisible,
+  onAcceptChallenge,
   onChallenge,
   playerTokens,
   secondsRemaining,
+  totalRequired,
 }: MultiplayerChallengePanelProps) {
   if (!isVisible && challengeNotice === null) {
     return null;
   }
+
+  const showAcceptProgress = isVisible && totalRequired > 0 && acceptedCount > 0;
 
   return (
     <div
@@ -61,6 +73,11 @@ export function MultiplayerChallengePanel({
               is placed incorrectly.
             </p>
           )}
+          {showAcceptProgress ? (
+            <p className="text-xs text-slate-200/60">
+              {acceptedCount}/{totalRequired} accepted
+            </p>
+          ) : null}
         </div>
 
         {isVisible && secondsRemaining !== null ? (
@@ -73,14 +90,36 @@ export function MultiplayerChallengePanel({
       {isVisible && !isCurrentUserActive ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-slate-200/80">Tokens available: {playerTokens}</p>
-          <Button
-            type="button"
-            disabled={!canChallenge || isSubmittingChallenge}
-            onClick={onChallenge}
-            className="bg-challenge hover:bg-challenge/90 text-white"
-          >
-            {isSubmittingChallenge ? "Challenging..." : "Challenge (1 token)"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {hasCurrentUserAccepted ? (
+              <Button
+                type="button"
+                disabled
+                variant="outline"
+                className="border-emerald-500/40 text-emerald-300 opacity-80"
+              >
+                Accepted ✓
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={isAcceptingChallenge}
+                onClick={onAcceptChallenge}
+                variant="outline"
+                className="border-slate-500/60 text-slate-200 hover:border-slate-400/80 hover:text-white"
+              >
+                {isAcceptingChallenge ? "Accepting..." : "Accept Placement"}
+              </Button>
+            )}
+            <Button
+              type="button"
+              disabled={!canChallenge || isSubmittingChallenge}
+              onClick={onChallenge}
+              className="bg-challenge hover:bg-challenge/90 text-white"
+            >
+              {isSubmittingChallenge ? "Challenging..." : "Challenge (1 token)"}
+            </Button>
+          </div>
         </div>
       ) : null}
     </div>
