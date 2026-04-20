@@ -13,6 +13,7 @@ import {
   restoreChallengeToken,
   SessionIdSchema,
   SubmitPlacementSchema,
+  type AcceptChallengeResult,
   type ProceedFromChallengeResult,
   type SubmitChallengeResult,
   type SubmitPlacementResult,
@@ -20,6 +21,7 @@ import {
 import { loadWritableGamePlayer, loadWritableGameSession } from "./gameDataLoaders";
 import { resolveTurn } from "./turnActions";
 import { buildChallengeDeadline } from "./turns";
+import { acceptChallenge as _acceptChallenge } from "./acceptChallengeAction";
 
 /**
  * Submit the active player's multiplayer placement and either open the challenge
@@ -372,4 +374,9 @@ export async function proceedFromChallenge(
   });
 }
 
-export { acceptChallenge } from "./acceptChallengeAction";
+export async function acceptChallenge(
+  sessionId: string,
+  presenceUserIds: string[],
+): Promise<Result<AcceptChallengeResult, AppError>> {
+  return _acceptChallenge(sessionId, presenceUserIds);
+}
