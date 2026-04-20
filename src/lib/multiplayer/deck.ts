@@ -57,6 +57,8 @@ export const TurnStateSchema = z.object({
   phaseDeadline: z.iso.datetime({ offset: true }).optional(),
   /** Per-player vote state for the team_voting phase. */
   votes: z.record(z.string(), TeamVoteEntrySchema).optional(),
+  /** Non-active player IDs who have pressed "Accept Placement" during challenge_window. */
+  acceptedPlayerIds: z.array(z.uuid()).optional(),
 });
 
 /** Persistent turn state stored in game_sessions.current_turn JSONB. */

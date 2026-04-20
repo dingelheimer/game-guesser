@@ -82,6 +82,15 @@ export const TurnRevealedPayloadSchema = z.object({
 });
 
 /**
+ * Broadcast payload schema for the challenge_accepted event.
+ */
+export const ChallengeAcceptedPayloadSchema = z.object({
+  acceptedCount: z.number().int(),
+  totalRequired: z.number().int(),
+  userId: z.uuid(),
+});
+
+/**
  * Broadcast payload schema for the platform_bonus_result event.
  */
 export const PlatformBonusResultPayloadSchema = z.object({
@@ -154,6 +163,7 @@ export const TeamGameOverPayloadSchema = z.object({
 });
 
 export type BroadcastTimelineEntry = z.infer<typeof BroadcastTimelineEntrySchema>;
+export type ChallengeAcceptedPayload = z.infer<typeof ChallengeAcceptedPayloadSchema>;
 export type TurnRevealedCard = z.infer<typeof TurnRevealedCardSchema>;
 
 /**

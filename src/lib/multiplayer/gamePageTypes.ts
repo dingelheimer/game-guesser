@@ -50,6 +50,7 @@ export type MultiplayerGamePagePlayer = Readonly<{
  */
 export type MultiplayerGamePageData = Readonly<{
   currentTurn: Readonly<{
+    acceptedPlayerIds?: readonly string[];
     activePlayerId: string;
     card: MultiplayerTurnCard;
     phase: TurnPhase;
