@@ -7,6 +7,7 @@ import { initialGameFixture } from "./GameScreen.test.fixtures";
 
 const mocks = vi.hoisted(() => {
   const sendMock = vi.fn(async () => ({ status: "ok" }));
+  const acceptChallengeMock = vi.fn();
   const proceedFromChallengeMock = vi.fn();
   const proceedFromPlatformBonusMock = vi.fn();
   const skipTurnMock = vi.fn();
@@ -72,6 +73,7 @@ const mocks = vi.hoisted(() => {
   };
 
   return {
+    acceptChallengeMock,
     channelHandlers,
     channelMock,
     presenceHandlers,
@@ -111,6 +113,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 vi.mock("@/lib/multiplayer/challengeActions", () => ({
+  acceptChallenge: mocks.acceptChallengeMock,
   proceedFromChallenge: mocks.proceedFromChallengeMock,
   submitChallenge: mocks.submitChallengeMock,
   submitPlacement: mocks.submitPlacementMock,
@@ -136,6 +139,7 @@ describe("GameScreen", () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     mocks.setPresenceState({});
+    mocks.acceptChallengeMock.mockReset();
     mocks.proceedFromChallengeMock.mockReset();
     mocks.proceedFromPlatformBonusMock.mockReset();
     mocks.skipTurnMock.mockReset();
