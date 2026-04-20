@@ -84,6 +84,7 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
     session.currentTurn.placedPosition,
   );
   const challengerId = session.currentTurn.challengerId;
+  const isStandardVariant = session.settings.variant === "standard";
   const isProVariant = session.settings.variant === "pro";
   const isExpertVariant = session.settings.variant === "expert";
   let challengeResult: ChallengeResult | undefined;
@@ -157,7 +158,10 @@ export async function resolveTurn(sessionId: string): Promise<Result<ResolveTurn
   }
 
   const platformBonusEligible =
-    platformBonusPlayerId !== undefined && !isExpertVariant && (isProVariant || isCorrect);
+    platformBonusPlayerId !== undefined &&
+    !isExpertVariant &&
+    !isStandardVariant &&
+    (isProVariant || isCorrect);
   const expertVerificationEligible = platformBonusPlayerId !== undefined && isExpertVariant;
   if (platformBonusEligible) {
     const platformBonusStateResult = await loadPlatformBonusState(

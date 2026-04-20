@@ -262,7 +262,7 @@ describe("proceedFromChallenge", () => {
     mocks.serviceResults.length = 0;
   });
 
-  it("enters the platform bonus phase when the challenge window expires on a correct turn", async () => {
+  it("skips platform bonus for Standard variant when the challenge window expires on a correct turn", async () => {
     authenticate(otherPlayerId);
     queueRegular(
       { data: { user_id: otherPlayerId }, error: null },
@@ -327,10 +327,6 @@ describe("proceedFromChallenge", () => {
       { data: [{ game_id: 103, platform_id: 10 }], error: null },
       { data: [{ id: 10, name: "PC" }], error: null },
       { data: null, error: null },
-      { data: [{ platform_id: 10 }], error: null },
-      { data: [{ id: 10, name: "PC" }], error: null },
-      { data: [], error: null },
-      { data: [], error: null },
       { data: null, error: null },
       {
         data: [
@@ -369,20 +365,18 @@ describe("proceedFromChallenge", () => {
 
     expect(result.data.reveal).toMatchObject({
       isCorrect: true,
-      platformOptions: [{ id: 10, name: "PC" }],
       scores: {
         [activePlayerId]: 5,
         [otherPlayerId]: 3,
       },
     });
-    expect(result.data.followUp).toBeUndefined();
-    expect(updateOperations(mocks.serviceOperations, "game_sessions")).toContainEqual({
+    expect(result.data.followUp).toBeDefined();
+    expect(updateOperations(mocks.serviceOperations, "game_sessions")).not.toContainEqual({
       action: "update",
       table: "game_sessions",
       payload: expect.objectContaining({
         current_turn: expect.objectContaining({
           phase: "platform_bonus",
-          platformOptions: [{ id: 10, name: "PC" }],
         }),
       }),
     });
