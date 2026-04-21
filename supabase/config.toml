@@ -374,6 +374,9 @@ verify_jwt = false
 ["functions.daily-generate"]
 verify_jwt = false
 
+[functions.daily-start]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
