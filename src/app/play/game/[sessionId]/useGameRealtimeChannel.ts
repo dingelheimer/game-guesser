@@ -35,15 +35,25 @@ import type { useGameStateTransitions } from "./useGameStateTransitions";
 type Transitions = ReturnType<typeof useGameStateTransitions> &
   ReturnType<typeof useGameBonusTransitions>;
 
+/** Minimal turn context for deduplicating challenge progression calls. */
+type CurrentTurnContext = Readonly<{
+  activePlayerId: string;
+  phase: string;
+  turnNumber: number;
+}>;
+
 /** Params for the realtime channel hook. */
 type UseGameRealtimeChannelParams = Readonly<{
+  challengeRequestKeyRef: RefObject<string | null>;
   channelRef: RefObject<RealtimeChannel | null>;
   clearDisconnectGrace: () => void;
   clearFailedPlacementTimeout: () => void;
   clearProgressionTimeout: () => void;
   currentPlayer: MultiplayerGamePageData["players"][number] | undefined;
+  currentTurnContextRef: RefObject<CurrentTurnContext>;
   initialGame: MultiplayerGamePageData;
   playersRef: RefObject<MultiplayerGamePageData["players"]>;
+  proceedFromChallengeCallbackRef: RefObject<(() => Promise<void>) | null>;
   setGame: (updater: (prev: MultiplayerGamePageData) => MultiplayerGamePageData) => void;
   setWinner: (winner: MultiplayerGamePageData["winner"]) => void;
   supabase: SupabaseClient;
@@ -57,13 +67,16 @@ type UseGameRealtimeChannelParams = Readonly<{
  * Returns the current presence list.
  */
 export function useGameRealtimeChannel({
+  challengeRequestKeyRef,
   channelRef,
   clearDisconnectGrace,
   clearFailedPlacementTimeout,
   clearProgressionTimeout,
   currentPlayer,
+  currentTurnContextRef,
   initialGame,
   playersRef,
+  proceedFromChallengeCallbackRef,
   setGame,
   setWinner,
   supabase,
@@ -192,6 +205,16 @@ export function useGameRealtimeChannel({
             ].filter((id, index, arr) => arr.indexOf(id) === index),
           },
         }));
+        if (parsed.data.acceptedCount >= parsed.data.totalRequired) {
+          const ctx = currentTurnContextRef.current;
+          if (ctx.phase === "challenge_window") {
+            const key = `${String(ctx.turnNumber)}:${ctx.activePlayerId}:challenge`;
+            if (challengeRequestKeyRef.current !== key) {
+              challengeRequestKeyRef.current = key;
+              void proceedFromChallengeCallbackRef.current?.();
+            }
+          }
+        }
       })
       .on("broadcast", { event: "turn_started" }, (message) => {
         const parsed = TurnStartedPayloadSchema.safeParse(message.payload);

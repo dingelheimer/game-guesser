@@ -96,9 +96,11 @@ export async function acceptChallenge(
     return fail(appError("CONFLICT", "Another player already advanced this multiplayer turn."));
   }
 
-  const updatedAccepted: string[] = Array.isArray(appendedIds)
-    ? (appendedIds as string[])
-    : [String(appendedIds)];
+  if (!Array.isArray(appendedIds)) {
+    return fail(appError("INTERNAL_ERROR", "Unexpected response from accept RPC."));
+  }
+
+  const updatedAccepted = appendedIds as string[];
 
   const connectedNonActive = presenceUserIds.filter(
     (id) => id !== sessionResult.data.activePlayerId,
