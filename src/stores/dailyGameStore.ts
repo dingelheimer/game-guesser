@@ -8,7 +8,7 @@ import {
 import type { DailyGameState } from "./dailyGameStore.helpers";
 import * as api from "@/lib/daily/api";
 
-export type { DailyGamePhase, DailyGameState } from "./dailyGameStore.helpers";
+export type { DailyGamePhase, DailyGameState, DailyStreakData } from "./dailyGameStore.helpers";
 export {
   buildPlacementReviewItems,
   revealedToTimelineItem,
@@ -55,6 +55,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
   lastPlacementCorrect: null,
   validPositions: null,
   gameOver: false,
+  streak: null,
 
   async startDaily() {
     set({ phase: "loading", error: null });
@@ -79,6 +80,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
           timelineItems: [],
           revealedCards: {},
           gameOver: true,
+          streak: res.streak,
         });
         return;
       }
@@ -118,6 +120,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
         lastPlacementCorrect: null,
         validPositions: null,
         gameOver: false,
+        streak: res.streak,
       });
     } catch (err) {
       set({
@@ -225,6 +228,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
       lastPlacementCorrect: null,
       validPositions: null,
       gameOver: false,
+      streak: null,
     });
   },
 }));

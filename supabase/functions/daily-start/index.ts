@@ -126,7 +126,16 @@ Deno.serve(async (req: Request) => {
     }
 
     // 2. Look for an existing result row for this player.
-    const existingResult = await db.findExistingResult(challenge.id, userId, anonymousId);
+    // For authenticated users, also fetch streak data in parallel.
+    const [existingResult, streakRow] = await Promise.all([
+      db.findExistingResult(challenge.id, userId, anonymousId),
+      userId !== undefined ? db.fetchStreak(userId) : Promise.resolve(null),
+    ]);
+
+    const streakData =
+      userId !== undefined && streakRow !== null
+        ? { current_streak: streakRow.current_streak, best_streak: streakRow.best_streak }
+        : null;
 
     // ── Completed ─────────────────────────────────────────────────────────
     if (existingResult !== null && existingResult.completed) {
@@ -142,6 +151,7 @@ Deno.serve(async (req: Request) => {
           placements: existingResult.placements,
           timeline: existingResult.timeline,
           total_cards: TOTAL_PLACEMENT_CARDS,
+          streak: streakData,
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
@@ -181,6 +191,7 @@ Deno.serve(async (req: Request) => {
           extra_try_available: !existingResult.extra_try_used,
           placements: existingResult.placements,
           total_cards: TOTAL_PLACEMENT_CARDS,
+          streak: streakData,
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
@@ -218,6 +229,7 @@ Deno.serve(async (req: Request) => {
         extra_try_available: true,
         placements: [],
         total_cards: TOTAL_PLACEMENT_CARDS,
+        streak: streakData,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
     );

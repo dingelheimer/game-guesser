@@ -172,6 +172,11 @@ Deno.serve(async (req: Request) => {
     };
     await db.updateResult(resultId, update);
 
+    // 8. If the game just ended and the player is authenticated, update their streak.
+    if (turnResult.game_over && userId !== undefined) {
+      await db.upsertStreak(userId);
+    }
+
     // 8. Fetch revealed card and (if game continues) next hidden card in parallel.
     const nextDeckIndex = getCurrentCardDeckIndex(turnResult.new_turns_played);
     const nextGameId =
