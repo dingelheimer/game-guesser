@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it } from "vitest";
 import {
+  buildPlacementReviewItems,
   hiddenToTimelineItem,
   insertAtPosition,
   revealedToTimelineItem,
 } from "./dailyGameStore.helpers";
-import type { HiddenCardData, RevealedCardData } from "@/lib/daily/api";
+import type { DailyPlacementRecord, HiddenCardData, RevealedCardData } from "@/lib/daily/api";
 
 const REVEALED: RevealedCardData = {
   game_id: 42,
@@ -118,5 +119,94 @@ describe("insertAtPosition", () => {
   it("returns a new array reference", () => {
     const original = [1, 2];
     expect(insertAtPosition(original, 3, 2)).not.toBe(original);
+  });
+});
+
+describe("buildPlacementReviewItems", () => {
+  const CARD_A: RevealedCardData = {
+    game_id: 1,
+    name: "Game A",
+    release_year: 1998,
+    cover_image_id: "cover_a",
+    screenshot_image_ids: ["shot_a"],
+    platform_names: ["PC"],
+  };
+
+  const CARD_B: RevealedCardData = {
+    game_id: 2,
+    name: "Game B",
+    release_year: 2005,
+    cover_image_id: "cover_b",
+    screenshot_image_ids: ["shot_b"],
+    platform_names: ["PS2"],
+  };
+
+  const correctPlacement: DailyPlacementRecord = {
+    game_id: 1,
+    position: 1,
+    correct: true,
+  };
+
+  const wrongWithExtraTry: DailyPlacementRecord = {
+    game_id: 2,
+    position: 0,
+    correct: false,
+    extra_try: true,
+    valid_positions: [1, 2],
+  };
+
+  const wrongFinal: DailyPlacementRecord = {
+    game_id: 1,
+    position: 2,
+    correct: false,
+  };
+
+  it("returns an empty array for no placements", () => {
+    expect(buildPlacementReviewItems([], {})).toEqual([]);
+  });
+
+  it("assigns 1-based index", () => {
+    const items = buildPlacementReviewItems([correctPlacement, wrongWithExtraTry], {
+      1: CARD_A,
+      2: CARD_B,
+    });
+    expect(items[0]?.index).toBe(1);
+    expect(items[1]?.index).toBe(2);
+  });
+
+  it("maps correct placement", () => {
+    const [item] = buildPlacementReviewItems([correctPlacement], { 1: CARD_A });
+    expect(item?.correct).toBe(true);
+    expect(item?.extraTry).toBe(false);
+  });
+
+  it("maps wrong placement with extra try", () => {
+    const [item] = buildPlacementReviewItems([wrongWithExtraTry], { 2: CARD_B });
+    expect(item?.correct).toBe(false);
+    expect(item?.extraTry).toBe(true);
+  });
+
+  it("maps wrong placement without extra try", () => {
+    const [item] = buildPlacementReviewItems([wrongFinal], { 1: CARD_A });
+    expect(item?.correct).toBe(false);
+    expect(item?.extraTry).toBe(false);
+  });
+
+  it("populates cardData from revealedCards", () => {
+    const [item] = buildPlacementReviewItems([correctPlacement], { 1: CARD_A });
+    expect(item?.cardData).toStrictEqual(CARD_A);
+  });
+
+  it("sets cardData to null when game_id not in revealedCards", () => {
+    const [item] = buildPlacementReviewItems([correctPlacement], {});
+    expect(item?.cardData).toBeNull();
+  });
+
+  it("handles multiple placements preserving order", () => {
+    const placements = [correctPlacement, wrongWithExtraTry];
+    const items = buildPlacementReviewItems(placements, { 1: CARD_A, 2: CARD_B });
+    expect(items).toHaveLength(2);
+    expect(items[0]?.gameId).toBe(1);
+    expect(items[1]?.gameId).toBe(2);
   });
 });
