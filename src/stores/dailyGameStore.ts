@@ -9,7 +9,11 @@ import type { DailyGameState } from "./dailyGameStore.helpers";
 import * as api from "@/lib/daily/api";
 
 export type { DailyGamePhase, DailyGameState } from "./dailyGameStore.helpers";
-export { revealedToTimelineItem, hiddenToTimelineItem } from "./dailyGameStore.helpers";
+export {
+  buildPlacementReviewItems,
+  revealedToTimelineItem,
+  hiddenToTimelineItem,
+} from "./dailyGameStore.helpers";
 
 const ANON_ID_KEY = "game_guesser_daily_anon_id";
 
@@ -46,6 +50,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
   turnsPlayed: 0,
   extraTryAvailable: true,
   placements: [],
+  revealedCards: {},
 
   lastPlacementCorrect: null,
   validPositions: null,
@@ -72,6 +77,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
           extraTryAvailable: !res.extra_try_used,
           placements: res.placements,
           timelineItems: [],
+          revealedCards: {},
           gameOver: true,
         });
         return;
@@ -108,6 +114,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
         turnsPlayed: res.turns_played,
         extraTryAvailable: res.extra_try_available,
         placements: res.placements,
+        revealedCards: { [res.anchor_card.game_id]: res.anchor_card },
         lastPlacementCorrect: null,
         validPositions: null,
         gameOver: false,
@@ -161,6 +168,10 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
         lastPlacementCorrect: result.correct,
         validPositions: result.valid_positions ?? null,
         gameOver: result.game_over,
+        revealedCards: {
+          ...get().revealedCards,
+          [result.revealed_card.game_id]: result.revealed_card,
+        },
       });
     } catch (err) {
       set({
@@ -210,6 +221,7 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
       turnsPlayed: 0,
       extraTryAvailable: true,
       placements: [],
+      revealedCards: {},
       lastPlacementCorrect: null,
       validPositions: null,
       gameOver: false,

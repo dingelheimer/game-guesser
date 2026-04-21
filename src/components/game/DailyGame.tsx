@@ -149,11 +149,7 @@ function DailyResultControls({
               {message}
             </motion.div>
 
-            <Button
-              onClick={onAdvanceTurn}
-              className="w-full max-w-sm"
-              aria-label={buttonLabel}
-            >
+            <Button onClick={onAdvanceTurn} className="w-full max-w-sm" aria-label={buttonLabel}>
               {buttonLabel}
             </Button>
           </motion.div>
@@ -179,6 +175,8 @@ export function DailyGame() {
   const extraTryAvailable = useDailyGameStore((s) => s.extraTryAvailable);
   const lastPlacementCorrect = useDailyGameStore((s) => s.lastPlacementCorrect);
   const gameOver = useDailyGameStore((s) => s.gameOver);
+  const placements = useDailyGameStore((s) => s.placements);
+  const revealedCards = useDailyGameStore((s) => s.revealedCards);
   const error = useDailyGameStore((s) => s.error);
 
   const placeCard = useDailyGameStore((s) => s.placeCard);
@@ -215,6 +213,8 @@ export function DailyGame() {
         totalCards={totalCards}
         turnsPlayed={turnsPlayed}
         extraTryUsed={!extraTryAvailable}
+        placements={placements}
+        revealedCards={revealedCards}
         onPlayAgain={resetGame}
       />
     );
