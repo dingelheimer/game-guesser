@@ -25,6 +25,12 @@ export interface DailyPlacementRecord {
   valid_positions?: number[];
 }
 
+/** Streak data returned by daily-start for authenticated users. Null for guests. */
+export interface DailyStreakData {
+  current_streak: number;
+  best_streak: number;
+}
+
 interface DailyStartBase {
   result_id: number;
   challenge_number: number;
@@ -35,6 +41,8 @@ interface DailyStartBase {
   extra_try_used: boolean;
   placements: DailyPlacementRecord[];
   timeline: DailyTimelineEntry[];
+  /** Streak data for authenticated users; null for guests or first-time players. */
+  streak: DailyStreakData | null;
 }
 
 export interface DailyStartResponseStarted extends DailyStartBase {

@@ -157,6 +157,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      daily_streaks: {
+        Row: {
+          best_streak: number;
+          current_streak: number;
+          last_played: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          best_streak?: number;
+          current_streak?: number;
+          last_played?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          best_streak?: number;
+          current_streak?: number;
+          last_played?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daily_streaks_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       game_genres: {
         Row: {
           game_id: number;

@@ -5,6 +5,9 @@
 
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { getDisplayName } from "../../solo-turn/logic/platform-names.ts";
+import { computeStreakUpdate } from "../../_shared/streak.ts";
+import { utcDateString } from "../../_shared/seeded-shuffle.ts";
+import type { StreakRow } from "../../_shared/streak.ts";
 import type { PlacementRecord, TimelineEntry } from "./turn.ts";
 
 /** A row from daily_challenge_results (fields needed by daily-turn). */
@@ -80,6 +83,13 @@ export interface DailyTurnDbOperations {
 
   /** Fetch hidden card data (screenshots only — no spoilers). */
   fetchHiddenCardData: (gameId: number) => Promise<HiddenCardData>;
+
+  /**
+   * Upsert the streak row for an authenticated user.
+   * Computes the new streak values based on today's UTC date and persists them.
+   * Only called on game completion; guests are silently skipped.
+   */
+  upsertStreak: (userId: string) => Promise<void>;
 }
 
 /** Factory — creates DB operations bound to a Supabase client. */
@@ -264,6 +274,39 @@ export function createDailyTurnDbOperations(supabase: SupabaseClient): DailyTurn
           (s) => (s as { igdb_image_id: string }).igdb_image_id,
         ),
       };
+    },
+
+    async upsertStreak(userId: string): Promise<void> {
+      const today = utcDateString();
+
+      // Fetch the existing streak row (may not exist yet).
+      const { data: existing, error: fetchErr } = await supabase
+        .from("daily_streaks")
+        .select("current_streak, best_streak, last_played")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (fetchErr !== null) {
+        throw new Error(`Failed to fetch streak for user ${userId}: ${fetchErr.message}`);
+      }
+
+      const streakRow = existing as StreakRow | null;
+      const update = computeStreakUpdate(streakRow, today);
+
+      const { error: upsertErr } = await supabase.from("daily_streaks").upsert(
+        {
+          user_id: userId,
+          current_streak: update.current_streak,
+          best_streak: update.best_streak,
+          last_played: update.last_played,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+
+      if (upsertErr !== null) {
+        throw new Error(`Failed to upsert streak for user ${userId}: ${upsertErr.message}`);
+      }
     },
   };
 }

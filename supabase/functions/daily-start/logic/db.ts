@@ -10,6 +10,7 @@ import {
   utcDateString,
 } from "../../_shared/seeded-shuffle.ts";
 import { getDisplayName } from "../../solo-turn/logic/platform-names.ts";
+import type { StreakRow } from "../../_shared/streak.ts";
 import type { TimelineEntry, PlacementRecord } from "./start.ts";
 import { DECK_SIZE } from "./start.ts";
 
@@ -76,6 +77,11 @@ export interface DailyStartDbOperations {
   ) => Promise<DailyResultRow>;
   fetchRevealedCardData: (gameId: number) => Promise<RevealedCardData>;
   fetchHiddenCardData: (gameId: number) => Promise<HiddenCardData>;
+  /**
+   * Fetch the streak row for an authenticated user.
+   * Returns null if no streak row exists yet (first play).
+   */
+  fetchStreak: (userId: string) => Promise<StreakRow | null>;
 }
 
 export function createDailyStartDbOperations(
@@ -319,6 +325,20 @@ export function createDailyStartDbOperations(
         game_id: gameId,
         screenshot_image_ids: (screenshots ?? []).map((s) => s.igdb_image_id as string),
       };
+    },
+
+    async fetchStreak(userId: string): Promise<StreakRow | null> {
+      const { data, error } = await supabase
+        .from("daily_streaks")
+        .select("current_streak, best_streak, last_played")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error !== null) {
+        throw new Error(`Failed to fetch streak for user ${userId}: ${error.message}`);
+      }
+
+      return data as StreakRow | null;
     },
   };
 }

@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { DailyPlacementRecord, HiddenCardData, RevealedCardData } from "@/lib/daily/api";
+import type {
+  DailyPlacementRecord,
+  DailyStreakData,
+  HiddenCardData,
+  RevealedCardData,
+} from "@/lib/daily/api";
 import type { TimelineItem } from "@/components/game/Timeline";
 
-export type { DailyPlacementRecord };
+export type { DailyPlacementRecord, DailyStreakData };
 
 // ── Placement review helpers ──────────────────────────────────────────────────
 
@@ -115,6 +120,11 @@ export interface DailyGameState {
   validPositions: number[] | null;
   /** Whether the game is over (set from the turn response). */
   gameOver: boolean;
+  /**
+   * Streak data for authenticated users fetched from daily-start.
+   * Null for guests or authenticated users with no prior streak.
+   */
+  streak: DailyStreakData | null;
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
