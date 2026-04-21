@@ -4,6 +4,7 @@
 import { useMemo, type Dispatch, type RefObject, type SetStateAction } from "react";
 import type { RealtimeChannel } from "@supabase/realtime-js";
 import {
+  acceptChallenge,
   proceedFromChallenge,
   submitChallenge,
   submitPlacement,
@@ -43,6 +44,7 @@ type UseGameActionsParams = Readonly<{
   progressionTimeoutRef: RefObject<number | null>;
   setActionError: Dispatch<SetStateAction<string | null>>;
   setGame: Dispatch<SetStateAction<MultiplayerGamePageData>>;
+  setIsAcceptingChallenge: Dispatch<SetStateAction<boolean>>;
   setIsSkippingTurn: Dispatch<SetStateAction<boolean>>;
   setIsSubmittingChallenge: Dispatch<SetStateAction<boolean>>;
   setIsSubmittingExpertVerification: Dispatch<SetStateAction<boolean>>;
@@ -68,6 +70,7 @@ export function useGameActions({
   progressionTimeoutRef,
   setActionError,
   setGame,
+  setIsAcceptingChallenge,
   setIsSkippingTurn,
   setIsSubmittingChallenge,
   setIsSubmittingExpertVerification,
@@ -211,6 +214,55 @@ export function useGameActions({
         },
       });
       if (result.data.followUp !== undefined) scheduleFollowUp(result.data.followUp);
+    };
+
+    const handleAcceptChallenge = async () => {
+      if (
+        currentPlayer === undefined ||
+        currentPlayer.userId === game.currentTurn.activePlayerId ||
+        game.currentTurn.phase !== "challenge_window"
+      )
+        return;
+      setIsAcceptingChallenge(true);
+      setActionError(null);
+      const presenceIds = presence.map((p) => p.userId);
+      const result = await acceptChallenge(game.sessionId, presenceIds);
+      setIsAcceptingChallenge(false);
+      if (!result.success) {
+        if (result.error.code !== "CONFLICT") setActionError(result.error.message);
+        return;
+      }
+      // Update local acceptedPlayerIds immediately
+      setGame((prev) => ({
+        ...prev,
+        currentTurn: {
+          ...prev.currentTurn,
+          acceptedPlayerIds: [
+            ...(prev.currentTurn.acceptedPlayerIds ?? []),
+            currentPlayer.userId,
+          ],
+        },
+      }));
+      const connectedNonActive = presenceIds.filter((id) => id !== game.currentTurn.activePlayerId);
+      const acceptedCount = (game.currentTurn.acceptedPlayerIds?.length ?? 0) + 1;
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "challenge_accepted",
+        payload: {
+          acceptedCount,
+          totalRequired: connectedNonActive.length,
+          userId: currentPlayer.userId,
+        },
+      });
+      if (result.data.allAccepted && result.data.reveal !== undefined) {
+        coreTransitions.applyTurnRevealed(result.data.reveal);
+        void channelRef.current?.send({
+          type: "broadcast",
+          event: "turn_revealed",
+          payload: result.data.reveal,
+        });
+        if (result.data.followUp !== undefined) scheduleFollowUp(result.data.followUp);
+      }
     };
 
     const handleProceedFromPlatformBonus = async () => {
@@ -389,6 +441,7 @@ export function useGameActions({
     };
 
     return {
+      handleAcceptChallenge,
       handleChallenge,
       handlePlaceCard,
       handleProceedFromChallenge,

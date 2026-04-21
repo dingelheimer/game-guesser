@@ -13,6 +13,7 @@ import {
   buildHiddenTurnCard,
   buildTimelineCardFromEntry,
   ChallengeMadePayloadSchema,
+  ChallengeAcceptedPayloadSchema,
   ExpertVerificationResultPayloadSchema,
   GameOverPayloadSchema,
   GameStartedPayloadSchema,
@@ -177,6 +178,20 @@ export function useGameRealtimeChannel({
       .on("broadcast", { event: "challenge_made" }, (message) => {
         const parsed = ChallengeMadePayloadSchema.safeParse(message.payload);
         if (parsed.success) applyChallengeMade(parsed.data.displayName);
+      })
+      .on("broadcast", { event: "challenge_accepted" }, (message) => {
+        const parsed = ChallengeAcceptedPayloadSchema.safeParse(message.payload);
+        if (!parsed.success) return;
+        setGame((prev) => ({
+          ...prev,
+          currentTurn: {
+            ...prev.currentTurn,
+            acceptedPlayerIds: [
+              ...(prev.currentTurn.acceptedPlayerIds ?? []),
+              parsed.data.userId,
+            ].filter((id, index, arr) => arr.indexOf(id) === index),
+          },
+        }));
       })
       .on("broadcast", { event: "turn_started" }, (message) => {
         const parsed = TurnStartedPayloadSchema.safeParse(message.payload);

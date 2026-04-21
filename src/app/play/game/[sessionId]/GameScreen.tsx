@@ -3,7 +3,6 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/realtime-js";
-import type { TeamGameOverPayload } from "@/lib/multiplayer/turns";
 import type { ShareOutcome, ShareYearRange } from "@/lib/share";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +28,7 @@ import { useGameActions } from "./useGameActions";
 import { useGameReconciliation } from "./useGameReconciliation";
 import { useGameBonusTransitions } from "./useGameBonusTransitions";
 import { useGameRealtimeChannel } from "./useGameRealtimeChannel";
+import { getInitialTeamGameOver } from "./gameScreenState";
 import { useGameStateTransitions } from "./useGameStateTransitions";
 import { useGameTimers } from "./useGameTimers";
 
@@ -54,6 +54,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const [disconnectCountdown, setDisconnectCountdown] = useState<number | null>(null);
   const [disconnectGrace, setDisconnectGrace] = useState<DisconnectGraceState>(null);
   const [isSubmittingChallenge, setIsSubmittingChallenge] = useState(false);
+  const [isAcceptingChallenge, setIsAcceptingChallenge] = useState(false);
   const [isSubmittingExpertVerification, setIsSubmittingExpertVerification] = useState(false);
   const [isSubmittingPlatformBonus, setIsSubmittingPlatformBonus] = useState(false);
   const [isSubmittingPlacement, setIsSubmittingPlacement] = useState(false);
@@ -66,22 +67,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const [sharePlatformBonusEarned, setSharePlatformBonusEarned] = useState(0);
   const [sharePlatformBonusOpportunities, setSharePlatformBonusOpportunities] = useState(0);
   const [shareYearRange, setShareYearRange] = useState<ShareYearRange | null>(null);
-  const [teamGameOver, setTeamGameOver] = useState<TeamGameOverPayload | null>(
-    initialGame.status === "finished" && initialGame.settings.gameMode === "teamwork"
-      ? initialGame.winner === null
-        ? {
-            finalTeamScore: initialGame.teamScore ?? 0,
-            finalTeamTimeline:
-              initialGame.teamTimeline?.map((card) => ({
-                gameId: card.gameId,
-                name: card.title,
-                releaseYear: card.releaseYear,
-              })) ?? [],
-            teamWin: false,
-          }
-        : null
-      : null,
-  );
+  const [teamGameOver, setTeamGameOver] = useState(() => getInitialTeamGameOver(initialGame));
   const [isSubmittingTeamVote, setIsSubmittingTeamVote] = useState(false);
   playersRef.current = game.players;
 
@@ -98,6 +84,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     setDisconnectGrace,
     setExpertVerificationResult,
     setGame,
+    setIsAcceptingChallenge,
     setIsSkippingTurn,
     setIsSubmittingChallenge,
     setIsSubmittingExpertVerification,
@@ -186,6 +173,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     progressionTimeoutRef,
     setActionError,
     setGame,
+    setIsAcceptingChallenge,
     setIsSkippingTurn,
     setIsSubmittingChallenge,
     setIsSubmittingExpertVerification,
@@ -258,6 +246,14 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     currentPlayer.tokens > 0 &&
     !isSubmittingChallenge;
 
+  const connectedNonActivePlayers = presence.filter(
+    (p) => p.userId !== game.currentTurn.activePlayerId,
+  );
+  const acceptedPlayerIds = game.currentTurn.acceptedPlayerIds ?? [];
+  const acceptedCount = acceptedPlayerIds.length;
+  const totalRequired = connectedNonActivePlayers.length;
+  const hasCurrentUserAccepted = acceptedPlayerIds.includes(currentPlayer.userId);
+
   return (
     <div className="flex flex-1 items-start justify-center px-4 py-8 sm:px-6 sm:py-10">
       <div className="w-full max-w-7xl space-y-6">
@@ -299,17 +295,24 @@ export function GameScreen({ initialGame }: GameScreenProps) {
 
         {!isTeamworkMode ? (
           <MultiplayerChallengePanel
+            acceptedCount={acceptedCount}
             activePlayerName={activePlayer?.displayName ?? null}
             canChallenge={canChallenge}
             challengeNotice={challengeNotice}
+            hasCurrentUserAccepted={hasCurrentUserAccepted}
+            isAcceptingChallenge={isAcceptingChallenge}
             isCurrentUserActive={currentPlayer.userId === game.currentTurn.activePlayerId}
             isSubmittingChallenge={isSubmittingChallenge}
             isVisible={isChallengeWindow}
+            onAcceptChallenge={() => {
+              void actions.handleAcceptChallenge();
+            }}
             onChallenge={() => {
               void actions.handleChallenge();
             }}
             playerTokens={currentPlayer.tokens}
             secondsRemaining={secondsRemaining}
+            totalRequired={totalRequired}
           />
         ) : null}
 

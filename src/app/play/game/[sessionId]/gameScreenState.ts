@@ -6,6 +6,7 @@ import type {
   MultiplayerTimelineCard,
   MultiplayerTurnCard,
 } from "@/lib/multiplayer/gamePage";
+import type { TeamGameOverPayload } from "@/lib/multiplayer/turns";
 import { PlatformOptionSchema } from "@/lib/platformBonus";
 
 const BroadcastTimelineEntrySchema = z.object({
@@ -82,6 +83,15 @@ export const TurnRevealedPayloadSchema = z.object({
 });
 
 /**
+ * Broadcast payload schema for the challenge_accepted event.
+ */
+export const ChallengeAcceptedPayloadSchema = z.object({
+  acceptedCount: z.number().int(),
+  totalRequired: z.number().int(),
+  userId: z.uuid(),
+});
+
+/**
  * Broadcast payload schema for the platform_bonus_result event.
  */
 export const PlatformBonusResultPayloadSchema = z.object({
@@ -154,6 +164,7 @@ export const TeamGameOverPayloadSchema = z.object({
 });
 
 export type BroadcastTimelineEntry = z.infer<typeof BroadcastTimelineEntrySchema>;
+export type ChallengeAcceptedPayload = z.infer<typeof ChallengeAcceptedPayloadSchema>;
 export type TurnRevealedCard = z.infer<typeof TurnRevealedCardSchema>;
 
 /**
@@ -364,4 +375,24 @@ export function isPlayerConnected(
   playerId: string,
 ): boolean {
   return connectedPlayers.some((player) => player.userId === playerId);
+}
+
+/**
+ * Compute the initial `teamGameOver` state from the loaded game data.
+ * Returns a payload when the game is already finished in teamwork mode
+ * with no winner (team loss), otherwise null.
+ */
+export function getInitialTeamGameOver(game: MultiplayerGamePageData): TeamGameOverPayload | null {
+  if (game.status !== "finished" || game.settings.gameMode !== "teamwork") return null;
+  if (game.winner !== null) return null;
+  return {
+    finalTeamScore: game.teamScore ?? 0,
+    finalTeamTimeline:
+      game.teamTimeline?.map((card) => ({
+        gameId: card.gameId,
+        name: card.title,
+        releaseYear: card.releaseYear,
+      })) ?? [],
+    teamWin: false,
+  };
 }

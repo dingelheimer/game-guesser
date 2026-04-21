@@ -40,6 +40,10 @@ export default tseslint.config(
       "@typescript-eslint/no-unnecessary-condition": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { destructuredArrayIgnorePattern: "^_" },
+      ],
     },
   },
   {
