@@ -654,7 +654,6 @@ export async function getDeckSize(
   if (houseRules.decadeStart != null) rpcArgs["p_decade_start"] = houseRules.decadeStart;
 
   const { data, error } = await supabase.rpc(
-    // @ts-expect-error estimate_deck_size not yet in generated types
     "estimate_deck_size",
     rpcArgs,
   );
