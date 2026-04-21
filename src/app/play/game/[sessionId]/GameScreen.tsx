@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/realtime-js";
 import type { ShareOutcome, ShareYearRange } from "@/lib/share";
 import { createClient } from "@/lib/supabase/client";
@@ -46,6 +46,12 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const platformBonusRequestKeyRef = useRef<string | null>(null);
   const expertVerificationRequestKeyRef = useRef<string | null>(null);
   const skipRequestKeyRef = useRef<string | null>(null);
+  const proceedFromChallengeCallbackRef = useRef<(() => Promise<void>) | null>(null);
+  const currentTurnContextRef = useRef({
+    activePlayerId: initialGame.currentTurn.activePlayerId,
+    phase: initialGame.currentTurn.phase,
+    turnNumber: initialGame.turnNumber,
+  });
 
   const [game, setGame] = useState(initialGame);
   const [winner, setWinner] = useState(initialGame.winner);
@@ -70,6 +76,11 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   const [teamGameOver, setTeamGameOver] = useState(() => getInitialTeamGameOver(initialGame));
   const [isSubmittingTeamVote, setIsSubmittingTeamVote] = useState(false);
   playersRef.current = game.players;
+  currentTurnContextRef.current = {
+    activePlayerId: game.currentTurn.activePlayerId,
+    phase: game.currentTurn.phase,
+    turnNumber: game.turnNumber,
+  };
 
   const refs = {
     disconnectCountdownIntervalRef,
@@ -122,13 +133,16 @@ export function GameScreen({ initialGame }: GameScreenProps) {
       : null;
 
   const presence = useGameRealtimeChannel({
+    challengeRequestKeyRef,
     channelRef,
     clearDisconnectGrace: transitions.clearDisconnectGrace,
     clearFailedPlacementTimeout: transitions.clearFailedPlacementTimeout,
     clearProgressionTimeout: transitions.clearProgressionTimeout,
     currentPlayer,
+    currentTurnContextRef,
     initialGame,
     playersRef,
+    proceedFromChallengeCallbackRef,
     setGame,
     setWinner,
     supabase,
@@ -183,6 +197,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     setPlacementFeedback,
     skipRequestKeyRef,
   });
+  proceedFromChallengeCallbackRef.current = actions.handleProceedFromChallenge;
 
   useAutoProgression({
     challengeRequestKeyRef,
@@ -203,6 +218,30 @@ export function GameScreen({ initialGame }: GameScreenProps) {
     isSubmittingPlacement,
     setGame,
   });
+
+  // Fix C: defence-in-depth watch — trigger reveal when all non-active players have accepted.
+  // This catches the active player and any client that missed the final challenge_accepted broadcast.
+  useEffect(() => {
+    if (game.currentTurn.phase !== "challenge_window") return;
+    const connectedNonActive = presence.filter(
+      (p) => p.userId !== game.currentTurn.activePlayerId,
+    );
+    const required = connectedNonActive.length;
+    const accepted = (game.currentTurn.acceptedPlayerIds ?? []).length;
+    if (required === 0 || accepted < required) return;
+    const key = `${String(game.turnNumber)}:${game.currentTurn.activePlayerId}:challenge`;
+    if (challengeRequestKeyRef.current === key) return;
+    challengeRequestKeyRef.current = key;
+    void actions.handleProceedFromChallenge();
+  }, [
+    actions.handleProceedFromChallenge,
+    challengeRequestKeyRef,
+    game.currentTurn.acceptedPlayerIds,
+    game.currentTurn.activePlayerId,
+    game.currentTurn.phase,
+    game.turnNumber,
+    presence,
+  ]);
 
   if (currentPlayer === undefined) {
     throw new Error("Current player was missing from the multiplayer game payload.");
