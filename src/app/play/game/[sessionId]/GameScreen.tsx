@@ -223,9 +223,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
   // This catches the active player and any client that missed the final challenge_accepted broadcast.
   useEffect(() => {
     if (game.currentTurn.phase !== "challenge_window") return;
-    const connectedNonActive = presence.filter(
-      (p) => p.userId !== game.currentTurn.activePlayerId,
-    );
+    const connectedNonActive = presence.filter((p) => p.userId !== game.currentTurn.activePlayerId);
     const required = connectedNonActive.length;
     const accepted = (game.currentTurn.acceptedPlayerIds ?? []).length;
     if (required === 0 || accepted < required) return;
