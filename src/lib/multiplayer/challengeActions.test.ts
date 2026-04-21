@@ -67,6 +67,8 @@ const mocks = vi.hoisted(() => {
     }));
   }
 
+  const serviceRpcMock = vi.fn();
+
   return {
     mockCreateClient: vi.fn(async () => ({
       auth: { getUser: mockGetUser },
@@ -74,6 +76,7 @@ const mocks = vi.hoisted(() => {
     })),
     mockCreateServiceClient: vi.fn(() => ({
       from: createMockFrom(serviceResults, serviceOperations),
+      rpc: serviceRpcMock,
     })),
     mockGetUser,
     mockRevalidatePath,
@@ -81,6 +84,7 @@ const mocks = vi.hoisted(() => {
     regularResults,
     serviceOperations,
     serviceResults,
+    serviceRpcMock,
   };
 });
 
@@ -125,6 +129,10 @@ function queueRegular(...results: readonly MockQueryResult[]) {
 
 function queueService(...results: readonly MockQueryResult[]) {
   mocks.serviceResults.push(...results);
+}
+
+function queueServiceRpc(data: unknown, error: { code?: string; message?: string } | null = null) {
+  mocks.serviceRpcMock.mockResolvedValueOnce({ data, error });
 }
 
 function updateOperation(ops: MockOperation[], table: string) {
@@ -390,6 +398,7 @@ describe("acceptChallenge", () => {
     mocks.regularResults.length = 0;
     mocks.serviceOperations.length = 0;
     mocks.serviceResults.length = 0;
+    mocks.serviceRpcMock.mockReset();
   });
 
   it("rejects if the caller is the active player", async () => {
@@ -505,41 +514,38 @@ describe("acceptChallenge", () => {
     const thirdPlayerId = "55555555-5555-4555-8555-555555555555";
     authenticate(otherPlayerId);
     queueRegular({ data: { user_id: otherPlayerId }, error: null });
-    queueService(
-      {
-        data: {
-          room_id: roomId,
-          status: "active",
-          deck: [101, 102],
-          deck_cursor: 2,
-          current_turn: {
-            phase: "challenge_window",
-            activePlayerId,
-            gameId: 101,
-            screenshotImageId: "shot-101",
-            placedPosition: 1,
-            phaseDeadline: "2099-04-12T12:00:00.000Z",
-          },
-          turn_number: 1,
-          turn_order: [activePlayerId, otherPlayerId, thirdPlayerId],
-          active_player_id: activePlayerId,
-          settings: defaultSettings,
+    queueService({
+      data: {
+        room_id: roomId,
+        status: "active",
+        deck: [101, 102],
+        deck_cursor: 2,
+        current_turn: {
+          phase: "challenge_window",
+          activePlayerId,
+          gameId: 101,
+          screenshotImageId: "shot-101",
+          placedPosition: 1,
+          phaseDeadline: "2099-04-12T12:00:00.000Z",
         },
-        error: null,
+        turn_number: 1,
+        turn_order: [activePlayerId, otherPlayerId, thirdPlayerId],
+        active_player_id: activePlayerId,
+        settings: defaultSettings,
       },
-      { data: { id: sessionId }, error: null },
-    );
+      error: null,
+    });
+    queueServiceRpc([otherPlayerId]);
 
     const result = await acceptChallenge(sessionId, [activePlayerId, otherPlayerId, thirdPlayerId]);
 
     expect(result).toEqual({ success: true, data: { allAccepted: false } });
-    const updateOp = updateOperation(mocks.serviceOperations, "game_sessions");
-    expect(updateOp.payload).toMatchObject({
-      current_turn: expect.objectContaining({
-        phase: "challenge_window",
-        acceptedPlayerIds: [otherPlayerId],
-      }),
+    expect(mocks.serviceRpcMock).toHaveBeenCalledWith("append_accepted_player_id", {
+      p_session_id: sessionId,
+      p_turn_number: 1,
+      p_user_id: otherPlayerId,
     });
+    expect(mocks.serviceOperations.some((op) => op.action === "update")).toBe(false);
   });
 
   it("is idempotent when the caller already accepted", async () => {
@@ -583,6 +589,7 @@ describe("acceptChallenge", () => {
       { data: { user_id: otherPlayerId }, error: null },
       { data: { user_id: otherPlayerId }, error: null },
     );
+    queueServiceRpc([otherPlayerId]);
     queueService(
       {
         data: {
@@ -686,6 +693,11 @@ describe("acceptChallenge", () => {
       },
     });
     expect(result.data.followUp).toBeDefined();
+    expect(mocks.serviceRpcMock).toHaveBeenCalledWith("append_accepted_player_id", {
+      p_session_id: sessionId,
+      p_turn_number: 4,
+      p_user_id: otherPlayerId,
+    });
     const updates = updateOperations(mocks.serviceOperations, "game_sessions");
     expect(updates[0]?.payload).toMatchObject({
       current_turn: expect.objectContaining({
