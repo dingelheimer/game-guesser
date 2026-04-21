@@ -248,6 +248,15 @@ export type ProceedFromExpertVerificationResult = Readonly<{
 }>;
 
 /**
+ * Success payload returned by {@link acceptChallenge}.
+ */
+export type AcceptChallengeResult = Readonly<{
+  allAccepted: boolean;
+  followUp?: TurnFollowUpResult;
+  reveal?: TurnRevealedPayload;
+}>;
+
+/**
  * Success payload returned by {@link skipTurn}.
  */
 export type SkipTurnResult = Readonly<{

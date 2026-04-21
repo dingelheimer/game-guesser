@@ -324,6 +324,9 @@ export async function getMultiplayerGamePageData(
 
   return {
     currentTurn: {
+      ...(currentTurn.data.acceptedPlayerIds !== undefined
+        ? { acceptedPlayerIds: currentTurn.data.acceptedPlayerIds }
+        : {}),
       activePlayerId:
         session.data.active_player_id ?? winner?.userId ?? currentTurn.data.activePlayerId,
       card: currentTurnCard,
