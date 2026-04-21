@@ -8,6 +8,10 @@ import { initialGameFixture } from "./GameScreen.test.fixtures";
 const mocks = vi.hoisted(() => {
   const sendMock = vi.fn(async () => ({ status: "ok" }));
   const acceptChallengeMock = vi.fn();
+  const proceedFromChallengeMock = vi.fn().mockResolvedValue({
+    success: false,
+    error: { code: "CONFLICT", message: "Already advanced." },
+  });
   const submitChallengeMock = vi.fn();
   const submitPlacementMock = vi.fn();
   const trackMock = vi.fn(async () => ({ status: "ok" }));
@@ -49,6 +53,7 @@ const mocks = vi.hoisted(() => {
     acceptChallengeMock,
     channelHandlers,
     channelMock,
+    proceedFromChallengeMock,
     removeChannelMock,
     sendMock,
     submitChallengeMock,
@@ -76,7 +81,7 @@ vi.mock("@/lib/supabase/client", () => ({
 
 vi.mock("@/lib/multiplayer/challengeActions", () => ({
   acceptChallenge: mocks.acceptChallengeMock,
-  proceedFromChallenge: vi.fn(),
+  proceedFromChallenge: mocks.proceedFromChallengeMock,
   submitChallenge: mocks.submitChallengeMock,
   submitPlacement: mocks.submitPlacementMock,
 }));
@@ -115,6 +120,11 @@ describe("GameScreen — accept challenge", () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     mocks.acceptChallengeMock.mockReset();
+    mocks.proceedFromChallengeMock.mockReset();
+    mocks.proceedFromChallengeMock.mockResolvedValue({
+      success: false,
+      error: { code: "CONFLICT", message: "Already advanced." },
+    });
     mocks.submitChallengeMock.mockReset();
     mocks.submitPlacementMock.mockReset();
   });

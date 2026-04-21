@@ -91,7 +91,7 @@ describe("GameCard", () => {
 
       expect(wrapper.className).toContain("aspect-video");
       expect(wrapper.className).toContain(
-        "w-[80vw] shrink-0 md:w-[440px] lg:w-[540px] xl:w-[620px]",
+        "w-full max-w-[80vw] md:max-w-[440px] lg:max-w-[540px] xl:max-w-[620px]",
       );
       expect(imgs[0]).toHaveAttribute(
         "src",

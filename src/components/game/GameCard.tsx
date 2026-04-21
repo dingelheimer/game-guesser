@@ -55,7 +55,7 @@ export function GameCard({
   const sizeClasses =
     size === "timeline"
       ? "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]"
-      : "w-[80vw] shrink-0 md:w-[440px] lg:w-[540px] xl:w-[620px]";
+      : "w-full max-w-[80vw] md:max-w-[440px] lg:max-w-[540px] xl:max-w-[620px]";
   const aspectRatioClass = isRevealed ? "aspect-[3/4]" : "aspect-video";
   const flipTransition = reduceMotion
     ? {}

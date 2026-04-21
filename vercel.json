@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/phase-expiry",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }

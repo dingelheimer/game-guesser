@@ -78,64 +78,52 @@ export async function acceptChallenge(
     return ok({ allAccepted });
   }
 
-  const updatedAccepted = [...existingAccepted, userIdResult.data];
+  // Atomically append this player's accept to prevent concurrent overwrites.
+  const { data: appendedIds, error: rpcError } = await serviceClient.rpc(
+    "append_accepted_player_id",
+    {
+      p_session_id: parsed.data.sessionId,
+      p_turn_number: sessionResult.data.turnNumber,
+      p_user_id: userIdResult.data,
+    },
+  );
+
+  if (rpcError !== null) {
+    return fail(appError("INTERNAL_ERROR", "Failed to record your acceptance."));
+  }
+
+  if (appendedIds === null) {
+    return fail(appError("CONFLICT", "Another player already advanced this multiplayer turn."));
+  }
+
+  if (!Array.isArray(appendedIds)) {
+    return fail(appError("INTERNAL_ERROR", "Unexpected response from accept RPC."));
+  }
+
+  const updatedAccepted = appendedIds as string[];
+
   const connectedNonActive = presenceUserIds.filter(
     (id) => id !== sessionResult.data.activePlayerId,
   );
   const allAccepted =
     connectedNonActive.length > 0 && connectedNonActive.every((id) => updatedAccepted.includes(id));
 
-  if (allAccepted) {
-    // All connected non-active players accepted — proceed to reveal atomically
-    const updatedTurn: TurnState = {
-      ...sessionResult.data.currentTurn,
-      acceptedPlayerIds: updatedAccepted,
-      phase: "revealing",
-    };
-
-    const { data: updatedSession, error: updateError } = await serviceClient
-      .from("game_sessions")
-      .update({
-        current_turn: updatedTurn as unknown as Json,
-      })
-      .eq("id", parsed.data.sessionId)
-      .eq("turn_number", sessionResult.data.turnNumber)
-      .eq("current_turn->>phase", "challenge_window")
-      .is("current_turn->challengerId", null)
-      .select("id")
-      .maybeSingle();
-
-    if (updateError !== null) {
-      return fail(appError("INTERNAL_ERROR", "Failed to advance the challenge window."));
-    }
-
-    if (updatedSession === null) {
-      return fail(appError("CONFLICT", "Another player already advanced this multiplayer turn."));
-    }
-
-    const revealResult = await resolveTurn(parsed.data.sessionId);
-    if (!revealResult.success) {
-      return revealResult;
-    }
-
+  if (!allAccepted) {
     revalidateGamePath(parsed.data.sessionId);
-    return ok({
-      allAccepted: true,
-      ...(revealResult.data.followUp === undefined ? {} : { followUp: revealResult.data.followUp }),
-      reveal: revealResult.data.reveal,
-    });
+    return ok({ allAccepted: false });
   }
 
-  // Not all accepted yet — record this player's accept atomically
-  const partialTurn: TurnState = {
+  // All connected non-active players accepted — proceed to reveal atomically.
+  const updatedTurn: TurnState = {
     ...sessionResult.data.currentTurn,
     acceptedPlayerIds: updatedAccepted,
+    phase: "revealing",
   };
 
   const { data: updatedSession, error: updateError } = await serviceClient
     .from("game_sessions")
     .update({
-      current_turn: partialTurn as unknown as Json,
+      current_turn: updatedTurn as unknown as Json,
     })
     .eq("id", parsed.data.sessionId)
     .eq("turn_number", sessionResult.data.turnNumber)
@@ -145,13 +133,22 @@ export async function acceptChallenge(
     .maybeSingle();
 
   if (updateError !== null) {
-    return fail(appError("INTERNAL_ERROR", "Failed to record your acceptance."));
+    return fail(appError("INTERNAL_ERROR", "Failed to advance the challenge window."));
   }
 
   if (updatedSession === null) {
     return fail(appError("CONFLICT", "Another player already advanced this multiplayer turn."));
   }
 
+  const revealResult = await resolveTurn(parsed.data.sessionId);
+  if (!revealResult.success) {
+    return revealResult;
+  }
+
   revalidateGamePath(parsed.data.sessionId);
-  return ok({ allAccepted: false });
+  return ok({
+    allAccepted: true,
+    ...(revealResult.data.followUp === undefined ? {} : { followUp: revealResult.data.followUp }),
+    reveal: revealResult.data.reveal,
+  });
 }
