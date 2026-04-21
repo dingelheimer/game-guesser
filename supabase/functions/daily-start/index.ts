@@ -29,11 +29,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 import { computeChallengeNumber, utcDateString } from "../_shared/seeded-shuffle.ts";
 import { createDailyStartDbOperations } from "./logic/db.ts";
-import {
-  getCurrentCardDeckIndex,
-  isInProgress,
-  TOTAL_PLACEMENT_CARDS,
-} from "./logic/start.ts";
+import { getCurrentCardDeckIndex, isInProgress, TOTAL_PLACEMENT_CARDS } from "./logic/start.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -152,7 +148,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── In Progress (resume) ──────────────────────────────────────────────
-    if (existingResult !== null && isInProgress(existingResult.turns_played, existingResult.completed)) {
+    if (
+      existingResult !== null &&
+      isInProgress(existingResult.turns_played, existingResult.completed)
+    ) {
       const currentDeckIdx = getCurrentCardDeckIndex(existingResult.turns_played);
       const currentGameId = challenge.deck[currentDeckIdx];
 

@@ -101,7 +101,9 @@ export function createDailyStartDbOperations(
       dateStr: string,
       challengeNumber: number,
     ): Promise<DailyChallengeRow> {
-      console.warn(`[daily-start] Fallback generation triggered for ${dateStr} — cron may have missed`);
+      console.warn(
+        `[daily-start] Fallback generation triggered for ${dateStr} — cron may have missed`,
+      );
 
       const { data: gameRows, error: gameIdsError } = await supabase.rpc(
         "get_daily_eligible_game_ids",
@@ -140,11 +142,15 @@ export function createDailyStartDbOperations(
             .single();
 
           if (fetchErr !== null || existing === null) {
-            throw new Error(`Fallback: race condition — could not re-fetch challenge: ${fetchErr?.message ?? "no data"}`);
+            throw new Error(
+              `Fallback: race condition — could not re-fetch challenge: ${fetchErr?.message ?? "no data"}`,
+            );
           }
           return existing as DailyChallengeRow;
         }
-        throw new Error(`Fallback: failed to insert challenge for ${dateStr}: ${insertError.message}`);
+        throw new Error(
+          `Fallback: failed to insert challenge for ${dateStr}: ${insertError.message}`,
+        );
       }
 
       // Fetch the newly inserted row to get its id.
@@ -155,7 +161,9 @@ export function createDailyStartDbOperations(
         .single();
 
       if (fetchInsertedErr !== null || inserted === null) {
-        throw new Error(`Fallback: failed to fetch inserted challenge: ${fetchInsertedErr?.message ?? "no data"}`);
+        throw new Error(
+          `Fallback: failed to fetch inserted challenge: ${fetchInsertedErr?.message ?? "no data"}`,
+        );
       }
 
       return inserted as DailyChallengeRow;
