@@ -87,6 +87,14 @@ export function SoloGame({ username }: { username: string | null }) {
     expertVerificationResult === null &&
     isExpertVariant;
 
+  // Height cap applied to the revealed hero card so the Continue button and
+  // timeline remain visible without scrolling. PRO/EXPERT platform controls
+  // add ~200px of extra vertical content, so they get a tighter cap.
+  const revealHeightCap =
+    isProVariant || isExpertVariant
+      ? "max-h-[35vh] md:max-h-[38vh]"
+      : "max-h-[40vh] md:max-h-[45vh]";
+
   const pendingTimelineItem =
     isPlacing && currentCard !== null ? hiddenToTimelineItem(currentCard) : null;
   const shouldShowHeroCard = !isSubmitting && (isRevealing || currentCard !== null);
@@ -298,6 +306,7 @@ export function SoloGame({ username }: { username: string | null }) {
                 releaseYear={isRevealing ? (revealedCard?.release_year ?? 0) : 0}
                 platform={isRevealing ? revealedPlatform : "?"}
                 isRevealed={isRevealing}
+                {...(isRevealing && { className: revealHeightCap })}
               />
             </motion.div>
           )}
