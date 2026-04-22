@@ -95,6 +95,11 @@ export function SoloGame({ username }: { username: string | null }) {
       ? "max-h-[35vh] md:max-h-[38vh]"
       : "max-h-[40vh] md:max-h-[45vh]";
 
+  // On desktop, when platform controls are pending, switch to side-by-side
+  // layout (card left, controls right) to reclaim vertical space.
+  const hasPlatformControlsPending = isPlatformBonusPending || isExpertVerificationPending;
+  const isSideBySide = isRevealing && lastPlacementCorrect === true && hasPlatformControlsPending;
+
   const pendingTimelineItem =
     isPlacing && currentCard !== null ? hiddenToTimelineItem(currentCard) : null;
   const shouldShowHeroCard = !isSubmitting && (isRevealing || currentCard !== null);
@@ -268,6 +273,7 @@ export function SoloGame({ username }: { username: string | null }) {
         className={cn(
           "mx-auto flex w-full max-w-7xl flex-col items-center gap-6 px-4 pt-6 pb-4",
           isPlacing && "md:hidden",
+          isSideBySide && "md:flex-row md:items-start md:justify-center md:gap-8",
         )}
       >
         <AnimatePresence mode="wait">
