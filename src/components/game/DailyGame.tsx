@@ -178,6 +178,7 @@ export function DailyGame() {
   const placements = useDailyGameStore((s) => s.placements);
   const revealedCards = useDailyGameStore((s) => s.revealedCards);
   const error = useDailyGameStore((s) => s.error);
+  const streak = useDailyGameStore((s) => s.streak);
 
   const placeCard = useDailyGameStore((s) => s.placeCard);
   const advanceTurn = useDailyGameStore((s) => s.advanceTurn);
@@ -215,6 +216,7 @@ export function DailyGame() {
         extraTryUsed={!extraTryAvailable}
         placements={placements}
         revealedCards={revealedCards}
+        streak={streak}
         onPlayAgain={resetGame}
       />
     );
