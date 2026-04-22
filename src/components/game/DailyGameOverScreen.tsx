@@ -12,6 +12,8 @@ import { coverUrl } from "@/lib/igdb/images";
 import type { DailyPlacementRecord, DailyStreakData, RevealedCardData } from "@/lib/daily/api";
 import { buildPlacementReviewItems } from "@/stores/dailyGameStore.helpers";
 import { generateDailyShareText } from "@/lib/daily/share";
+import { DailyLeaderboard } from "@/components/daily/DailyLeaderboard";
+import { useDailyLeaderboard } from "@/hooks/useDailyLeaderboard";
 
 // ── Placement row ─────────────────────────────────────────────────────────────
 
@@ -92,6 +94,40 @@ function PlacementRow({ index, correct, extraTry, cardData }: PlacementRowProps)
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── DailyLeaderboardSection ───────────────────────────────────────────────────
+
+interface DailyLeaderboardSectionProps {
+  challengeNumber: number | null;
+  totalCards: number;
+}
+
+function DailyLeaderboardSection({ challengeNumber, totalCards }: DailyLeaderboardSectionProps) {
+  const { entries, playerRank, currentUserId, isLoading, error } = useDailyLeaderboard(
+    challengeNumber,
+    10,
+  );
+
+  if (challengeNumber === null) return null;
+
+  return (
+    <div>
+      <h3 className="text-text-secondary mb-3 text-xs font-semibold tracking-[0.18em] uppercase">
+        Today&apos;s Leaderboard
+      </h3>
+      <DailyLeaderboard
+        entries={entries}
+        playerRank={playerRank}
+        currentUserId={currentUserId}
+        isPreview
+        fullLeaderboardHref={`/daily/leaderboard?challenge=${String(challengeNumber)}`}
+        totalCards={totalCards}
+        isLoading={isLoading}
+        error={error}
+      />
     </div>
   );
 }
@@ -237,6 +273,9 @@ export function DailyGameOverScreen({
               </div>
             </div>
           )}
+
+          {/* Daily leaderboard preview */}
+          <DailyLeaderboardSection challengeNumber={challengeNumber} totalCards={totalCards} />
 
           {/* CTAs */}
           <div className="flex w-full flex-col gap-3">
