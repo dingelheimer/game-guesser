@@ -192,6 +192,10 @@ export function DailyGame() {
   const isSubmitting = phase === "submitting";
   const isIncorrectReveal = isRevealing && lastPlacementCorrect === false;
 
+  // Height cap applied to the revealed hero card so the Continue button and
+  // timeline remain visible without scrolling. Daily mode is always Standard variant.
+  const revealHeightCap = "max-h-[40vh] md:max-h-[45vh]";
+
   const pendingTimelineItem =
     isPlacing && currentCard !== null ? hiddenToTimelineItem(currentCard) : null;
   const shouldShowHeroCard = !isSubmitting && (isRevealing || currentCard !== null);
@@ -286,6 +290,7 @@ export function DailyGame() {
                 releaseYear={isRevealing ? (revealedCard?.release_year ?? 0) : 0}
                 platform={isRevealing ? (revealedCard?.platform_names[0] ?? "Unknown") : "?"}
                 isRevealed={isRevealing}
+                {...(isRevealing && { className: revealHeightCap })}
               />
             </motion.div>
           )}
