@@ -5,11 +5,13 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { coverUrl } from "@/lib/igdb/images";
-import type { DailyPlacementRecord, RevealedCardData } from "@/lib/daily/api";
+import type { DailyPlacementRecord, DailyStreakData, RevealedCardData } from "@/lib/daily/api";
 import { buildPlacementReviewItems } from "@/stores/dailyGameStore.helpers";
+import { generateDailyShareText } from "@/lib/daily/share";
 
 // ── Placement row ─────────────────────────────────────────────────────────────
 
@@ -106,6 +108,8 @@ interface DailyGameOverScreenProps {
   extraTryUsed: boolean;
   placements: readonly DailyPlacementRecord[];
   revealedCards: Readonly<Record<number, RevealedCardData>>;
+  /** Streak data for authenticated users; null for guests. */
+  streak: DailyStreakData | null;
   onPlayAgain: () => void;
 }
 
@@ -121,6 +125,7 @@ export function DailyGameOverScreen({
   extraTryUsed,
   placements,
   revealedCards,
+  streak,
   onPlayAgain,
 }: DailyGameOverScreenProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -141,6 +146,25 @@ export function DailyGameOverScreen({
   const reviewItems = buildPlacementReviewItems(placements, revealedCards);
   const correctCount = placements.filter((p) => p.correct).length;
   const completedAll = turnsPlayed >= totalCards;
+
+  function handleShare() {
+    if (challengeNumber === null) return;
+    const text = generateDailyShareText({
+      challengeNumber,
+      score,
+      totalCards,
+      extraTryUsed,
+      placements,
+      streak,
+    });
+    if (typeof navigator.share === "function") {
+      void navigator.share({ text });
+    } else {
+      void navigator.clipboard.writeText(text).then(() => {
+        toast.success("Copied!", { duration: 2000 });
+      });
+    }
+  }
 
   return (
     <motion.section
@@ -216,6 +240,11 @@ export function DailyGameOverScreen({
 
           {/* CTAs */}
           <div className="flex w-full flex-col gap-3">
+            {challengeNumber !== null && (
+              <Button onClick={handleShare} className="w-full" variant="outline">
+                Share Result 🔗
+              </Button>
+            )}
             <Link
               href="/play/solo"
               className="bg-primary-500 hover:bg-primary-400 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors"
