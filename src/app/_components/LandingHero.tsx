@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, CalendarDays, Gamepad2, Sparkles, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, Gamepad2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MOTION } from "@/lib/motion";
 import type { DailyChallengeStatus } from "@/lib/daily/status.server";
@@ -58,7 +58,7 @@ function GuestDailyCta({ itemProps, challengeNumber }: CtaProps & { challengeNum
       <Button size="lg" asChild className={BIG_BUTTON_CLASS}>
         <Link href="/daily">
           <CalendarDays className="h-7 w-7" aria-hidden="true" />
-          {label} — Play Free
+          {label} — Play Now
           <ArrowRight
             className="h-7 w-7 transition-transform group-hover:translate-x-1"
             aria-hidden="true"
@@ -248,14 +248,6 @@ export function LandingHero({ dailyChallengeStatus }: LandingHeroProps) {
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(139,92,246,0.30),_transparent_50%),radial-gradient(ellipse_at_bottom_right,_rgba(34,211,238,0.25),_transparent_40%),radial-gradient(circle_at_bottom,_rgba(249,115,22,0.10),_transparent_30%)]" />
 
       <motion.div className="mx-auto max-w-2xl space-y-6 text-center" {...containerProps}>
-        <motion.p
-          {...itemProps}
-          className="text-primary-300 flex items-center justify-center gap-2 text-sm font-semibold tracking-[0.2em] uppercase"
-        >
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
-          Video game guessing game
-        </motion.p>
-
         <motion.h1
           {...itemProps}
           className="font-display text-text-primary text-4xl font-bold tracking-tight text-balance md:text-6xl"

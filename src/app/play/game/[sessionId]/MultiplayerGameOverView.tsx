@@ -81,7 +81,6 @@ export function MultiplayerGameOverView({
           platformBonusOpportunities: sharePlatformBonusOpportunities,
           score: currentPlayer.score,
           turnsPlayed: shareOutcomes.length,
-          url: shareUrl,
         });
 
   return (

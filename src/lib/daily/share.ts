@@ -22,8 +22,6 @@ export interface DailyShareParams {
  * Score: 7/10 💪
  * 🟩🟩🟩🟥🟩🟩🟩🟩🟩🟩
  * 🔥 5-day streak
- *
- * Play → gameguesser.com/daily
  * ```
  *
  * The emoji grid has one square per placement: 🟩 for correct, 🟥 for incorrect.
@@ -45,9 +43,6 @@ export function generateDailyShareText(params: DailyShareParams): string {
   if (streak !== null && streak.current_streak >= 1) {
     lines.push(`🔥 ${String(streak.current_streak)}-day streak`);
   }
-
-  lines.push("");
-  lines.push("Play → gameguesser.com/daily");
 
   return lines.join("\n");
 }
