@@ -4,6 +4,7 @@ import { LandingHero } from "@/app/_components/LandingHero";
 import { HowItWorksCards } from "@/app/_components/HowItWorksCards";
 import { getSiteUrl, siteConfig } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
+import { fetchDailyChallengeStatus } from "@/lib/daily/status.server";
 
 export const metadata: Metadata = {
   title: "Guess the Video Game by Screenshot & Release Year",
@@ -17,8 +18,7 @@ export default async function Home() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const isAuthenticated = user !== null;
-  const primaryCtaLabel = isAuthenticated ? "Continue Playing" : "Play Now";
+  const dailyChallengeStatus = await fetchDailyChallengeStatus(user?.id ?? null);
   const structuredData = {
     "@context": "https://schema.org",
     "@type": ["WebApplication", "Game"],
@@ -36,7 +36,7 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="flex flex-1 flex-col">
-        <LandingHero primaryCtaLabel={primaryCtaLabel} />
+        <LandingHero dailyChallengeStatus={dailyChallengeStatus} />
 
         <section aria-labelledby="how-it-works-label" className="px-4 py-8 md:px-6 md:py-12">
           <div className="mx-auto max-w-6xl space-y-6">

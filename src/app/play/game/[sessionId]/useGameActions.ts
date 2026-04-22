@@ -237,10 +237,7 @@ export function useGameActions({
         ...prev,
         currentTurn: {
           ...prev.currentTurn,
-          acceptedPlayerIds: [
-            ...(prev.currentTurn.acceptedPlayerIds ?? []),
-            currentPlayer.userId,
-          ],
+          acceptedPlayerIds: [...(prev.currentTurn.acceptedPlayerIds ?? []), currentPlayer.userId],
         },
       }));
       const connectedNonActive = presenceIds.filter((id) => id !== game.currentTurn.activePlayerId);

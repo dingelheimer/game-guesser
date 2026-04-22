@@ -12,11 +12,7 @@ import {
   type ServiceClient,
   type WritableGameSession,
 } from "./gameActionTypes";
-import {
-  loadBoardState,
-  loadWritableGamePlayer,
-  loadWritableGameSession,
-} from "./gameDataLoaders";
+import { loadBoardState, loadWritableGamePlayer, loadWritableGameSession } from "./gameDataLoaders";
 import { buildFollowUpAfterReveal, buildFollowUpAfterSkip } from "./turnLifecycle";
 import { resolveTurnInternal } from "./turnResolution";
 
@@ -151,8 +147,7 @@ async function advancePlatformBonus(
   session: WritableGameSession,
 ): Promise<Result<true, AppError>> {
   const isProVariant = session.settings.variant === "pro";
-  const platformBonusPlayerId =
-    session.currentTurn.platformBonusPlayerId ?? session.activePlayerId;
+  const platformBonusPlayerId = session.currentTurn.platformBonusPlayerId ?? session.activePlayerId;
   let rollbackState: Readonly<{
     fields: Readonly<{ score?: number; timeline?: readonly TimelineEntry[] }>;
     userId: string;
@@ -391,9 +386,7 @@ export async function scanAndAdvanceExpiredSessions(): Promise<PhaseExpiryScanRe
   let errors = 0;
 
   for (const session of sessions) {
-    const elapsedSec = Math.round(
-      (Date.now() - new Date(session.phaseDeadline).getTime()) / 1000,
-    );
+    const elapsedSec = Math.round((Date.now() - new Date(session.phaseDeadline).getTime()) / 1000);
     console.log(
       `[phase-expiry] Processing session=${session.id} phase=${session.phase} elapsed=${String(elapsedSec)}s past deadline`,
     );
@@ -404,13 +397,9 @@ export async function scanAndAdvanceExpiredSessions(): Promise<PhaseExpiryScanRe
       advanced++;
     } else if (result.error.code === "CONFLICT") {
       // CONFLICT means a client already advanced the phase — not an error
-      console.log(
-        `[phase-expiry] Session=${session.id} already advanced: ${result.error.message}`,
-      );
+      console.log(`[phase-expiry] Session=${session.id} already advanced: ${result.error.message}`);
     } else {
-      console.error(
-        `[phase-expiry] Error on session=${session.id}: ${result.error.message}`,
-      );
+      console.error(`[phase-expiry] Error on session=${session.id}: ${result.error.message}`);
       errors++;
     }
   }
