@@ -400,6 +400,7 @@ export function GameScreen({ initialGame }: GameScreenProps) {
                 releaseYear={game.currentTurn.card.releaseYear ?? 0}
                 screenshotImageId={game.currentTurn.card.screenshotImageId}
                 title={game.currentTurn.card.title}
+                size="hero-grid"
               />
             </CardContent>
           </Card>

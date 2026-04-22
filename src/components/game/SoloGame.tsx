@@ -279,7 +279,7 @@ export function SoloGame({ username }: { username: string | null }) {
                   : { duration: MOTION.duration.fast }
               }
               className={cn(
-                "relative w-[80vw] shrink-0 md:w-[440px] lg:w-[540px] xl:w-[620px]",
+                "relative",
                 // Desktop dragging uses the timeline card; mobile still relies on the hero card.
                 isPlacing && "md:hidden",
                 isRevealing &&
