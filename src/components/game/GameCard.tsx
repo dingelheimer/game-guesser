@@ -26,10 +26,11 @@ export interface GameCardProps {
   isLoading?: boolean;
   /**
    * Card size variant.
-   * - `"hero"` (default): current-card area; uses full-size screenshots.
+   * - `"hero"` (default): current-card area in solo/daily; intrinsic fixed widths.
+   * - `"hero-grid"`: current-card area inside a CSS grid column; fluid `w-full` sizing.
    * - `"timeline"`: compact placed card; uses mobile-optimised screenshots.
    */
-  size?: "hero" | "timeline";
+  size?: "hero" | "hero-grid" | "timeline";
   className?: string;
 }
 
@@ -55,7 +56,9 @@ export function GameCard({
   const sizeClasses =
     size === "timeline"
       ? "w-[40vw] shrink-0 md:w-[180px] lg:w-[200px] xl:w-[220px]"
-      : "w-full max-w-[80vw] md:max-w-[440px] lg:max-w-[540px] xl:max-w-[620px]";
+      : size === "hero-grid"
+        ? "w-full max-w-[80vw] md:max-w-[440px] lg:max-w-[540px] xl:max-w-[620px]"
+        : "w-[80vw] shrink-0 md:w-[440px] lg:w-[540px] xl:w-[620px]";
   const aspectRatioClass = isRevealed ? "aspect-[3/4]" : "aspect-video";
   const flipTransition = reduceMotion
     ? {}

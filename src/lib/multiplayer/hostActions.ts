@@ -653,10 +653,7 @@ export async function getDeckSize(
     rpcArgs["p_platform_family"] = houseRules.consoleLockFamily;
   if (houseRules.decadeStart != null) rpcArgs["p_decade_start"] = houseRules.decadeStart;
 
-  const { data, error } = await supabase.rpc(
-    "estimate_deck_size",
-    rpcArgs,
-  );
+  const { data, error } = await supabase.rpc("estimate_deck_size", rpcArgs);
 
   if (error !== null || typeof data !== "number") return null;
   return data;

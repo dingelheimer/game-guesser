@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { fetchDailyChallengeStatus } from "@/lib/daily/status.server";
 import { PlayHub } from "./PlayHub";
 
 export const dynamic = "force-dynamic";
@@ -19,15 +20,14 @@ export default async function PlayPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let username: string | null = null;
-  if (user !== null) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .maybeSingle();
-    username = profile?.username ?? null;
-  }
+  const [profileResult, dailyChallengeStatus] = await Promise.all([
+    user !== null
+      ? supabase.from("profiles").select("username").eq("id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    fetchDailyChallengeStatus(user?.id ?? null),
+  ]);
 
-  return <PlayHub defaultDisplayName={username} />;
+  const username = profileResult.data?.username ?? null;
+
+  return <PlayHub defaultDisplayName={username} dailyChallengeStatus={dailyChallengeStatus} />;
 }
