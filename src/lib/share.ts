@@ -24,10 +24,6 @@ interface ShareNotifier {
   error: (title: string, options: { description: string }) => void;
 }
 
-function buildShareFooter(url: string): string {
-  return `Play → ${url.replace(/^https?:\/\//, "")}`;
-}
-
 /** Expand the tracked share range to include a newly revealed year. */
 export function extendShareYearRange(range: ShareYearRange | null, year: number): ShareYearRange {
   if (range === null) {
@@ -76,7 +72,6 @@ export function buildSoloShareText({
   platformBonusOpportunities,
   score,
   turnsPlayed,
-  url,
   yearRange,
 }: {
   outcomes: readonly ShareOutcome[];
@@ -84,7 +79,6 @@ export function buildSoloShareText({
   platformBonusOpportunities: number;
   score: number;
   turnsPlayed: number;
-  url: string;
   yearRange: ShareYearRange;
 }): string {
   return [
@@ -92,8 +86,6 @@ export function buildSoloShareText({
     `${formatShareOutcomeGrid(outcomes)} ${String(Math.max(0, score))}/${String(Math.max(0, turnsPlayed))}`,
     `⏱ ${String(yearRange.start)} → ${String(yearRange.end)}`,
     formatPlatformBonusSummary(platformBonusEarned, platformBonusOpportunities),
-    "",
-    buildShareFooter(url),
   ].join("\n");
 }
 
@@ -106,7 +98,6 @@ export function buildMultiplayerShareText({
   platformBonusOpportunities,
   score,
   turnsPlayed,
-  url,
 }: {
   outcomes: readonly ShareOutcome[];
   placement: number;
@@ -115,15 +106,12 @@ export function buildMultiplayerShareText({
   platformBonusOpportunities: number;
   score: number;
   turnsPlayed: number;
-  url: string;
 }): string {
   return [
     "🎮 Game Guesser — Multiplayer",
     `🏆 ${formatOrdinal(placement)} place (${String(playerCount)} players)`,
     `${formatShareOutcomeGrid(outcomes)} ${String(Math.max(0, score))}/${String(Math.max(0, turnsPlayed))}`,
     formatPlatformBonusSummary(platformBonusEarned, platformBonusOpportunities),
-    "",
-    buildShareFooter(url),
   ].join("\n");
 }
 

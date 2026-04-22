@@ -315,10 +315,10 @@ export function DailyGame() {
           !isPlacing && "justify-end",
         )}
       >
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 pt-1 pb-2">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 pt-3 pb-2">
           <div className="bg-surface-700 h-px flex-1" />
           <span className="text-text-secondary/70 text-xs font-medium tracking-wider uppercase">
-            {isPlacing ? "Timeline — tap a zone to place" : "Timeline"}
+            {isPlacing ? "Drag to a zone to place" : "Timeline"}
           </span>
           <div className="bg-surface-700 h-px flex-1" />
         </div>

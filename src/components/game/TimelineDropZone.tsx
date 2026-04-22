@@ -95,27 +95,37 @@ export function DropZone({
       onKeyDown={handleKeyDown}
       aria-label={`Place card ${positionLabel}. Press Enter to confirm.`}
     >
-      {/* Mobile: horizontal bar (grows taller when active) */}
+      {/* Mobile: horizontal bar (animates opacity when active) */}
       <motion.div
-        className="bg-primary-500/40 block w-full rounded md:hidden"
-        animate={{ height: isActive ? 40 : isFirst ? 10 : 6 }}
-        transition={spring}
-      />
-
-      {/* Desktop: vertical bar (grows wider when active) */}
-      <motion.div
-        className="bg-primary-500/40 hidden h-full items-center justify-center overflow-hidden rounded md:flex"
+        className="bg-primary-500/40 block h-full w-full rounded md:hidden"
         animate={
           isActive
-            ? { width: 80, opacity: 1 }
+            ? { opacity: 1 }
             : reduceMotion
-              ? { width: isFirst ? 36 : 28, opacity: isFirst ? 0.7 : 0.5 }
-              : { width: isFirst ? 36 : 28, opacity: isFirst ? [0.5, 0.9, 0.5] : [0.3, 0.6, 0.3] }
+              ? { opacity: isFirst ? 0.5 : 0.3 }
+              : { opacity: isFirst ? [0.3, 0.6, 0.3] : [0.15, 0.35, 0.15] }
         }
         transition={
           isActive
             ? spring
-            : { width: spring, opacity: { repeat: Infinity, duration: 2, ease: "easeInOut" } }
+            : { opacity: { repeat: Infinity, duration: 2, ease: "easeInOut" } }
+        }
+      />
+
+      {/* Desktop: vertical bar (animates opacity when active) */}
+      <motion.div
+        className="bg-primary-500/40 hidden h-full w-full items-center justify-center overflow-hidden rounded md:flex"
+        animate={
+          isActive
+            ? { opacity: 1 }
+            : reduceMotion
+              ? { opacity: isFirst ? 0.5 : 0.3 }
+              : { opacity: isFirst ? [0.3, 0.6, 0.3] : [0.15, 0.35, 0.15] }
+        }
+        transition={
+          isActive
+            ? spring
+            : { opacity: { repeat: Infinity, duration: 2, ease: "easeInOut" } }
         }
       >
         {isActive && (

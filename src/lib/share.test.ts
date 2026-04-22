@@ -38,11 +38,10 @@ describe("buildSoloShareText", () => {
         platformBonusOpportunities: 4,
         score: 4,
         turnsPlayed: 5,
-        url: "https://gameguesser.com",
         yearRange: { end: 2017, start: 1991 },
       }),
     ).toBe(
-      "🎮 Game Guesser — Solo\n🟩🟩🟨🟥🟩 4/5\n⏱ 1991 → 2017\n🎯 Platform bonus: 3/4\n\nPlay → gameguesser.com",
+      "🎮 Game Guesser — Solo\n🟩🟩🟨🟥🟩 4/5\n⏱ 1991 → 2017\n🎯 Platform bonus: 3/4",
     );
   });
 });
@@ -58,10 +57,9 @@ describe("buildMultiplayerShareText", () => {
         platformBonusOpportunities: 5,
         score: 5,
         turnsPlayed: 6,
-        url: "https://gameguesser.com",
       }),
     ).toBe(
-      "🎮 Game Guesser — Multiplayer\n🏆 1st place (4 players)\n🟩🟩🟩🟨🟥🟩 5/6\n🎯 Platform bonus: 4/5\n\nPlay → gameguesser.com",
+      "🎮 Game Guesser — Multiplayer\n🏆 1st place (4 players)\n🟩🟩🟩🟨🟥🟩 5/6\n🎯 Platform bonus: 4/5",
     );
   });
 });
