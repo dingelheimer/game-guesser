@@ -269,7 +269,7 @@ export function DailyGame() {
                   : { duration: MOTION.duration.fast }
               }
               className={cn(
-                "relative w-[80vw] shrink-0 md:w-[440px] lg:w-[540px] xl:w-[620px]",
+                "relative",
                 isPlacing && "md:hidden",
                 isIncorrectReveal &&
                   "rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.4)] ring-2 ring-rose-500",
