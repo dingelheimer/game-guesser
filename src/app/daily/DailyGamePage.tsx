@@ -1,22 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { DailyGame } from "@/components/game/DailyGame";
 import { useDailyGameStore } from "@/stores/dailyGameStore";
 import { MOTION } from "@/lib/motion";
+import { Button } from "@/components/ui/button";
 
 export function DailyGamePage() {
   const phase = useDailyGameStore((s) => s.phase);
+  const error = useDailyGameStore((s) => s.error);
   const startDaily = useDailyGameStore((s) => s.startDaily);
 
-  // Auto-start on mount: fetches today's challenge status (new, in-progress, or completed).
+  const handleStart = useCallback(() => {
+    void startDaily();
+  }, [startDaily]);
+
+  // Auto-start on mount; a manual retry button handles re-attempts after failure.
   useEffect(() => {
     if (phase === "idle") {
       void startDaily();
     }
+    // intentionally empty deps — runs once on mount only
   }, []);
 
   return (
@@ -34,6 +41,23 @@ export function DailyGamePage() {
         >
           <Loader2 className="size-6 animate-spin" aria-hidden="true" />
           <span>Loading today's challenge…</span>
+        </motion.div>
+      )}
+
+      {phase === "idle" && error !== null && (
+        <motion.div
+          key="error"
+          className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: MOTION.duration.fast }}
+        >
+          <AlertTriangle className="text-rose-400 size-8" aria-hidden="true" />
+          <p className="text-text-secondary max-w-sm text-sm">{error}</p>
+          <Button onClick={handleStart} variant="outline" size="sm">
+            Try Again
+          </Button>
         </motion.div>
       )}
 
