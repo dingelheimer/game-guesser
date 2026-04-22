@@ -15,7 +15,7 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  * Optional env vars:
- *   DAILY_LAUNCH_DATE  — ISO date string of challenge #1 (default: "2026-05-01")
+ *   DAILY_LAUNCH_DATE  — ISO date string of challenge #1 (default: "2026-04-22")
  *   DAILY_ADVANCE_DAYS — how many days ahead to pre-generate (default: 7)
  */
 
@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const launchDate = Deno.env.get("DAILY_LAUNCH_DATE") ?? "2026-05-01";
+  const launchDate = Deno.env.get("DAILY_LAUNCH_DATE") ?? "2026-04-22";
   const advanceDays = parseInt(Deno.env.get("DAILY_ADVANCE_DAYS") ?? "7", 10);
 
   const supabase = createClient(supabaseUrl, serviceKey);

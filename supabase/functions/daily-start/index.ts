@@ -22,7 +22,7 @@
  *   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
  *
  * Optional env vars:
- *   DAILY_LAUNCH_DATE — ISO date of challenge #1 (default: "2026-05-01")
+ *   DAILY_LAUNCH_DATE — ISO date of challenge #1 (default: "2026-04-22")
  */
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -106,7 +106,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const launchDate = Deno.env.get("DAILY_LAUNCH_DATE") ?? "2026-05-01";
+  const launchDate = Deno.env.get("DAILY_LAUNCH_DATE") ?? "2026-04-22";
   const supabase = createClient(supabaseUrl, serviceKey);
   const db = createDailyStartDbOperations(supabase, launchDate);
 
