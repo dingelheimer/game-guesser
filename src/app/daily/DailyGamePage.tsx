@@ -53,7 +53,7 @@ export function DailyGamePage() {
           exit={{ opacity: 0 }}
           transition={{ duration: MOTION.duration.fast }}
         >
-          <AlertTriangle className="text-rose-400 size-8" aria-hidden="true" />
+          <AlertTriangle className="size-8 text-rose-400" aria-hidden="true" />
           <p className="text-text-secondary max-w-sm text-sm">{error}</p>
           <Button onClick={handleStart} variant="outline" size="sm">
             Try Again
