@@ -116,7 +116,6 @@ export function GameOverScreen({
           platformBonusOpportunities: bonusOpportunities,
           score,
           turnsPlayed,
-          url: shareUrl,
           yearRange: resolvedShareYearRange,
         });
   const highlightedPositions = endedOnIncorrectPlacement ? (validPositions ?? []) : [];

@@ -96,14 +96,14 @@ describe("generateDailyShareText", () => {
     expect(text).toContain("🔥 1-day streak");
   });
 
-  it("includes the play URL", () => {
+  it("omits the play URL", () => {
     const text = generateDailyShareText(makeParams());
-    expect(text).toContain("Play → gameguesser.com/daily");
+    expect(text).not.toContain("Play →");
   });
 
-  it("has an empty line before the play URL", () => {
+  it("does not have a trailing blank line", () => {
     const text = generateDailyShareText(makeParams());
-    expect(text).toContain("\n\nPlay →");
+    expect(text).not.toMatch(/\n\n$/);
   });
 
   it("produces the full expected share text without streak", () => {
@@ -128,7 +128,7 @@ describe("generateDailyShareText", () => {
       streak: null,
     });
     expect(text).toBe(
-      "🎮 Game Guesser Daily #42\nScore: 9/10 💪\n🟩🟩🟩🟥🟩🟩🟩🟩🟩🟩\n\nPlay → gameguesser.com/daily",
+      "🎮 Game Guesser Daily #42\nScore: 9/10 💪\n🟩🟩🟩🟥🟩🟩🟩🟩🟩🟩",
     );
   });
 
@@ -154,7 +154,7 @@ describe("generateDailyShareText", () => {
       streak: { current_streak: 3, best_streak: 5 },
     });
     expect(text).toBe(
-      "🎮 Game Guesser Daily #7\nScore: 9/10 ❤️\n🟩🟩🟩🟩🟥🟩🟩🟩🟩🟩\n🔥 3-day streak\n\nPlay → gameguesser.com/daily",
+      "🎮 Game Guesser Daily #7\nScore: 9/10 ❤️\n🟩🟩🟩🟩🟥🟩🟩🟩🟩🟩\n🔥 3-day streak",
     );
   });
 });

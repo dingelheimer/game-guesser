@@ -221,7 +221,7 @@ export function Timeline({
             // Mobile: vertical stack container
             "flex flex-col",
             // Desktop: horizontal scroll container (centering delegated to inner wrapper)
-            "md:overflow-x-auto md:pb-4",
+            "md:overflow-x-auto md:pt-1 md:pb-4",
             // Always maintain a minimum height so the section doesn't collapse
             "min-h-[80px] md:min-h-[300px] xl:min-h-[326px]",
             placedCards.length === 0 && "justify-center",
