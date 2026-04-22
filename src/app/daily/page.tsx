@@ -1,12 +1,45 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
+import { siteConfig } from "@/lib/site";
 import { DailyGamePage } from "./DailyGamePage";
 
-export const metadata: Metadata = {
-  title: "Daily Challenge",
-  description:
-    "Play today's daily challenge — the same 11 games for everyone. How does your score compare?",
-};
+const DAILY_URL = `${siteConfig.url}/daily`;
+const DESCRIPTION =
+  "Can you place all 10 games on the timeline? Play today's challenge and compare your score!";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: challenge } = await supabase
+    .from("daily_challenges")
+    .select("challenge_number")
+    .eq("challenge_date", today)
+    .maybeSingle();
+
+  const title =
+    challenge !== null
+      ? `Game Guesser — Daily Challenge #${String(challenge.challenge_number)}`
+      : "Game Guesser — Daily Challenge";
+
+  return {
+    title: { absolute: title },
+    description: DESCRIPTION,
+    alternates: { canonical: DAILY_URL },
+    openGraph: {
+      title,
+      description: DESCRIPTION,
+      url: DAILY_URL,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: DESCRIPTION,
+    },
+  };
+}
 
 export default function DailyPage() {
   return <DailyGamePage />;
