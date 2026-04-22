@@ -100,4 +100,3 @@ export async function fetchDailyPlayerRank(
   if (!first) return null;
   return mapPlayerRank(first);
 }
-

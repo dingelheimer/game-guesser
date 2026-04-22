@@ -37,9 +37,7 @@ function LeaderboardRow({ entry, isCurrentUser, totalCards = 10 }: LeaderboardRo
         isCurrentUser ? "bg-primary-400/10" : "hover:bg-surface-700/50 transition-colors",
       )}
     >
-      <td className="text-text-secondary px-3 py-2.5 font-mono text-sm">
-        {rankLabel(entry.rank)}
-      </td>
+      <td className="text-text-secondary px-3 py-2.5 font-mono text-sm">{rankLabel(entry.rank)}</td>
       <td className="px-3 py-2.5">
         <span
           className={cn(
@@ -53,7 +51,7 @@ function LeaderboardRow({ entry, isCurrentUser, totalCards = 10 }: LeaderboardRo
           )}
         </span>
       </td>
-      <td className="font-display text-text-primary px-3 py-2.5 text-center font-bold text-sm">
+      <td className="font-display text-text-primary px-3 py-2.5 text-center text-sm font-bold">
         {entry.score}/{totalCards}
         {entry.extraTryUsed ? (
           <span className="ml-1 text-xs" title="Extra try used">
@@ -105,7 +103,7 @@ export function DailyLeaderboard({
 }: DailyLeaderboardProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-6 text-sm text-text-secondary">
+      <div className="text-text-secondary flex items-center justify-center gap-2 py-6 text-sm">
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
         Loading leaderboard…
       </div>
@@ -113,9 +111,7 @@ export function DailyLeaderboard({
   }
 
   if (error !== null) {
-    return (
-      <p className="py-4 text-center text-sm text-rose-400">Could not load leaderboard.</p>
-    );
+    return <p className="py-4 text-center text-sm text-rose-400">Could not load leaderboard.</p>;
   }
 
   const displayEntries = isPreview ? entries.slice(0, 10) : entries;
@@ -125,25 +121,25 @@ export function DailyLeaderboard({
   return (
     <div className="space-y-3">
       {displayEntries.length === 0 ? (
-        <div className="rounded-xl border border-border/50 bg-surface-800 p-6 text-center">
-          <Trophy className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
-          <p className="text-sm text-text-secondary">No scores yet — be the first!</p>
+        <div className="border-border/50 bg-surface-800 rounded-xl border p-6 text-center">
+          <Trophy className="text-text-disabled mx-auto mb-2 h-8 w-8" />
+          <p className="text-text-secondary text-sm">No scores yet — be the first!</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-white/10 bg-surface-800/60">
+        <div className="bg-surface-800/60 overflow-hidden rounded-xl border border-white/10">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/10">
-                <th className="text-text-secondary px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+                <th className="text-text-secondary px-3 py-2 text-left text-xs font-medium tracking-wide uppercase">
                   Rank
                 </th>
-                <th className="text-text-secondary px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+                <th className="text-text-secondary px-3 py-2 text-left text-xs font-medium tracking-wide uppercase">
                   Player
                 </th>
-                <th className="text-text-secondary px-3 py-2 text-center text-xs font-medium uppercase tracking-wide">
+                <th className="text-text-secondary px-3 py-2 text-center text-xs font-medium tracking-wide uppercase">
                   Score
                 </th>
-                <th className="text-text-secondary px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">
+                <th className="text-text-secondary px-3 py-2 text-right text-xs font-medium tracking-wide uppercase">
                   Time
                 </th>
               </tr>
@@ -164,10 +160,10 @@ export function DailyLeaderboard({
 
       {/* Player's rank if outside the displayed list */}
       {!playerInList && playerRank !== null && (
-        <div className="rounded-xl border border-primary-500/20 bg-primary-500/5 px-3 py-2.5">
+        <div className="border-primary-500/20 bg-primary-500/5 rounded-xl border px-3 py-2.5">
           <p className="text-sm">
             <span className="text-text-secondary">Your rank: </span>
-            <span className="font-display font-bold text-primary-400">
+            <span className="font-display text-primary-400 font-bold">
               #{String(playerRank.rank)}
             </span>
             <span className="text-text-secondary ml-2">
@@ -180,8 +176,11 @@ export function DailyLeaderboard({
 
       {/* Guest sign-up prompt */}
       {isGuest && (
-        <div className="rounded-xl border border-white/10 bg-surface-800/40 px-3 py-2.5 text-center text-xs text-text-secondary">
-          <Link href="/auth/sign-up" className="text-primary-400 underline-offset-2 hover:underline">
+        <div className="bg-surface-800/40 text-text-secondary rounded-xl border border-white/10 px-3 py-2.5 text-center text-xs">
+          <Link
+            href="/auth/sign-up"
+            className="text-primary-400 underline-offset-2 hover:underline"
+          >
             Sign up
           </Link>{" "}
           to appear on the leaderboard and track your streak.
@@ -193,7 +192,7 @@ export function DailyLeaderboard({
         <div className="text-center">
           <Link
             href={fullLeaderboardHref}
-            className="text-xs text-primary-400 underline-offset-2 hover:underline"
+            className="text-primary-400 text-xs underline-offset-2 hover:underline"
           >
             View full leaderboard →
           </Link>

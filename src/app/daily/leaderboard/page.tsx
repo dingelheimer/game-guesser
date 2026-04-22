@@ -69,15 +69,16 @@ export default async function DailyLeaderboardPage({
     const { challenge_number: cn } = challengeRow;
     const results = await Promise.allSettled([
       fetchDailyLeaderboardServer(cn, 50),
-      currentUserId !== null ? fetchDailyPlayerRankServer(cn, currentUserId) : Promise.resolve(null),
+      currentUserId !== null
+        ? fetchDailyPlayerRankServer(cn, currentUserId)
+        : Promise.resolve(null),
     ]);
     if (results[0].status === "fulfilled") entries = results[0].value;
     if (results[1].status === "fulfilled") playerRankData = results[1].value;
   }
 
   // Check if player is in top 50 (so we don't show the separate rank banner).
-  const playerInTop50 =
-    currentUserId !== null && entries.some((e) => e.userId === currentUserId);
+  const playerInTop50 = currentUserId !== null && entries.some((e) => e.userId === currentUserId);
   const playerRankToShow = playerInTop50 ? null : playerRankData;
 
   const tabLabel = isYesterday ? "Yesterday" : "Today";
@@ -93,11 +94,9 @@ export default async function DailyLeaderboardPage({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Trophy className="h-6 w-6 text-sky-400" />
-            <h1 className="font-display text-2xl font-bold text-text-primary">
-              Daily Leaderboard
-            </h1>
+            <h1 className="font-display text-text-primary text-2xl font-bold">Daily Leaderboard</h1>
           </div>
-          <p className="text-sm text-text-secondary">{challengeLabel}</p>
+          <p className="text-text-secondary text-sm">{challengeLabel}</p>
         </div>
 
         {/* Tab navigation */}
@@ -129,12 +128,12 @@ export default async function DailyLeaderboardPage({
 
         {/* Leaderboard */}
         {challengeRow === null ? (
-          <div className="rounded-2xl border border-border/50 bg-surface-800 p-10 text-center">
-            <Trophy className="mx-auto mb-3 h-10 w-10 text-text-disabled" />
-            <p className="font-display mb-1 text-lg font-semibold text-text-primary">
+          <div className="border-border/50 bg-surface-800 rounded-2xl border p-10 text-center">
+            <Trophy className="text-text-disabled mx-auto mb-3 h-10 w-10" />
+            <p className="font-display text-text-primary mb-1 text-lg font-semibold">
               No challenge available
             </p>
-            <p className="text-sm text-text-secondary">
+            <p className="text-text-secondary text-sm">
               {isYesterday
                 ? "No challenge was generated for yesterday."
                 : "Today's challenge hasn't been generated yet. Check back soon!"}
