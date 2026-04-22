@@ -46,14 +46,7 @@ const SAMPLE_ENTRIES: DailyLeaderboardEntry[] = [
 describe("DailyLeaderboard", () => {
   describe("loading state", () => {
     it("shows a loading spinner when isLoading is true", () => {
-      render(
-        <DailyLeaderboard
-          entries={[]}
-          playerRank={null}
-          currentUserId={null}
-          isLoading
-        />,
-      );
+      render(<DailyLeaderboard entries={[]} playerRank={null} currentUserId={null} isLoading />);
       expect(screen.getByText(/loading leaderboard/i)).toBeInTheDocument();
     });
 
@@ -86,27 +79,21 @@ describe("DailyLeaderboard", () => {
 
   describe("empty state", () => {
     it("shows 'No scores yet' when entries is empty", () => {
-      render(
-        <DailyLeaderboard entries={[]} playerRank={null} currentUserId={null} />,
-      );
+      render(<DailyLeaderboard entries={[]} playerRank={null} currentUserId={null} />);
       expect(screen.getByText(/no scores yet/i)).toBeInTheDocument();
     });
   });
 
   describe("leaderboard table", () => {
     it("renders all entries", () => {
-      render(
-        <DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />,
-      );
+      render(<DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />);
       expect(screen.getByText("Alice")).toBeInTheDocument();
       expect(screen.getByText("Bob")).toBeInTheDocument();
       expect(screen.getByText("Carol")).toBeInTheDocument();
     });
 
     it("shows rank labels with medal emojis for top 3", () => {
-      render(
-        <DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />,
-      );
+      render(<DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />);
       expect(screen.getByText("🥇")).toBeInTheDocument();
       expect(screen.getByText("🥈")).toBeInTheDocument();
       expect(screen.getByText("🥉")).toBeInTheDocument();
@@ -122,9 +109,7 @@ describe("DailyLeaderboard", () => {
     });
 
     it("shows 💪 for clean runs and ❤️ for extra try used", () => {
-      render(
-        <DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />,
-      );
+      render(<DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />);
       // Alice: clean run → 💪; Bob: extra try → ❤️
       const cleanRuns = screen.getAllByTitle("Clean run");
       const extraTries = screen.getAllByTitle("Extra try used");
@@ -134,19 +119,13 @@ describe("DailyLeaderboard", () => {
 
     it("highlights the current user's row with '(you)' label", () => {
       render(
-        <DailyLeaderboard
-          entries={SAMPLE_ENTRIES}
-          playerRank={null}
-          currentUserId="user-2"
-        />,
+        <DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId="user-2" />,
       );
       expect(screen.getByText("(you)")).toBeInTheDocument();
     });
 
     it("does not show '(you)' when currentUserId is null", () => {
-      render(
-        <DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />,
-      );
+      render(<DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />);
       expect(screen.queryByText("(you)")).not.toBeInTheDocument();
     });
   });
@@ -196,19 +175,13 @@ describe("DailyLeaderboard", () => {
 
   describe("guest sign-up prompt", () => {
     it("shows sign-up prompt for guests (null currentUserId)", () => {
-      render(
-        <DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />,
-      );
+      render(<DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId={null} />);
       expect(screen.getByText(/sign up/i)).toBeInTheDocument();
     });
 
     it("does not show sign-up prompt for authenticated users", () => {
       render(
-        <DailyLeaderboard
-          entries={SAMPLE_ENTRIES}
-          playerRank={null}
-          currentUserId="user-1"
-        />,
+        <DailyLeaderboard entries={SAMPLE_ENTRIES} playerRank={null} currentUserId="user-1" />,
       );
       expect(screen.queryByText(/sign up/i)).not.toBeInTheDocument();
     });
@@ -243,11 +216,14 @@ describe("DailyLeaderboard", () => {
 
     it("slices to top 10 in preview mode", () => {
       const many = Array.from({ length: 15 }, (_, i) =>
-        makeEntry({ rank: i + 1, userId: `user-${String(i + 1)}`, username: `Player${String(i + 1)}`, score: 10 - i }),
+        makeEntry({
+          rank: i + 1,
+          userId: `user-${String(i + 1)}`,
+          username: `Player${String(i + 1)}`,
+          score: 10 - i,
+        }),
       );
-      render(
-        <DailyLeaderboard entries={many} playerRank={null} currentUserId={null} isPreview />,
-      );
+      render(<DailyLeaderboard entries={many} playerRank={null} currentUserId={null} isPreview />);
       // Players 11–15 should not be visible in preview
       expect(screen.queryByText("Player11")).not.toBeInTheDocument();
       expect(screen.getByText("Player10")).toBeInTheDocument();

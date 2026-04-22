@@ -14,6 +14,7 @@ import { buildPlacementReviewItems } from "@/stores/dailyGameStore.helpers";
 import { generateDailyShareText } from "@/lib/daily/share";
 import { DailyLeaderboard } from "@/components/daily/DailyLeaderboard";
 import { useDailyLeaderboard } from "@/hooks/useDailyLeaderboard";
+import { NextChallengeCountdown } from "@/components/daily/NextChallengeCountdown";
 
 // ── Placement row ─────────────────────────────────────────────────────────────
 
@@ -293,6 +294,7 @@ export function DailyGameOverScreen({
             <Button onClick={onPlayAgain} variant="outline" className="w-full">
               Come Back Tomorrow
             </Button>
+            <NextChallengeCountdown />
           </div>
         </div>
       </div>
