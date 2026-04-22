@@ -888,6 +888,26 @@ export type Database = {
           id: number;
         }[];
       };
+      get_daily_leaderboard: {
+        Args: { p_challenge_number: number; p_limit?: number };
+        Returns: {
+          rank: number;
+          user_id: string;
+          username: string;
+          score: number;
+          extra_try_used: boolean;
+          completed_at: string;
+        }[];
+      };
+      get_daily_player_rank: {
+        Args: { p_challenge_number: number; p_user_id: string };
+        Returns: {
+          rank: number;
+          score: number;
+          extra_try_used: boolean;
+          completed_at: string;
+        }[];
+      };
       is_game_session_member: {
         Args: { check_session_id: string };
         Returns: boolean;
