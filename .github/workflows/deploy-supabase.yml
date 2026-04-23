@@ -4,7 +4,9 @@
 # Required GitHub repository secrets:
 #   SUPABASE_ACCESS_TOKEN  — Personal access token from app.supabase.com/account/tokens
 #   SUPABASE_PROJECT_ID    — Project ref from Supabase Dashboard → Settings → General
-#   SUPABASE_DB_PASSWORD   — Database password from Supabase Dashboard → Settings → Database
+#
+# No database password is needed: supabase db push uses the Management API
+# (authenticated via SUPABASE_ACCESS_TOKEN), not a direct database connection.
 #
 # To configure secrets: GitHub repo → Settings → Secrets and variables → Actions → New repository secret
 
@@ -44,8 +46,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase db push \
-            --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}" \
-            --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+            --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
 
   # ── 2. Deploy all Edge Functions ────────────────────────────────────────────
   # Runs after migrations so functions can reference new schema.

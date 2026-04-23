@@ -60,7 +60,9 @@ Add these in **GitHub repo → Settings → Secrets and variables → Actions**:
 |--------|-----------------|
 | `SUPABASE_ACCESS_TOKEN` | [app.supabase.com/account/tokens](https://app.supabase.com/account/tokens) |
 | `SUPABASE_PROJECT_ID` | Supabase Dashboard → Settings → General → Reference ID |
-| `SUPABASE_DB_PASSWORD` | Supabase Dashboard → Settings → Database → Database password |
+
+No database password is needed — `supabase db push` authenticates via the
+Management API using `SUPABASE_ACCESS_TOKEN`.
 
 The workflow runs the migration step before deploying Edge Functions so that any
 new schema is in place before the functions that depend on it go live.
