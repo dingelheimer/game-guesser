@@ -46,6 +46,25 @@ pnpm db:types:local     # Generate types from local database
 pnpm db:reset:local     # Reset local DB and regenerate types
 ```
 
+## CI/CD
+
+A GitHub Actions workflow (`.github/workflows/deploy-supabase.yml`) automatically
+applies database migrations and deploys all Supabase Edge Functions whenever
+changes to `supabase/migrations/**` or `supabase/functions/**` are pushed to `main`.
+
+### Required secrets
+
+Add these in **GitHub repo → Settings → Secrets and variables → Actions**:
+
+| Secret | Where to find it |
+|--------|-----------------|
+| `SUPABASE_ACCESS_TOKEN` | [app.supabase.com/account/tokens](https://app.supabase.com/account/tokens) |
+| `SUPABASE_PROJECT_ID` | Supabase Dashboard → Settings → General → Reference ID |
+| `SUPABASE_DB_PASSWORD` | Supabase Dashboard → Settings → Database → Database password |
+
+The workflow runs the migration step before deploying Edge Functions so that any
+new schema is in place before the functions that depend on it go live.
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
