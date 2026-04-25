@@ -1,11 +1,11 @@
-# Contributing to Game Guesser
+# Contributing to Gamester
 
 Thank you for your interest in contributing! This document explains how to
-contribute to Game Guesser and the licensing terms that apply.
+contribute to Gamester and the licensing terms that apply.
 
 ## License
 
-Game Guesser is licensed under the
+Gamester is licensed under the
 [GNU Affero General Public License v3.0 (AGPL-3.0-only)](LICENSE). By
 submitting a contribution (pull request, patch, or any other form), you agree
 that your contribution is licensed under the same AGPL-3.0-only license.
@@ -33,8 +33,8 @@ By making a contribution, you certify that:
 1. **Fork** the repository on GitHub.
 2. **Clone** your fork locally:
    ```bash
-   git clone https://github.com/<your-username>/game-guesser.git
-   cd game-guesser
+   git clone https://github.com/<your-username>/gamester.git
+   cd gamester
    pnpm install
    ```
 3. **Create a branch** for your change:
@@ -63,4 +63,4 @@ By making a contribution, you certify that:
 ## Reporting Issues
 
 If you find a bug or have a feature request, please
-[open an issue](https://github.com/dingelheimer/game-guesser/issues) on GitHub.
+[open an issue](https://github.com/dingelheimer/gamester/issues) on GitHub.
