@@ -4,10 +4,10 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Privacy Policy | Game Guesser",
+    absolute: "Privacy Policy | Gamester",
   },
   description:
-    "Game Guesser privacy policy. Learn what data we collect, how we use it, and your rights under GDPR and other privacy regulations.",
+    "Gamester privacy policy. Learn what data we collect, how we use it, and your rights under GDPR and other privacy regulations.",
 };
 
 function Section({
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
             Last updated: <time dateTime="2026-04-17">17 April 2026</time>
           </p>
           <p className="text-text-secondary text-sm leading-7">
-            This privacy policy explains what data Game Guesser collects, why we collect it, and
+            This privacy policy explains what data Gamester collects, why we collect it, and
             your rights regarding that data. We aim to be clear and honest — no legalese.
           </p>
         </header>
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
         {/* 1. Data Controller */}
         <Section id="controller" title="1. Data Controller">
           <p>
-            Game Guesser is operated by <strong className="text-text-primary">Garbage Apps</strong>.
+            Gamester is operated by <strong className="text-text-primary">Garbage Apps</strong>.
           </p>
           <p>
             <strong className="text-text-primary">Contact for privacy inquiries:</strong>{" "}
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
             </a>
           </p>
           <p className="text-text-disabled text-xs">
-            We plan to migrate to a dedicated privacy address (privacy@gameguesser.com) via
+            We plan to migrate to a dedicated privacy address (privacy@gamester.games) via
             Cloudflare Email Routing in the future.
           </p>
         </Section>
@@ -266,7 +266,7 @@ export default function PrivacyPage() {
         {/* 7. Children's Privacy */}
         <Section id="children" title="7. Children's Privacy">
           <p>
-            Game Guesser is not directed at children under the age of 13. We do not knowingly
+            Gamester is not directed at children under the age of 13. We do not knowingly
             collect personal data from children under 13 (COPPA). Under GDPR, users under 16 must
             have parental consent for data processing.
           </p>
@@ -303,7 +303,7 @@ export default function PrivacyPage() {
         {/* 9. CCPA */}
         <Section id="ccpa" title="9. California Privacy Rights (CCPA)">
           <p>
-            Game Guesser does not sell personal information. Phase 0 of our ad rollout uses a
+            Gamester does not sell personal information. Phase 0 of our ad rollout uses a
             NullProvider — no ad network receives any user data.
           </p>
           <p>
@@ -350,7 +350,7 @@ export default function PrivacyPage() {
         {/* Footer nav */}
         <div className="border-border/30 text-text-disabled border-t pt-6 text-xs">
           <Link href="/" className="hover:text-text-secondary transition-colors">
-            ← Back to Game Guesser
+            ← Back to Gamester
           </Link>
         </div>
       </article>

@@ -8,7 +8,7 @@ describe("SourceCodeLink", () => {
     render(<SourceCodeLink>View Source</SourceCodeLink>);
 
     const link = screen.getByRole("link", { name: "View Source" });
-    expect(link).toHaveAttribute("href", "https://github.com/dingelheimer/game-guesser");
+    expect(link).toHaveAttribute("href", "https://github.com/dingelheimer/gamester");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });

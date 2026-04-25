@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Gamepad2 } from "lucide-react";
 import { LoginForm } from "./login-form";
+import { siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Sign In",
@@ -21,7 +22,7 @@ export default async function LoginPage({
         <div className="space-y-1 text-center">
           <Link href="/" className="inline-flex items-center gap-2">
             <Gamepad2 className="text-primary-400 h-6 w-6" />
-            <span className="font-display text-text-primary text-lg font-bold">Game Guesser</span>
+            <span className="font-display text-text-primary text-lg font-bold">{siteConfig.name}</span>
           </Link>
           <h1 className="font-display text-text-primary text-2xl font-bold">Welcome back</h1>
           <p className="text-text-secondary text-sm">Sign in to save your scores</p>

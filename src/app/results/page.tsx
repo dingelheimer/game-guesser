@@ -32,7 +32,7 @@ export async function generateMetadata({
   if (result === null || d === undefined) {
     return {
       title: "Result not found",
-      description: "This Game Guesser result link is invalid or has been corrupted.",
+      description: "This Gamester result link is invalid or has been corrupted.",
     };
   }
 
@@ -176,7 +176,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Resu
               <p className="text-text-secondary text-xs font-semibold tracking-[0.18em] uppercase">
                 Challenge a friend
               </p>
-              <p className="text-text-primary mt-3 text-lg font-semibold">Play Game Guesser</p>
+              <p className="text-text-primary mt-3 text-lg font-semibold">Play Gamester</p>
               <p className="text-text-secondary mt-3 text-sm leading-6">
                 Start your own run, host a room, and see if you can top this spoiler-free result.
               </p>

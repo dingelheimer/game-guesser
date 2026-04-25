@@ -4,10 +4,10 @@ import { ArrowUpDown, Coins, Eye, Sparkles, Trophy, Users } from "lucide-react";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "How to Play | Game Guesser",
+    absolute: "How to Play | Gamester",
   },
   description:
-    "Learn how to play Game Guesser, master platform bonuses, understand tokens and challenges, and get ready for solo or multiplayer rounds.",
+    "Learn how to play Gamester, master platform bonuses, understand tokens and challenges, and get ready for solo or multiplayer rounds.",
 };
 
 const howToPlaySteps = [
@@ -60,7 +60,7 @@ const guideCards = [
 
 const faqItems = [
   {
-    question: "How do I play Game Guesser?",
+    question: "How do I play Gamester?",
     answer:
       "Read the mystery screenshot, place the game on your timeline by release year, then reveal the answer and resolve any bonus checks or penalties.",
   },
@@ -70,7 +70,7 @@ const faqItems = [
       "You can play solo for endless score chasing or host a multiplayer room for 2-8 players.",
   },
   {
-    question: "Is Game Guesser free?",
+    question: "Is Gamester free?",
     answer:
       "Yes. You can jump into the browser game for free and start a solo run or multiplayer room without installing anything.",
   },
@@ -110,7 +110,7 @@ export default function RulesPage() {
               How to Play
             </p>
             <h1 className="font-display text-text-primary text-4xl font-bold tracking-tight md:text-5xl">
-              Learn Game Guesser in a couple of rounds.
+              Learn Gamester in a couple of rounds.
             </h1>
             <p className="text-text-secondary max-w-3xl text-base leading-7">
               Place each mystery game card on your release-year timeline, reveal the answer, and

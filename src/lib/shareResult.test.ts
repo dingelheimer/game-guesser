@@ -56,6 +56,6 @@ describe("shareResult payload helpers", () => {
       yearRange: { end: 2005, start: 1999 },
     });
 
-    expect(url).toMatch(/^https:\/\/gameguesser\.com\/results\?d=/u);
+    expect(url).toMatch(/^https:\/\/gamester\.games\/results\?d=/u);
   });
 });

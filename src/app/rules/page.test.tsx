@@ -8,7 +8,7 @@ describe("Rules page", () => {
     render(<RulesPage />);
 
     expect(
-      screen.getByRole("heading", { name: /learn game guesser in a couple of rounds/i }),
+      screen.getByRole("heading", { name: /learn gamester in a couple of rounds/i }),
     ).toBeVisible();
     expect(screen.getByRole("heading", { name: "Platform Bonus" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Solo Endless" })).toBeVisible();
@@ -23,7 +23,7 @@ describe("Rules page", () => {
 
     expect(pageModule.metadata).toMatchObject({
       title: {
-        absolute: "How to Play | Game Guesser",
+        absolute: "How to Play | Gamester",
       },
       description: expect.stringContaining("master platform bonuses"),
     });
@@ -31,8 +31,8 @@ describe("Rules page", () => {
     const structuredData = container.querySelector('script[type="application/ld+json"]');
     expect(structuredData).not.toBeNull();
     expect(structuredData?.textContent).toContain('"@type":"FAQPage"');
-    expect(structuredData?.textContent).toContain("How do I play Game Guesser?");
+    expect(structuredData?.textContent).toContain("How do I play Gamester?");
     expect(structuredData?.textContent).toContain("How many players can play?");
-    expect(structuredData?.textContent).toContain("Is Game Guesser free?");
+    expect(structuredData?.textContent).toContain("Is Gamester free?");
   });
 });

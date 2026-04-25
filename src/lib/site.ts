@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export const siteConfig = {
-  name: "Game Guesser",
-  url: "https://gameguesser.com",
+  name: "Gamester",
+  url: "https://gamester.games",
   description:
     "A video game timeline guessing party game where you place games by release year, chase streaks, and compete with friends.",
   ogImage: "/og.png",
-  repoUrl: "https://github.com/dingelheimer/game-guesser",
+  repoUrl: "https://github.com/dingelheimer/gamester",
   privacyUrl: "/privacy",
   kofiUrl: "https://ko-fi.com/garbageapps",
 } as const;

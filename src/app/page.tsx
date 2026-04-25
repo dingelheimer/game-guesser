@@ -9,7 +9,7 @@ import { fetchDailyChallengeStatus } from "@/lib/daily/status.server";
 export const metadata: Metadata = {
   title: "Guess the Video Game by Screenshot & Release Year",
   description:
-    "Play Game Guesser, the video game guessing game where you place mystery titles on a release-year timeline in solo mode or with friends.",
+    "Play Gamester, the video game guessing game where you place mystery titles on a release-year timeline in solo mode or with friends.",
 };
 
 /** Marketing landing page with auth-aware CTAs and homepage structured data. */

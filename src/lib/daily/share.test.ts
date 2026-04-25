@@ -31,7 +31,7 @@ function makeParams(overrides: Partial<DailyShareParams> = {}): DailyShareParams
 describe("generateDailyShareText", () => {
   it("includes the challenge number in the header", () => {
     const text = generateDailyShareText(makeParams({ challengeNumber: 99 }));
-    expect(text).toContain("🎮 Game Guesser Daily #99");
+    expect(text).toContain("🎮 Gamester Daily #99");
   });
 
   it("includes score and total cards", () => {
@@ -128,7 +128,7 @@ describe("generateDailyShareText", () => {
       streak: null,
     });
     expect(text).toBe(
-      "🎮 Game Guesser Daily #42\nScore: 9/10 💪\n🟩🟩🟩🟥🟩🟩🟩🟩🟩🟩",
+      "🎮 Gamester Daily #42\nScore: 9/10 💪\n🟩🟩🟩🟥🟩🟩🟩🟩🟩🟩",
     );
   });
 
@@ -154,7 +154,7 @@ describe("generateDailyShareText", () => {
       streak: { current_streak: 3, best_streak: 5 },
     });
     expect(text).toBe(
-      "🎮 Game Guesser Daily #7\nScore: 9/10 ❤️\n🟩🟩🟩🟩🟥🟩🟩🟩🟩🟩\n🔥 3-day streak",
+      "🎮 Gamester Daily #7\nScore: 9/10 ❤️\n🟩🟩🟩🟩🟥🟩🟩🟩🟩🟩\n🔥 3-day streak",
     );
   });
 });
