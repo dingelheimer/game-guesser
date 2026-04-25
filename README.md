@@ -1,8 +1,10 @@
-# Game Guesser
+# Gamester
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 A video game timeline guessing party game inspired by Hitster. Built with Next.js, Supabase, and Vercel.
+
+Play at [gamester.games](https://gamester.games).
 
 ## Getting Started
 
