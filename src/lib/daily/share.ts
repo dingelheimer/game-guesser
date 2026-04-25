@@ -18,7 +18,7 @@ export interface DailyShareParams {
  *
  * Format:
  * ```
- * 🎮 Game Guesser Daily #42
+ * 🎮 Gamester Daily #42
  * Score: 7/10 💪
  * 🟩🟩🟩🟥🟩🟩🟩🟩🟩🟩
  * 🔥 5-day streak
@@ -35,7 +35,7 @@ export function generateDailyShareText(params: DailyShareParams): string {
   const emojiGrid = placements.map((p) => (p.correct ? "🟩" : "🟥")).join("");
 
   const lines: string[] = [
-    `🎮 Game Guesser Daily #${String(challengeNumber)}`,
+    `🎮 Gamester Daily #${String(challengeNumber)}`,
     `Score: ${String(score)}/${String(totalCards)} ${indicator}`,
     emojiGrid,
   ];

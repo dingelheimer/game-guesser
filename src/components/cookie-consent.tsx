@@ -42,7 +42,7 @@ export function CookieConsentBanner() {
             consentModal: {
               title: "We use cookies 🍪",
               description:
-                "We use essential cookies to keep the game running. With your consent we also collect anonymous analytics to improve Game Guesser. No personal data is ever sold.",
+                "We use essential cookies to keep the game running. With your consent we also collect anonymous analytics to improve Gamester. No personal data is ever sold.",
               acceptAllBtn: "Accept all",
               acceptNecessaryBtn: "Reject all",
               showPreferencesBtn: "Manage preferences",

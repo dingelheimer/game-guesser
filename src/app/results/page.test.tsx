@@ -21,14 +21,14 @@ describe("Results page", () => {
     const { default: ResultsPage } = await import("./page");
     render(await ResultsPage({ searchParams: Promise.resolve({ d: encoded }) }));
 
-    expect(screen.getByRole("heading", { name: "Game Guesser Multiplayer Result" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Gamester Multiplayer Result" })).toBeVisible();
     expect(screen.getByText("🟩🟩🟨🟥")).toBeVisible();
     expect(screen.getByText("3/4")).toBeVisible();
     expect(screen.getByText("1998 → 2019")).toBeVisible();
     expect(screen.getByText("Finished #1 out of 4 players.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Play Solo" })).toHaveAttribute(
       "href",
-      "https://gameguesser.com/play/solo",
+      "https://gamester.games/play/solo",
     );
   });
 
@@ -39,7 +39,7 @@ describe("Results page", () => {
     expect(screen.getByRole("heading", { name: "Result not found" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute(
       "href",
-      "https://gameguesser.com/",
+      "https://gamester.games/",
     );
   });
 
@@ -62,7 +62,7 @@ describe("Results page", () => {
 
     expect(metadata.openGraph?.images).toEqual([
       expect.objectContaining({
-        url: `https://gameguesser.com/api/og?d=${encoded}`,
+        url: `https://gamester.games/api/og?d=${encoded}`,
       }),
     ]);
     expect(metadata.title).toBe("Solo result");

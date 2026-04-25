@@ -145,7 +145,7 @@ describe("GameOverScreen", () => {
 
     expect(screen.getByText("Share preview")).toBeInTheDocument();
     expect(
-      screen.getByText(/🎮 Game Guesser — Solo/u),
+      screen.getByText(/🎮 Gamester — Solo/u),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share Result" })).toBeInTheDocument();
   });

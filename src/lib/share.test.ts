@@ -41,7 +41,7 @@ describe("buildSoloShareText", () => {
         yearRange: { end: 2017, start: 1991 },
       }),
     ).toBe(
-      "🎮 Game Guesser — Solo\n🟩🟩🟨🟥🟩 4/5\n⏱ 1991 → 2017\n🎯 Platform bonus: 3/4",
+      "🎮 Gamester — Solo\n🟩🟩🟨🟥🟩 4/5\n⏱ 1991 → 2017\n🎯 Platform bonus: 3/4",
     );
   });
 });
@@ -59,7 +59,7 @@ describe("buildMultiplayerShareText", () => {
         turnsPlayed: 6,
       }),
     ).toBe(
-      "🎮 Game Guesser — Multiplayer\n🏆 1st place (4 players)\n🟩🟩🟩🟨🟥🟩 5/6\n🎯 Platform bonus: 4/5",
+      "🎮 Gamester — Multiplayer\n🏆 1st place (4 players)\n🟩🟩🟩🟨🟥🟩 5/6\n🎯 Platform bonus: 4/5",
     );
   });
 });
@@ -75,10 +75,10 @@ describe("shareResult", () => {
       navigator: { clipboard: { writeText }, share },
       notify: { error, success },
       text: "share text",
-      url: "https://gameguesser.com",
+      url: "https://gamester.games",
     });
 
-    expect(share).toHaveBeenCalledWith({ text: "share text", url: "https://gameguesser.com" });
+    expect(share).toHaveBeenCalledWith({ text: "share text", url: "https://gamester.games" });
     expect(writeText).not.toHaveBeenCalled();
     expect(success).toHaveBeenCalledWith("Shared!", {
       description: "Your result is ready to post.",

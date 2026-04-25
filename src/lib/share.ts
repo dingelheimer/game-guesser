@@ -82,7 +82,7 @@ export function buildSoloShareText({
   yearRange: ShareYearRange;
 }): string {
   return [
-    "🎮 Game Guesser — Solo",
+    "🎮 Gamester — Solo",
     `${formatShareOutcomeGrid(outcomes)} ${String(Math.max(0, score))}/${String(Math.max(0, turnsPlayed))}`,
     `⏱ ${String(yearRange.start)} → ${String(yearRange.end)}`,
     formatPlatformBonusSummary(platformBonusEarned, platformBonusOpportunities),
@@ -108,7 +108,7 @@ export function buildMultiplayerShareText({
   turnsPlayed: number;
 }): string {
   return [
-    "🎮 Game Guesser — Multiplayer",
+    "🎮 Gamester — Multiplayer",
     `🏆 ${formatOrdinal(placement)} place (${String(playerCount)} players)`,
     `${formatShareOutcomeGrid(outcomes)} ${String(Math.max(0, score))}/${String(Math.max(0, turnsPlayed))}`,
     formatPlatformBonusSummary(platformBonusEarned, platformBonusOpportunities),

@@ -9,7 +9,7 @@ describe("robots", () => {
         userAgent: "*",
         allow: "/",
       },
-      sitemap: "https://gameguesser.com/sitemap.xml",
+      sitemap: "https://gamester.games/sitemap.xml",
     });
   });
 });

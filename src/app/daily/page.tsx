@@ -20,8 +20,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const title =
     challenge !== null
-      ? `Game Guesser — Daily Challenge #${String(challenge.challenge_number)}`
-      : "Game Guesser — Daily Challenge";
+      ? `Gamester — Daily Challenge #${String(challenge.challenge_number)}`
+      : "Gamester — Daily Challenge";
 
   return {
     title: { absolute: title },

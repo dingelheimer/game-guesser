@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Gamepad2, Trophy, HelpCircle, LogIn, UserPlus, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/lib/auth/actions";
+import { siteConfig } from "@/lib/site";
 
 const navItems = [
   { href: "/play", label: "Play", icon: Gamepad2 },
@@ -24,7 +25,7 @@ export function Header({ username }: HeaderProps) {
         <Link href="/" className="flex items-center gap-2">
           <Gamepad2 className="text-primary-400 h-7 w-7" />
           <span className="font-display text-text-primary text-xl font-bold tracking-tight">
-            Game Guesser
+            {siteConfig.name}
           </span>
         </Link>
 

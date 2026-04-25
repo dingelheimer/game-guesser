@@ -6,22 +6,22 @@ describe("sitemap", () => {
   it("returns the expected public routes", () => {
     expect(sitemap()).toEqual([
       {
-        url: "https://gameguesser.com/",
+        url: "https://gamester.games/",
         changeFrequency: "weekly",
         priority: 1,
       },
       {
-        url: "https://gameguesser.com/rules",
+        url: "https://gamester.games/rules",
         changeFrequency: "monthly",
         priority: 0.8,
       },
       {
-        url: "https://gameguesser.com/leaderboard",
+        url: "https://gamester.games/leaderboard",
         changeFrequency: "daily",
         priority: 0.7,
       },
       {
-        url: "https://gameguesser.com/play/solo",
+        url: "https://gamester.games/play/solo",
         changeFrequency: "monthly",
         priority: 0.6,
       },

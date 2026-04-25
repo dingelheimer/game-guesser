@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { ImageResponse } from "next/og";
 
-export const alt = "Game Guesser Daily Challenge";
+export const alt = "Gamester Daily Challenge";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -56,7 +56,7 @@ export default async function Image() {
           letterSpacing: "-2px",
         }}
       >
-        Game Guesser
+        Gamester
       </div>
       <div
         style={{
@@ -82,7 +82,7 @@ export default async function Image() {
           color: "#64748b",
         }}
       >
-        gameguesser.com/daily
+        gamester.games/daily
       </div>
     </div>,
     { ...size },
