@@ -177,12 +177,75 @@ export const useDailyGameStore = create<DailyGameState>()((set, get) => ({
         },
       });
     } catch (err) {
-      set({
-        phase: "placing",
-        timelineItems,
-        droppedPosition: null,
-        error: err instanceof Error ? err.message : String(err),
-      });
+      // The turn may have been processed server-side even though the response was
+      // lost (e.g. a network error dropped the reply before the client received
+      // it). Resync from the server before surfacing an error so client and server
+      // states stay consistent. Without this, the next placement would be applied
+      // to the wrong card because the server's turns_played is already incremented.
+      try {
+        const serverState = await api.startDaily(anonymousId ?? undefined);
+
+        if (serverState.status === "completed") {
+          set({
+            phase: "game_over",
+            resultId: serverState.result_id,
+            challengeNumber: serverState.challenge_number,
+            challengeDate: serverState.challenge_date,
+            totalCards: serverState.total_cards,
+            score: serverState.score,
+            turnsPlayed: serverState.turns_played,
+            extraTryAvailable: !serverState.extra_try_used,
+            placements: serverState.placements,
+            timelineItems: [],
+            revealedCards: {},
+            gameOver: true,
+            streak: serverState.streak,
+            error: null,
+          });
+        } else {
+          const anchorItem = revealedToTimelineItem(serverState.anchor_card);
+          const resyncedTimelineItems = [
+            anchorItem,
+            ...serverState.timeline.slice(1).map((entry) => ({
+              id: String(entry.game_id),
+              screenshotImageId: null,
+              coverImageId: null,
+              title: "—",
+              releaseYear: entry.release_year,
+              platform: "?",
+              isRevealed: true,
+            })),
+          ];
+          set({
+            phase: "placing",
+            currentCard: serverState.current_card,
+            nextCard: null,
+            revealedCard: null,
+            timelineItems: resyncedTimelineItems,
+            droppedPosition: null,
+            score: serverState.score,
+            turnsPlayed: serverState.turns_played,
+            extraTryAvailable: serverState.extra_try_available,
+            placements: serverState.placements,
+            revealedCards: {
+              ...get().revealedCards,
+              [serverState.anchor_card.game_id]: serverState.anchor_card,
+            },
+            lastPlacementCorrect: null,
+            validPositions: null,
+            gameOver: false,
+            error: null,
+          });
+        }
+      } catch {
+        // Resync also failed — fall back to reverting the optimistic UI update.
+        set({
+          phase: "placing",
+          timelineItems,
+          droppedPosition: null,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   },
 
